@@ -81,6 +81,37 @@ else
   warn "scripts/patch-logo.sh no existe en repo"
 fi
 
+# ---------- 3c. MCPs globales (user scope, sin .mcp.json locales) ----------
+step "MCPs globales (perplexity, playwright, horario, media, notebooklm)"
+python3 - <<'PYEOF'
+import json, os
+p = os.path.expanduser("~/.claude.json")
+d = json.load(open(p)) if os.path.exists(p) else {}
+user = d.setdefault("mcpServers", {})
+user.setdefault("perplexity", {"command": "/home/artorias/.local/bin/hermes-perplexity-mcp"})
+user.setdefault("playwright", {"command": "npx", "args": ["-y", "@playwright/mcp@latest"]})
+def blind(name, args, env=None):
+    user[name] = {"command": "/usr/bin/env",
+                  "args": ["-u", "PYTHONPATH", "/home/artorias/.local/bin/uv", "run"] + args,
+                  "env": env or {}}
+blind("horario", ["--directory", "/home/artorias/Documentos/Alexander/config/.mcp-servers/mcp-horario", "horario-mcp"],
+      {"HORARIO_BASE": "/home/artorias/Documentos/Alexander"})
+blind("media", ["--directory", "/home/artorias/Documentos/Alexander/config/.mcp-servers/mcp-media", "media-mcp"])
+blind("notebooklm", ["--directory", "/home/artorias/Documentos/Alexander/config/.mcp-servers/mcp-notebooklm", "nblm-mcp"])
+json.dump(d, open(p, "w"), indent=2)
+# settings: ignorar .mcp.json de proyectos ajenos
+sp = os.path.expanduser("~/.claude/settings.json")
+s = json.load(open(sp))
+s["disabledMcpjsonServers"] = ["*"]
+allow = set(s.get("permissions", {}).get("allow", []))
+for pref in ("mcp__perplexity__", "mcp__playwright__", "mcp__horario__", "mcp__media__", "mcp__notebooklm__"):
+    allow.add(pref + "*")
+s.setdefault("permissions", {})["allow"] = sorted(allow)
+json.dump(s, open(sp, "w"), indent=2)
+print("ok")
+PYEOF
+ok "MCPs globales configurados"
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

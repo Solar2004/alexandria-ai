@@ -138,16 +138,29 @@ if [ "$MCP" = "1" ]; then
   fi
 fi
 
+# ---------- 5.5 Systemd units (headroom + omniroute) ----------
+step "Units systemd (headroom :8788, omniroute :20128)"
+mkdir -p /home/artorias/.config/systemd/user
+for u in headroom omniroute; do
+  if [ -f "$ATGHOME/systemd/$u.service" ]; then
+    cp "$ATGHOME/systemd/$u.service" /home/artorias/.config/systemd/user/
+    systemctl --user daemon-reload
+    systemctl --user enable --now "$u.service" >/dev/null 2>&1 || warn "$u.service no arrancó (¿deps? ¿puerto?)"
+    ok "$u.service instalado"
+  fi
+done
+
 # ---------- 6. OmniRoute (opcional) ----------
 if [ "$OMNIROUTE" = "1" ]; then
   step "OmniRoute (fallback multi-provider :20128)"
   if command -v omniroute >/dev/null 2>&1; then
     ok "omniroute ya instalado ($(omniroute --version 2>/dev/null | head -1))"
   else
-    timeout 300 npm i -g omniroute >/tmp/atg-omni.log 2>&1 \
-      && ok "omniroute instalado" || warn "falló (ver /tmp/atg-omni.log)"
+    timeout 300 npm i -g --prefix /home/artorias/.local omniroute >/tmp/atg-omni.log 2>&1 \
+      && ok "omniroute instalado (prefix ~/.local)" || warn "falló (ver /tmp/atg-omni.log)"
   fi
-  curl -s -m 5 http://127.0.0.1:20128/livez >/dev/null 2>&1 || warn "omniroute no responde aún — arrancar: omniroute (o systemd)"
+  curl -s -m 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:20128/dashboard 2>/dev/null | grep -qE '30[0-9]|200' \
+    && ok "omniroute responde en :20128" || warn "omniroute no responde aún — systemctl --user restart omniroute"
 fi
 
 # ---------- 7. Verificación final ----------

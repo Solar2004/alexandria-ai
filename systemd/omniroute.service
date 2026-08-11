@@ -1,0 +1,12 @@
+[Unit]
+Description=OmniRoute AI gateway (fallback multi-provider :20128)
+After=network.target
+
+[Service]
+ExecStart=/home/artorias/.local/bin/omniroute
+Restart=on-failure
+RestartSec=5
+Environment=HOME=/home/artorias
+
+[Install]
+WantedBy=default.target

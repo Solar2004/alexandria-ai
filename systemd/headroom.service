@@ -1,0 +1,13 @@
+[Unit]
+Description=Headroom context compression proxy (Claude Code -> routatic-proxy :3456)
+After=network.target oc-go-cc.service
+Wants=oc-go-cc.service
+
+[Service]
+ExecStart=/home/artorias/.local/bin/headroom proxy --port 8788 --no-memory-tools
+EnvironmentFile=/home/artorias/.config/headroom/env
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

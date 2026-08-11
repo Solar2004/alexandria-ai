@@ -53,6 +53,11 @@ ok "statusLine activado en settings.json (backup previo hecho)"
 # ---------- 3. Wrapper atg + alias ----------
 step "Wrapper atg + alias cc"
 install -m 755 "$ATGHOME/bin/atg" /home/artorias/.local/bin/atg
+# alias claude → atg (toda la build, no el binario pelado); subs quedan al binario directo
+if grep -q "^alias claude='ANTHROPIC_BASE_URL" /home/artorias/.zshrc 2>/dev/null; then
+  sed -i "s|^alias claude='ANTHROPIC_BASE_URL=http://127.0.0.1:3456 ~/.local/bin/claude'|alias claude='atg'|" /home/artorias/.zshrc
+  ok "alias claude → atg"
+fi
 if ! grep -q "alias cc=" /home/artorias/.zshrc 2>/dev/null; then
   cat >> /home/artorias/.zshrc <<'EOF'
 

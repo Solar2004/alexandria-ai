@@ -18,7 +18,20 @@ HEADROOM=/home/artorias/.local/bin/headroom
 # ---------- auto-init: CLAUDE.md si falta (mata el welcome screen + da memoria) ----------
 auto_init() {
   [ -f CLAUDE.md ] && return 0
-  [ "$PWD" = "$HOME" ] && return 0
+  if [ "$PWD" = "$HOME" ]; then
+    # memoria global de usuario: ~/CLAUDE.md se carga en TODOS los proyectos
+    [ -f "$HOME/CLAUDE.md" ] && return 0
+    cat > "$HOME/CLAUDE.md" <<'EOF'
+# Memoria global de usuario (Alexander)
+
+- Idioma: responde en español, directo y sin rodeos.
+- Modelo: deepseek-v4-flash vía opencode-go (routatic :3456, headroom :8788).
+- Stack del usuario: Arch Linux, kitty, tmux; proyectos en ~/Projectos/.
+- Si el proyecto tiene su propio CLAUDE.md, este archivo solo aporta contexto de usuario.
+EOF
+    echo "atg: ~/CLAUDE.md (memoria global) creado"
+    return 0
+  fi
   local md="# $(basename "$PWD")
 
 > Generado automaticamente por atg (auto-init). Editalo: es la memoria del proyecto para Claude.

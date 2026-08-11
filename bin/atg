@@ -1,0 +1,44 @@
+#!/bin/bash
+# ============================================================
+#  ATG — AlexanderTheGreat · Claude Code de última generación
+#  Wrapper único: aplica headroom (compresión), tema sol/luna
+#  y el statusline con datos. Modos:
+#    atg            → claude + headroom (recomendado)
+#    atg --raw      → claude directo a routatic (sin headroom)
+#    atg --free     → claude vía OmniRoute (fallback gratuito)
+#    atg --bare     → claude modo minimal (sin plugins/themes)
+#  Instalación: Projectos/AlexanderTheGreat/install.sh
+# ============================================================
+set -euo pipefail
+
+ATGHOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MODE="cc"
+HEADROOM=/home/artorias/.local/bin/headroom
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --free)  MODE=free;  shift ;;
+    --raw)   MODE=raw;   shift ;;
+    --bare)  MODE=bare;  shift ;;
+    --help|-h)
+      sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *) break ;;
+  esac
+done
+
+case "$MODE" in
+  free)
+    # OmniRoute en :20128 (traduce Anthropic ↔ OpenAI; fallback multi-provider)
+    exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:20128 claude "$@"
+    ;;
+  raw)
+    exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude "$@"
+    ;;
+  bare)
+    exec env HOME=/home/artorias claude --bare "$@"
+    ;;
+  cc)
+    exec env HOME=/home/artorias "$HEADROOM" wrap claude --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
+    ;;
+esac

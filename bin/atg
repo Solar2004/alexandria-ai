@@ -63,6 +63,7 @@ while [[ $# -gt 0 ]]; do
     --free)  MODE=free;  shift ;;
     --raw)   MODE=raw;   shift ;;
     --bare)  MODE=bare;  shift ;;
+    --clean) MODE=clean; shift ;;
     --help|-h)
       sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -80,6 +81,10 @@ case "$MODE" in
     ;;
   bare)
     exec env HOME=/home/artorias claude --bare "$@"
+    ;;
+  clean)
+    # pantalla 100% limpia: -c retoma la sesión del dir o crea sin cabecera
+    exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude -c "$@"
     ;;
   cc)
     exec env HOME=/home/artorias "$HEADROOM" wrap claude --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"

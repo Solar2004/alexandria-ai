@@ -139,6 +139,13 @@ if [ "$MCP" = "1" ]; then
   fi
 fi
 
+# ---------- 5.4b Temas sol/luna (UI de Claude Code) ----------
+step "Temas sol/luna (UI)"
+mkdir -p /home/artorias/.claude/themes
+for t in sol luna; do
+  cp "$ATGHOME/themes/$t.json" /home/artorias/.claude/themes/ 2>/dev/null && ok "theme $t instalado"
+done
+
 # ---------- 5.5 Systemd units (headroom + omniroute) ----------
 step "Units systemd (headroom :8788, omniroute :20128)"
 mkdir -p /home/artorias/.config/systemd/user

@@ -15,6 +15,49 @@ ATGHOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="cc"
 HEADROOM=/home/artorias/.local/bin/headroom
 
+# ---------- auto-init: CLAUDE.md si falta (mata el welcome screen + da memoria) ----------
+auto_init() {
+  [ -f CLAUDE.md ] && return 0
+  [ "$PWD" = "$HOME" ] && return 0
+  local md="# $(basename "$PWD")
+
+> Generado automaticamente por atg (auto-init). Editalo: es la memoria del proyecto para Claude.
+
+## Stack detectado
+$( [ -f package.json ] && echo "- Node.js: \`npm run build\` / \`npm test\` (si existen en package.json)" )
+$( [ -f pyproject.toml ] && echo "- Python: \`uv run\` (pyproject.toml presente)" )
+$( [ -f requirements.txt ] && echo "- Python: \`pip install -r requirements.txt\`" )
+$( [ -f Cargo.toml ] && echo "- Rust: \`cargo build\` / \`cargo test\`" )
+$( [ -f go.mod ] && echo "- Go: \`go build ./...\` / \`go test ./...\`" )
+$( [ -f Makefile ] && echo "- Make: \`make\` (objetivos en Makefile)" )
+$( [ -f docker-compose.yml ] || [ -f compose.yaml ] && echo "- Docker: compose presente" )
+$( git rev-parse --git-dir >/dev/null 2>&1 && echo "- Git: rama actual \`$(git branch --show-current 2>/dev/null)\`" )
+
+## Estructura (top-level)
+\`\`\`
+$( ls -1A | head -25 )
+\`\`\`
+
+## Reglas
+- Lee el codigo antes de cambiar nada. Pregunta si algo no esta claro.
+- Commits: mensajes claros y atoomicos.
+"
+  printf '%s' "$md" > CLAUDE.md
+  echo "atg: CLAUDE.md auto-generado (primer arranque en este directorio)"
+}
+
+# ---------- tema sol/luna según hora (06-18 sol, 18-06 luna) ----------
+apply_theme() {
+  local h=$(date +%H)
+  local t="luna"
+  [ "$h" -ge 6 ] && [ "$h" -lt 18 ] && t="sol"
+  jq --arg t "custom:$t" '.theme = $t' /home/artorias/.claude/settings.json > /tmp/atg-theme.json \
+    && mv /tmp/atg-theme.json /home/artorias/.claude/settings.json
+}
+
+auto_init
+apply_theme
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --free)  MODE=free;  shift ;;

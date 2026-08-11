@@ -16,6 +16,9 @@ Un repo autocontenido que instala y reconstruye todo tu Claude Code ideal tras u
 | **Skills élite** | hallmark (anti-slop), mattpocock (ingeniería), addyosmani (24 skills prod), archify (diagramas), cangjie (distilar libros/videos), reverse-skill (pentesting), diagram-design (27 tipos), anthropics oficial |
 | **Cadena de modelos** | `claude → headroom:8788 → routatic:3456 → opencode.ai` (deepseek-v4-flash, keys k1/k2 rotables, visión mimo-v2.5) |
 | **OmniRoute (opcional)** | Red de seguridad verificada: claude → :20128 → fallback a 90+ free tiers (keyless) cuando opencode-go agote quota |
+| **Launcher/welcome eliminado** | El panel de tips/"Welcome back" no sale: `atg` auto-genera `CLAUDE.md` al primer arranque (la pantalla de bienvenida desaparece con memoria de proyecto; queda mini-cabecera de 3 líneas — no hay switch oficial, issue abierto) |
+| **Temas sol/luna en la UI** | `themes/sol.json` (ámbar/crema, día) y `themes/luna.json` (índigo/plata, noche) — `atg` los aplica solo según la hora, hot-reload en vivo |
+| **Auto-init** | Primer `atg` en un proyecto: detecta stack (node/python/rust/go/make/docker/git) y genera `CLAUDE.md` con la estructura real — sin escribir `/init` nunca |
 | **Backup/Restore** | `./backup.sh` — todo tu `.claude` en un tar, restaurable en 30 segundos |
 
 ## Instalación (PC nueva tras reset)

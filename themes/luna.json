@@ -1,0 +1,28 @@
+{
+  "name": "Luna (noche)",
+  "base": "dark",
+  "overrides": {
+    "claude": "#818cf8",
+    "claudeShimmer": "#a5b4fc",
+    "text": "#e2e8f0",
+    "inverseText": "#0f172a",
+    "inactive": "#64748b",
+    "subtle": "#334155",
+    "suggestion": "#a5b4fc",
+    "permission": "#6366f1",
+    "remember": "#94a3b8",
+    "error": "#f87171",
+    "success": "#34d399",
+    "warning": "#fbbf24",
+    "planMode": "#a5b4fc",
+    "promptBorder": "#4f46e5",
+    "promptBorderShimmer": "#6366f1",
+    "selectionBg": "#312e81",
+    "userMessageBackground": "#1e1b4b",
+    "userMessageBackgroundHover": "#312e81",
+    "diffAdded": "#065f46",
+    "diffRemoved": "#7f1d1d",
+    "memoryBackgroundColor": "#1e293b",
+    "bashMessageBackgroundColor": "#1e293b"
+  }
+}

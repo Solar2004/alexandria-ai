@@ -1,0 +1,28 @@
+{
+  "name": "Sol (d\u00eda)",
+  "base": "light",
+  "overrides": {
+    "claude": "#d97706",
+    "claudeShimmer": "#f59e0b",
+    "text": "#292524",
+    "inverseText": "#fffbeb",
+    "inactive": "#a8a29e",
+    "subtle": "#d6d3d1",
+    "suggestion": "#d97706",
+    "permission": "#b45309",
+    "remember": "#92400e",
+    "error": "#dc2626",
+    "success": "#15803d",
+    "warning": "#b45309",
+    "planMode": "#f59e0b",
+    "promptBorder": "#d97706",
+    "promptBorderShimmer": "#f59e0b",
+    "selectionBg": "#fde68a",
+    "userMessageBackground": "#fffbeb",
+    "userMessageBackgroundHover": "#fef3c7",
+    "diffAdded": "#166534",
+    "diffRemoved": "#991b1b",
+    "memoryBackgroundColor": "#f5f5f4",
+    "bashMessageBackgroundColor": "#f5f5f4"
+  }
+}

@@ -66,6 +66,9 @@ apply_theme() {
   [ "$h" -ge 6 ] && [ "$h" -lt 18 ] && t="sol"
   jq --arg t "custom:$t" '.theme = $t' /home/artorias/.claude/settings.json > /tmp/atg-theme.json \
     && mv /tmp/atg-theme.json /home/artorias/.claude/settings.json
+  # statusline sol/luna (ccstatusline)
+  local src="/home/artorias/Projectos/AlexanderTheGreat/statusline/ccstatus-$t.json"
+  [ -f "$src" ] && cp "$src" /home/artorias/.config/ccstatusline/settings.json
 }
 
 auto_init

@@ -1,0 +1,16 @@
+[Unit]
+Description=CloudCLI - Claude Code remote UI (web+mobile)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/artorias
+Environment=HOME=/home/artorias
+Environment=PATH=/home/artorias/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/artorias/.local/bin/cloudcli start --port 3001
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -73,6 +73,14 @@ else
   fi
 fi
 
+# ---------- 3b. Logo ⚔ (binario parcheado) ----------
+step "Logo ⚔ (AlexanderTheGreat)"
+if [ -f "$ATGHOME/scripts/patch-logo.sh" ]; then
+  bash "$ATGHOME/scripts/patch-logo.sh" && ok "logo ⚔ aplicado" || warn "logo: binario no encontrado (¿update pendiente?)"
+else
+  warn "scripts/patch-logo.sh no existe en repo"
+fi
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

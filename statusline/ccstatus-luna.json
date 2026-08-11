@@ -1,0 +1,97 @@
+{
+ "version": 3,
+ "lines": [
+  [
+   {
+    "id": "1",
+    "type": "custom-symbol",
+    "customSymbol": "\u2694",
+    "color": "#818cf8"
+   },
+   {
+    "id": "2",
+    "type": "separator"
+   },
+   {
+    "id": "3",
+    "type": "model",
+    "color": "#a5b4fc"
+   },
+   {
+    "id": "4",
+    "type": "separator"
+   },
+   {
+    "id": "5",
+    "type": "context-percentage",
+    "color": "#c7d2fe"
+   },
+   {
+    "id": "6",
+    "type": "separator"
+   },
+   {
+    "id": "7",
+    "type": "session-cost",
+    "color": "#86efac"
+   },
+   {
+    "id": "8",
+    "type": "separator"
+   },
+   {
+    "id": "9",
+    "type": "git-branch",
+    "color": "#818cf8"
+   },
+   {
+    "id": "10",
+    "type": "git-changes",
+    "color": "#94a3b8"
+   },
+   {
+    "id": "11",
+    "type": "separator"
+   },
+   {
+    "id": "12",
+    "type": "custom-command",
+    "commandPath": "/home/artorias/.local/bin/ccclock",
+    "timeout": 2000,
+    "color": "#a5b4fc"
+   },
+   {
+    "id": "13",
+    "type": "separator"
+   },
+   {
+    "id": "14",
+    "type": "free-memory",
+    "color": "#94a3b8"
+   }
+  ],
+  [],
+  []
+ ],
+ "flexMode": "full-minus-40",
+ "compactThreshold": 60,
+ "colorLevel": 3,
+ "defaultPaddingSide": "both",
+ "inheritSeparatorColors": false,
+ "globalBold": false,
+ "gitCacheTtlSeconds": 5,
+ "minimalistMode": false,
+ "powerline": {
+  "enabled": false,
+  "separators": [
+   "\ue0b0"
+  ],
+  "separatorInvertBackground": [
+   false
+  ],
+  "startCaps": [],
+  "endCaps": [],
+  "autoAlign": false,
+  "continueThemeAcrossLines": false
+ }
+}

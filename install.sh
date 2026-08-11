@@ -119,7 +119,8 @@ if [ "$SKILLS" = "1" ]; then
     } || warn "anthropics/skills falló"
     rm -rf "$tmp"
   fi
-  ls /home/artorias/.claude/skills/ 2>/dev/null | wc -l | xargs -I{} ok "total skills instaladas: {}"
+  n=$(ls /home/artorias/.claude/skills/ 2>/dev/null | wc -l)
+  ok "total skills instaladas: $n"
 else
   step "Skills omitidas (--no-skills)"
 fi

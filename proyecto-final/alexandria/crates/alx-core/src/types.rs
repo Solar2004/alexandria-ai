@@ -217,6 +217,9 @@ pub enum Event {
     TokenSpent(AlxId, u32),
     RecallInjected(usize),
     NightTick,
+    /// El hook iterate.trigger pide volver a trabajar: iteración N con feedback
+    /// acumulado de las iteraciones previas.
+    IterateRequest(u32, Vec<String>),
 }
 
 /// Epoch millis actual.

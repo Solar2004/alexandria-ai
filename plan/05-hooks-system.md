@@ -58,6 +58,7 @@ enum EventKind {
 | `docs.autoupdate` | Stop | Actualiza dev-docs / changelog con lo hecho | no |
 | `night.maybe-schedule` | Stop | Si hay tareas pendientes y es noche, agenda `alx-night` | no |
 | `bench.sample` | PostToolUse | Mide métricas de la operación (tiempo, tokens, exit) | no |
+| `iterate.trigger` | Stop / TaskDone | Fuerza iteración: lee/actualiza IterationState, emite IterateRequest con feedback acumulado | no |
 | `atg.compat` | SessionStart | Detecta wrapper `atg` y embebe sus modos de red | no |
 
 ## 4. Ciclo de vida de un evento

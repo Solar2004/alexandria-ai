@@ -29,6 +29,7 @@ todo lo que está aquí se construye, se testea y se verifica.
 | `14-auditoria.md` | Auditoría exhaustiva del ecosistema (global + repo + MCP + red), duplicados |
 | `15-critic.md` | Auto-crítica por código (`alx-critic`) + decomposition engine |
 | `16-evolve.md` | Harness evolutivo (`alx-evolve`): la AI crea harnesses en tiempo real, temporal/permanente, doc-min |
+| `17-orquestrator.md` | Integración orquestrator-package: dual-language, verify handoff, SDD templates, iteration loop |
 
 ## Orden de lectura
 

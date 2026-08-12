@@ -268,3 +268,40 @@ Spec completo en `../16-evolve.md`. crate alx-evolve añadido al workspace (16 c
 3. **Temporal por defecto, permanente por evidencia** — un harness solo se queda si demostró servir.
 4. **Los harnesses son datos** — en `harnesses/active/*.toml`, validados por audit, versionados con el proyecto.
 5. **El critic y el evolve se retroalimentan** — harness → must_check → critic lo aplica → datos → refine del harness.
+
+---
+
+# Iteraciones 58–62 (quinta pasada — iteration loop por hook + integración orquestrator)
+
+> Disparadas por el usuario: *"mira orquestrator-package y saca lo que sirva... el sistema de iteraciones tipo sea por hooks, la AI por código finaliza de trabajar y entonces el hook le diría vuelve a trabajar, primera iteración... tú no sabes lo que es una iteración, haces 1 trabajo listo y no repites para ver."*
+
+## Resumen
+
+| # | Cambio | Por qué |
+|---|---|---|
+| 58 | Auditoría de `orquestrator-package` (plan/17-orquestrator.md) | 10 aportes reales: dual-language, verify handoff, SDD templates, token strategy, auto-kill, STATUS.md |
+| 59 | **Iteration loop por hook** (R24): hook `iterate.trigger` en Stop/TaskDone → IterateRequest(iter, feedback) | La AI termina → el hook la obliga a iterar. Un solo pase sin verificar = incompleto |
+| 60 | Distinguir critic loop (itera DENTRO de fase) vs iteration loop (fuerza iterar CUALQUIER fin de trabajo) | Dos bucles, un objetivo: pulir hasta criterio; el hook es el que hace la iteración automática |
+| 61 | Integrar orquestrator al governor: dual-language formalizado + PHALANX mode "orquestrator" | El protocolo que ya funciona se convierte en configuración del motor |
+| 62 | Implementar `IterationState` en alx-critic + evento `IterateRequest` en alx-core | El loop por hook existe en código, con tests |
+
+## Mermaid clave #10 (iteración 59) — iteration loop por hook
+
+```mermaid
+flowchart LR
+    W[Trabajo termina Stop/TaskDone] --> H{hook iterate.trigger}
+    H --> S[lee IterationState]
+    S --> C{Critic aproba?}
+    C -->|si| FIN[fin + informe]
+    C -->|no| Q{iter < max?}
+    Q -->|si| R[IterateRequest iter+1 con feedback acumulado]
+    R --> W
+    Q -->|no| FIN2[fin con informe de N iteraciones]
+```
+
+## Lecciones de las iteraciones 58–62
+
+1. **La iteración es la norma, no la excepción** — el hook la fuerza; la AI no decide "ya está".
+2. **Iterar = verificar + criticar + MEJORAR con feedback previo**, no re-hacer a ciegas.
+3. **El orquestrator ya demostró en práctica** lo que el plan tenía en teoría (dual-language, verify) — absorberlo, no reinventarlo.
+4. **El feedback acumulado converge** — la iteración N recibe los feedbacks 1..N-1; cada pasada es más precisa.

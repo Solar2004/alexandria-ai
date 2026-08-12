@@ -44,6 +44,8 @@
 | R21 | Harnesses temporales (se autodestruyen al cumplir su objetivo) vs permanentes (los que sirven) | alx-evolve (lifecycle) |
 | R22 | Documentación mínima obligatoria de todo lo creado — nada se escapa | alx-evolve (auto-doc) |
 | R23 | Mejora de harnesses (reglas de diseño, consistencia, colores) | alx-evolve (critic + refine) |
+| R24 | Iteration loop por hook: la AI termina → hook obliga a iterar (verificar+criticar+mejorar) hasta criterio | alx-critic (iterate.trigger) + alx-hooks |
+| R25 | Integrar orquestrator-package (dual-language caveman, verify handoff, SDD templates, token strategy) | alx-governor + PHALANX mode "orquestrator" |
 
 ## 3. Principios no negociables
 

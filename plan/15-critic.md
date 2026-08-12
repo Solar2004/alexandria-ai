@@ -103,10 +103,53 @@ Implementación en `alx-agent`:
 | `decompose.run` | TaskCreated | Descompone la tarea grande en micro-tareas antes de ejecutar |
 | `headless.spawn` | MicroTaskReady | Lanza micro-tareas independientes como sesiones headless paralelas |
 
-## 8. Decisiones
+## 8. Iteration loop por hook (R24)
+
+El problema real detectado por el usuario: *"la AI por código finaliza de trabajar y entonces el hook le diría vuelve a trabajar, primera iteración... tú no sabes lo que es una iteración, haces 1 trabajo listo y no repites para ver."*
+
+El critic loop (§2) itera DENTRO de una fase. Falta el **disparador por hook** que obliga a iterar CUALQUIER trabajo que la AI da por terminado.
+
+```
+Trabajo termina (Stop / TaskDone)
+  → hook iterate.trigger:
+      → lee state/iteration-state.toml (iter, max_iter, feedback[])
+      → ¿el trabajo pasó el criterio (critic aprueba)?
+          → SÍ → fin + informe (evidencia del pulido)
+      → NO → ¿iter < max_iter?
+          → iter += 1
+          → emite IterateRequest(iter, feedback_acumulado)
+          → la AI vuelve a trabajar CON el feedback de las iteraciones previas
+      → iter == max_iter → fin con informe de N iteraciones
+```
+
+```rust
+struct IterationState {
+    task_id: AlxId,
+    iter: u32,
+    max_iter: u32,          // phalanx config, default 3
+    feedback: Vec<String>,  // acumulado: qué falló / qué mejorar (cada iteración)
+    passed: bool,           // el critic aprobó
+}
+```
+
+Reglas:
+- **El hook no deja "terminar" sin iterar**: todo trabajo que produjo artefactos y no pasó verificación entra al loop.
+- **Iteración ≠ re-hacer**: iteración = verificar + criticar + MEJORAR con el feedback previo.
+- **Feedback acumulado**: la iteración N recibe los feedbacks 1..N-1 — no repite a ciegas, converge.
+- **max_iter configurable** (phalanx config, default 3). Al agotar → informe con historial de iteraciones.
+- **Escalada**: si tras max_iter el critic sigue bloqueando → escala a T3 (ver §2).
+
+Hook:
+
+| Hook | Evento | Qué hace |
+|---|---|---|
+| `iterate.trigger` | Stop / TaskDone | Fuerza iteración: lee/actualiza IterationState, emite IterateRequest con feedback acumulado |
+
+## 9. Decisiones
 
 - **Critic barato siempre**: criticar con T3 cuesta tanto como la propia fase. T1/T2 con reglas deterministas primero.
 - **El feedback es dato**: se persiste y alimenta la memoria; el sistema aprende de su propia crítica.
 - **Escalada controlada**: 3 iteraciones de critic barato, luego un T3 decide. Nunca bucle infinito.
 - **Descomposición obligatoria**: toda tarea que el planificador estime > N tokens de fase se descompone. Pequeño = imposible que falle.
-- **El humano ve el resultado pulido, no el proceso**: el bucle corre solo; los critic-reports quedan como evidencia para auditoría.
+- **Iteración es la norma, no la excepción**: el hook `iterate.trigger` la hace automática. Un solo pase sin verificar = trabajo incompleto.
+- **El humano ve el resultado pulido, no el proceso**: el bucle corre solo; los critic-reports e iteration-state quedan como evidencia.

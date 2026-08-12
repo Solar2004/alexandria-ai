@@ -1,14 +1,17 @@
 //! alx — binario CLI de ALEXANDRIA.
 //!
-//! Fase 2: skeleton funcional. El estado vive en memoria por invocación;
-//! la persistencia a disco llega en fases posteriores.
+//! Subcomandos: `run <titulo>` (pipeline de demo end-to-end), `status`
+//! (fachada alx-lib), `task add/list` y `--version`. El estado del DAG vive
+//! en memoria por invocación; la persistencia a disco llega en fases
+//! posteriores.
 
 use std::process::ExitCode;
 
 use clap::{CommandFactory, Parser, Subcommand};
 
-use alx_cli::{render_status, AppState};
+use alx_cli::{render_run, run_pipeline, AppState};
 use alx_core::types::{now_ms, PhaseId, Task};
+use alx_lib::Alexandria;
 
 /// ALEXANDRIA — motor de desarrollo IA autónomo.
 #[derive(Parser)]
@@ -24,7 +27,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Muestra el estado actual de las tareas.
+    /// Ejecuta el pipeline de demo end-to-end (task → DAG → descomposición → harness).
+    Run {
+        /// Título de la tarea demo.
+        titulo: String,
+    },
+    /// Estado actual del sistema (fachada alx-lib).
     Status,
     /// Gestiona tareas del DAG (en memoria).
     Task {
@@ -55,9 +63,14 @@ fn main() -> ExitCode {
 fn run(cli: Cli) -> ExitCode {
     let mut app = AppState::new();
     match cli.command {
-        None | Some(Command::Status) => {
-            println!("{}", render_status(&app));
-            print_help();
+        None => print_help(),
+        Some(Command::Run { titulo }) => {
+            let result = run_pipeline(&titulo);
+            println!("{}", render_run(&result));
+        }
+        Some(Command::Status) => {
+            let alex = Alexandria::new();
+            println!("{}", alex.status());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

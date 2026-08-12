@@ -63,7 +63,7 @@
 
 - [x] Fase 0: Plan maestro + memoria (este archivo + plan/)
 - [x] Fase 1: Workspace Rust + alx-core (tipos, event bus, store JSONL) — 15 crates, 13 tests verdes
-- [~] Fase 2: CLI `alx` (binario clap: status, task add/list, --version) — parcial, sin TUI
+- [~] Fase 2: CLI `alx` (status, task add/list, run pipeline end-to-end vía fachada alx-lib) — 6 tests
 - [~] Fase 3: alx-hooks (Hook, HookPriority, Registry, Dispatcher, DispatchPlan) — 12 tests
 - [~] Fase 4: alx-memory (compress caveman, RecallStore dedup/reinforce/inject/prune) — 12 tests
 - [~] Fase 5: alx-governor (classify→tier, router chains corregidas, budget) — 15 tests

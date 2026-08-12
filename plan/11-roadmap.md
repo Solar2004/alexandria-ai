@@ -80,6 +80,7 @@
 | 6.2 | Persistencia | `tasks.jsonl`, `dag.dot`, replay | test proptest: replay idéntico |
 | 6.3 | CLI task | create/list/show/deps/update/retry/skip/plan-from | comandos reales |
 | 6.4 | planning-with-files | `plan-from goal.md` → `task_plan.md`; `show` → `progress.md` | test: archivos escritos |
+| 6.5 | Decomposition engine | micro-tareas atómicas con `assert` + `done_when`; tarea grande → DAG de micro-tareas | test: tarea con 2 asserts → 2 micro-tareas |
 
 ## FASE 7 — `alx-harness` (pipeline)
 
@@ -164,6 +165,32 @@
 | 15.2 | Release | binario release, instalador final | instala limpio |
 | 15.3 | Meta | MISSION.md actualizado, 13-glosario completo | — |
 
+## FASE 16 — `alx-critic` (auto-crítica)
+
+**Objetivo**: la AI se critica sola, itera hasta pulir, aprende de sus errores.
+
+| # | Tarea | Subtareas | Verificación |
+|---|---|---|---|
+| 16.1 | Critic loop | critic T1 tras cada fase; feedback severidad; re-critic | test: fase rechazada → reabierta |
+| 16.2 | Criterios | `critics.toml`: reglas genéricas + por fase + must_check | test: check violado → blocker |
+| 16.3 | Reglas deterministas | secrets grep, clippy, cobertura, complejidad | test: secreto detectado |
+| 16.4 | critic.learn | error corregido → must_check futuro | test: fallo → check aprendido |
+| 16.5 | Escalada | 3 iter critic barato → T3 con historial | test: escalada a la 4ª |
+| 16.6 | critic-report | `state/critics/<task>/<phase>.jsonl` | test: report existe |
+
+## FASE 17 — `alx-audit` (ecosistema dedup)
+
+**Objetivo**: indexar todo (skills/agents/plugins/hooks/MCP), dedup, doctor.
+
+| # | Tarea | Subtareas | Verificación |
+|---|---|---|---|
+| 17.1 | Indexer | skills globales (86) + repo (24+3) → registry | test: total indexado |
+| 17.2 | Agent dedup | 842 agentes → registry único por slug+descripción | test: code-review → 1 |
+| 17.3 | Skill dedup | night-ops/fable/emil/planning → 1 fuente | test: sin duplicados |
+| 17.4 | Hook catalog | cbm-*, HCOM/CENTAURY, .orca, heredados → 20 .toml | `alx hook list` = 20 |
+| 17.5 | MCP registry | 10 servers registrados como clientes | test: discovery ok |
+| 17.6 | doctor | valida todo; informe de salud | `alx doctor` → 0 críticos |
+
 ## Criterio de "fase completa"
 
 Cada fase termina con: **tests verdes + comando real ejecutado + evidencia capturada**. Sin eso, la fase NO está completa y se revisa antes de avanzar.
@@ -174,7 +201,8 @@ Cada fase termina con: **tests verdes + comando real ejecutado + evidencia captu
 F1 → F2 → F3 → F4 ─┐
                 ├→ F5 → F6 → F7 → F8 → F9 ─┐
 F3 ──────────────┘                          ├→ F10 → F11 → F12 → F13 → F14 → F15
-                                            ┘
+                                            │
+                                            └→ F16 (critic) → F17 (audit) → F13–F15
 ```
 
-F3 (hooks) desbloquea F4 (memory) y F10 (mcp). F5 (governor) alimenta F6–F9. F12 (PHALANX) solo se completa cuando F3–F9 existen.
+F3 (hooks) desbloquea F4 (memory) y F10 (mcp). F5 (governor) alimenta F6–F9. F12 (PHALANX) solo se completa cuando F3–F9 existen. F16 (critic) se apoya en F6/F7/F3; F17 (audit) es independiente y puede correr en paralelo con F10.

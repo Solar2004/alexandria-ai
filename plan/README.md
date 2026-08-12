@@ -26,6 +26,8 @@ todo lo que está aquí se construye, se testea y se verifica.
 | `11-roadmap.md` | Fases de construcción paso a paso, tareas y subtareas |
 | `12-risks.md` | Riesgos, tradeoffs, decisiones pendientes |
 | `13-glosario.md` | Términos del dominio |
+| `14-auditoria.md` | Auditoría exhaustiva del ecosistema (global + repo + MCP + red), duplicados |
+| `15-critic.md` | Auto-crítica por código (`alx-critic`) + decomposition engine |
 
 ## Orden de lectura
 

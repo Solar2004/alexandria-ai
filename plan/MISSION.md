@@ -54,19 +54,24 @@
 
 - [x] Fase 0: Plan maestro + memoria (este archivo + plan/)
 - [ ] Fase 1: Workspace Rust + tipos core + CLI skeleton
-- [ ] Fase 2: alx-mcp (server de tools)
+- [ ] Fase 2: CLI skeleton + TUI
 - [ ] Fase 3: alx-hooks (engine de eventos)
 - [ ] Fase 4: alx-memory (auto-recalls)
 - [ ] Fase 5: alx-governor (routing + compresión + presupuesto + objetivos)
-- [ ] Fase 6: alx-harness (pipeline spec→ship)
-- [ ] Fase 7: alx-task (DAG de tareas)
+- [ ] Fase 6: alx-task (DAG de tareas + decomposition engine)
+- [ ] Fase 7: alx-harness (pipeline spec→ship)
 - [ ] Fase 8: alx-gate (verificación + LSP auto + lint)
 - [ ] Fase 9: alx-bench (performance matemático)
-- [ ] Fase 10: alx-night (modo autónomo)
-- [ ] Fase 11: Integración total (atg, headroom, MCP existentes)
-- [ ] Fase 12: Dogfood — usar ALEXANDER para construir una feature real
-- [ ] Fase 13: Docs + packaging + instalador
+- [ ] Fase 10: alx-mcp (server + client)
+- [ ] Fase 11: alx-night (modo autónomo)
+- [ ] Fase 12: PHALANX (el plugin único)
+- [ ] Fase 13: Integración total (atg, headroom, MCP existentes)
+- [ ] Fase 14: Dogfood — usar ALEXANDER para construir una feature real
+- [ ] Fase 15: Docs + packaging + instalador
+- [ ] Fase 16: Auto-crítica alx-critic (spec: `plan/15-critic.md`)
+- [ ] Fase 17: Auditoría/dedup alx-audit (spec: `plan/14-auditoria.md`)
 
 ## 5. Progreso de este intento (bitácora)
 
 - 2026-08-12: Creación plan maestro. Auditados aicli-ultimate (solo instalador) y AlexanderTheGreat (harness disperso, sin motor). Decisión: ALEXANDER/ALEXANDRIA/PHALANX. Ver plan/.
+- 2026-08-12 (tarde): Auditoría exhaustiva del ecosistema (86 skills globales, 842 agentes, 26 plugins, 10 MCP servers, 8 servicios de red, ~15 duplicados). 20 iteraciones más de arquitectura (total 40). Mermaid MEGA con pipeline+ifs, red real, hooks. Specs `alx-critic` (auto-crítica R18) y `alx-audit` (dedup R15). Roadmap ampliado a 17 fases. Los recalls que la AI aprende se vuelven checks del crítico = se mejora sola.

@@ -63,11 +63,11 @@
 
 - [x] Fase 0: Plan maestro + memoria (este archivo + plan/)
 - [x] Fase 1: Workspace Rust + alx-core (tipos, event bus, store JSONL) — 15 crates, 13 tests verdes
-- [ ] Fase 2: CLI skeleton + TUI
-- [ ] Fase 3: alx-hooks (engine de eventos)
-- [ ] Fase 4: alx-memory (auto-recalls)
-- [ ] Fase 5: alx-governor (routing + compresión + presupuesto + objetivos)
-- [ ] Fase 6: alx-task (DAG de tareas + decomposition engine)
+- [~] Fase 2: CLI `alx` (binario clap: status, task add/list, --version) — parcial, sin TUI
+- [~] Fase 3: alx-hooks (Hook, HookPriority, Registry, Dispatcher, DispatchPlan) — 12 tests
+- [~] Fase 4: alx-memory (compress caveman, RecallStore dedup/reinforce/inject/prune) — 12 tests
+- [~] Fase 5: alx-governor (classify→tier, router chains corregidas, budget) — 15 tests
+- [~] Fase 6: alx-task (TaskGraph transitions/ready/blocked, decompose micro-tareas) — 11 tests
 - [ ] Fase 7: alx-harness (pipeline spec→ship)
 - [ ] Fase 8: alx-gate (verificación + LSP auto + lint)
 - [ ] Fase 9: alx-bench (performance matemático)

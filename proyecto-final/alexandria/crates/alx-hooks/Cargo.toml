@@ -6,3 +6,5 @@ description = "Engine de eventos: ciclo Pre/Async/Post, timeout, lock"
 
 [dependencies]
 alx-core = { path = "../alx-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

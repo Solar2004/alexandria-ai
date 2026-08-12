@@ -4,5 +4,10 @@ version.workspace = true
 edition.workspace = true
 description = "Binario alx: subcomandos, TUI estado, merge atg"
 
+[[bin]]
+name = "alx"
+path = "src/main.rs"
+
 [dependencies]
 alx-core = { path = "../alx-core" }
+clap = { version = "4", features = ["derive"] }

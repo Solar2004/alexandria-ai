@@ -57,6 +57,7 @@
 6. **Harness por fase.** Cada fase del workflow tiene su harness con contrato de entrada/salida y compuertas de verificación.
 7. **Errores = datos.** Escribe qué falló y qué aprendiste, no borres el error.
 8. **Cada cosa que el dev "siempre repite" es un hook que falta.**
+9. **ITERACIÓN ES LA NORMA (R24).** Al terminar cualquier unidad de trabajo: VERIFICA (tests reales, evidencia) → CRITICA (qué falló, qué mejorar) → MEJORA. Un solo pase sin verificar = trabajo INCOMPLETO. El hook `iterate.trigger` lo hace automático en el sistema; en la sesión, aplícatelo tú: no "terminas" con 1 pase, iteras hasta que el criterio se cumple o se agotan las iteraciones, con feedback acumulado.
 
 ## 4. Estado de la build (actualizar siempre)
 

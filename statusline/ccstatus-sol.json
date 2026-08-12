@@ -7,35 +7,31 @@
     "type": "custom-symbol",
     "customSymbol": "☀",
     "color": "hex:1c1917",
-    "backgroundColor": "hex:f59e0b"
+    "backgroundColor": "hex:facc15"
    },
    {
     "id": "3",
     "type": "model",
-    "color": "hex:fffbeb",
-    "backgroundColor": "hex:d97706"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:f59e0b"
    },
    {
     "id": "5",
     "type": "context-percentage",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:b45309"
+    "backgroundColor": "hex:d97706"
    },
    {
     "id": "7",
     "type": "session-cost",
-    "color": "hex:052e16",
-    "backgroundColor": "hex:a3e635"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:fde047"
    },
    {
     "id": "9",
     "type": "git-branch",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:92400e"
-   },
-   {
-    "id": "11",
-    "type": "flex-separator"
+    "backgroundColor": "hex:b45309"
    },
    {
     "id": "12",
@@ -43,7 +39,7 @@
     "commandPath": "/home/artorias/.local/bin/ccclock",
     "timeout": 2000,
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:78350f"
+    "backgroundColor": "hex:92400e"
    },
    {
     "id": "14",
@@ -52,64 +48,7 @@
     "backgroundColor": "hex:57534e"
    }
   ],
-  [
-   {
-    "id": "21",
-    "type": "current-working-dir",
-    "color": "hex:fffbeb",
-    "backgroundColor": "hex:d97706"
-   },
-   {
-    "id": "22",
-    "type": "separator"
-   },
-   {
-    "id": "23",
-    "type": "git-changes",
-    "color": "hex:fffbeb",
-    "backgroundColor": "hex:78350f"
-   },
-   {
-    "id": "24",
-    "type": "separator"
-   },
-   {
-    "id": "25",
-    "type": "git-ci-status",
-    "color": "hex:052e16",
-    "backgroundColor": "hex:a3e635"
-   },
-   {
-    "id": "26",
-    "type": "separator"
-   },
-   {
-    "id": "27",
-    "type": "sandbox-status",
-    "color": "hex:fffbeb",
-    "backgroundColor": "hex:b45309"
-   },
-   {
-    "id": "28",
-    "type": "separator"
-   },
-   {
-    "id": "29",
-    "type": "cache-timer",
-    "color": "hex:1c1917",
-    "backgroundColor": "hex:f59e0b"
-   },
-   {
-    "id": "30",
-    "type": "separator"
-   },
-   {
-    "id": "31",
-    "type": "compaction-counter",
-    "color": "hex:fffbeb",
-    "backgroundColor": "hex:57534e"
-   }
-  ],
+  [],
   []
  ],
  "flexMode": "full-minus-40",
@@ -130,7 +69,7 @@
   ],
   "startCaps": [],
   "endCaps": [],
-  "autoAlign": true,
-  "continueThemeAcrossLines": true
+  "autoAlign": false,
+  "continueThemeAcrossLines": false
  }
 }

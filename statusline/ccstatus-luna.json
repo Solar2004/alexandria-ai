@@ -6,110 +6,49 @@
     "id": "1",
     "type": "custom-symbol",
     "customSymbol": "☾",
-    "color": "hex:eef2ff",
-    "backgroundColor": "hex:6366f1"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:fde047"
    },
    {
     "id": "3",
     "type": "model",
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:4f46e5"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:facc15"
    },
    {
     "id": "5",
     "type": "context-percentage",
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:4338ca"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:eab308"
    },
    {
     "id": "7",
     "type": "session-cost",
-    "color": "hex:052e16",
-    "backgroundColor": "hex:34d399"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:fef08a"
    },
    {
     "id": "9",
     "type": "git-branch",
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:3730a3"
-   },
-   {
-    "id": "11",
-    "type": "flex-separator"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:ca8a04"
    },
    {
     "id": "12",
     "type": "custom-command",
     "commandPath": "/home/artorias/.local/bin/ccclock",
     "timeout": 2000,
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:312e81"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:a16207"
    },
    {
     "id": "14",
     "type": "free-memory",
-    "color": "hex:e2e8f0",
-    "backgroundColor": "hex:475569"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:57534e"
    }
   ],
-  [
-   {
-    "id": "21",
-    "type": "current-working-dir",
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:4f46e5"
-   },
-   {
-    "id": "22",
-    "type": "separator"
-   },
-   {
-    "id": "23",
-    "type": "git-changes",
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:312e81"
-   },
-   {
-    "id": "24",
-    "type": "separator"
-   },
-   {
-    "id": "25",
-    "type": "git-ci-status",
-    "color": "hex:052e16",
-    "backgroundColor": "hex:34d399"
-   },
-   {
-    "id": "26",
-    "type": "separator"
-   },
-   {
-    "id": "27",
-    "type": "sandbox-status",
-    "color": "hex:e0e7ff",
-    "backgroundColor": "hex:4338ca"
-   },
-   {
-    "id": "28",
-    "type": "separator"
-   },
-   {
-    "id": "29",
-    "type": "cache-timer",
-    "color": "hex:eef2ff",
-    "backgroundColor": "hex:6366f1"
-   },
-   {
-    "id": "30",
-    "type": "separator"
-   },
-   {
-    "id": "31",
-    "type": "compaction-counter",
-    "color": "hex:e2e8f0",
-    "backgroundColor": "hex:475569"
-   }
-  ],
+  [],
   []
  ],
  "flexMode": "full-minus-40",
@@ -130,7 +69,7 @@
   ],
   "startCaps": [],
   "endCaps": [],
-  "autoAlign": true,
-  "continueThemeAcrossLines": true
+  "autoAlign": false,
+  "continueThemeAcrossLines": false
  }
 }

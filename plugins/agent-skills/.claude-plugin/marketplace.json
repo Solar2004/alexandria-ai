@@ -1,0 +1,15 @@
+{
+  "name": "addys-agent-skills",
+  "owner": {
+    "name": "Addy Osmani",
+    "email": "addyosmani@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "agent-skills",
+      "source": "./",
+      "description": "Production-grade engineering skills for AI coding agents (addyosmani)",
+      "version": "0.6.6"
+    }
+  ]
+}

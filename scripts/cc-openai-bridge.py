@@ -12,9 +12,9 @@ class H(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
 
     def _translate(self, body):
-        # body OpenAI: {model, messages:[{role, content}], max_tokens?, temperature?}
+        # body OpenAI: {messages|input: [{role, content}], max_tokens?, temperature?}
         msgs = []
-        for m in body.get("messages", []):
+        for m in body.get("messages") or body.get("input") or []:
             role = m["role"]
             if role == "system":
                 msgs.append({"role": "user", "content": "[Sistema] " + m["content"]})
@@ -48,6 +48,8 @@ class H(http.server.BaseHTTPRequestHandler):
                    "model": "deepseek-v4-flash",
                    "choices": [{"index": 0, "message": {"role": "assistant", "content": text},
                                 "finish_reason": data.get("stop_reason") or "stop"}],
+                   "output": [{"type": "message", "role": "assistant",
+                               "content": [{"type": "output_text", "text": text, "annotations": []}]}],
                    "usage": data.get("usage", {})}
             raw = json.dumps(out).encode()
             self.send_response(200)

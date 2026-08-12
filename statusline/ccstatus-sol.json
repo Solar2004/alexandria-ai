@@ -11,10 +11,11 @@
    },
    {
     "id": "3",
-    "type": "model",
+    "type": "custom-command",
+    "commandPath": "/home/artorias/.local/bin/ccmodel",
+    "timeout": 1000,
     "color": "hex:1c1917",
-    "backgroundColor": "hex:f59e0b",
-    "rawValue": true
+    "backgroundColor": "hex:f59e0b"
    },
    {
     "id": "5",

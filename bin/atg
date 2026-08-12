@@ -91,6 +91,7 @@ ensure_patched
 
 # Contexto real del modelo: CC ve claude-opus-4-6[1m] (1M) vía cc-model-mask; compacta al ~92% de 1M
 export CLAUDE_CODE_AUTO_COMPACT_WINDOW=900000
+export ANTHROPIC_MODEL="claude-opus-4-6[1m]"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

@@ -66,6 +66,7 @@ tar -czf "$OUT" \
   .local/bin/oc-go-cc-wrapper \
   .local/bin/hermes-perplexity-mcp \
   .zshrc \
+  CLAUDE.md \
   -C /tmp atg-stack.txt \
   2>/dev/null || {
   echo "ERROR: falló el tar (¿falta algún path?). Revisa la lista."

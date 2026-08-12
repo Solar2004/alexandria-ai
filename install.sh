@@ -160,6 +160,12 @@ claude plugin install agent-skills@addys-agent-skills >/dev/null 2>&1 \
   && ok "agent-skills instalado (24 skills + 8 commands)" \
   || warn "agent-skills no instalado — verifica con: claude plugin install agent-skills@addys-agent-skills"
 
+# ---------- 3e. Agentes especialistas (agency-agents) + skills emilkowalski ----------
+step "Agentes especialistas (265) + skills emilkowalski (10)"
+mkdir -p /home/artorias/.claude/agents /home/artorias/.claude/skills
+cp "$ATGHOME"/agents/*.md /home/artorias/.claude/agents/ 2>/dev/null && ok "265 agentes instalados" || warn "sin agentes"
+cp -r "$ATGHOME"/skills/emil/* /home/artorias/.claude/skills/ 2>/dev/null && ok "10 skills emil instaladas" || warn "sin skills emil"
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

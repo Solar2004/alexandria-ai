@@ -1,0 +1,8 @@
+[package]
+name = "alx-agents"
+version.workspace = true
+edition.workspace = true
+description = "Registry, router, spawn, headless sessions"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

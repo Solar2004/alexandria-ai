@@ -1,0 +1,8 @@
+[package]
+name = "alx-hooks"
+version.workspace = true
+edition.workspace = true
+description = "Engine de eventos: ciclo Pre/Async/Post, timeout, lock"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

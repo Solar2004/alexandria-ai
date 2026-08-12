@@ -1,0 +1,8 @@
+[package]
+name = "alx-bench"
+version.workspace = true
+edition.workspace = true
+description = "Metricas perf, umbrales, diff check"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

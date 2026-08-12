@@ -1,0 +1,8 @@
+[package]
+name = "alx-mcp"
+version.workspace = true
+edition.workspace = true
+description = "Server stdio/SSE + client a servidores existentes"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

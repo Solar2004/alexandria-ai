@@ -38,6 +38,10 @@ todo lo que está aquí se construye, se testea y se verifica.
 5. `09-token-economics.md` — el "barato y rápido"
 6. `11-roadmap.md` — por dónde empezamos
 
+## Vista visual
+
+- `media/alexandria-mermaid.png` — render del Mermaid MEGA (sistema completo + pipeline con decisiones + red real). Generado con mermaid.js vía navegador.
+
 ## Regla de oro
 
 Cada fase de la build termina con **evidencia verificable**: `cargo test` verde,

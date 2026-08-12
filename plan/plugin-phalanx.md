@@ -43,10 +43,12 @@ default_tier = "T2Medium"
 warn_at_pct = 80
 hard_cap_pct = 100
 routes = [
-  { tier = "T1Cheap",  proxy = "http://127.0.0.1:3456",  ready = "/readyz" },   # routatic
-  { tier = "T2Medium", proxy = "http://127.0.0.1:8788",  ready = "/readyz" },   # headroom
-  { tier = "T3Premium",proxy = "http://127.0.0.1:20128", ready = "/readyz" },   # omniroute
+  # routatic = PROVIDER (deepseek-v4-flash). headroom comprime, mask enmascara el modelo.
+  { tier = "T1Cheap",  chain = ["http://127.0.0.1:3456"] },                                        # routatic directo
+  { tier = "T2Medium", chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3460", "http://127.0.0.1:3456"] },  # headroom→mask→routatic
+  { tier = "T3Premium",chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3460", "http://127.0.0.1:3456"] },
 ]
+fallback = "http://127.0.0.1:20128"   # omniroute: SOLO si routatic cae (no es cadena principal)
 
 [memory]
 store = "~/.alexandria/state/recalls.jsonl"
@@ -73,7 +75,11 @@ commit = true                        # commit atómico tras cada pasada
 [mcp]
 server_stdio = true
 server_sse = { enabled = true, port = 8770 }
-clients = ["codebase-memory", "code-graph-rag", "horario", "media", "notebooklm", "perplexity", "playwright", "figma"]
+
+[mcp.clients]
+# Default = los 5 necesarios (arrancan siempre). El resto opcional (se activan por fase).
+default = ["codebase-memory", "code-graph-rag", "notebooklm", "mcp-search", "chrome-devtools"]
+optional = ["perplexity", "playwright", "figma", "media", "horario"]
 ```
 
 **Este archivo ES la configuración de PHALANX.** El motor lo lee y se configura solo. Cambiar `config.toml` cambia el comportamiento del sistema — sin recompilar.

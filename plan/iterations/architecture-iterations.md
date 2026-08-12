@@ -153,3 +153,59 @@ Diagrama único completo en `../02-architecture.md` §2.
 4. **El contexto mínimo gana** — sesiones headless pequeñas con envelope mínimo ahorran más que cualquier optimización de prompt.
 5. **Los duplicados son deuda** — registry único dedup antes de integrar, no después.
 6. **La infra real dicta el governor** — la cadena de proxies existente es la ruta canónica; el governor solo añade fallback y presupuesto.
+
+---
+
+# Iteraciones 41–47 (tercera pasada — corrección de red y MCP, paso a Fase 1)
+
+> Disparadas por el usuario: *"el omniroute solo es para los sistemas porque usamos routatic tipo para provedor... itera todo esto unas 7 veces mas... los mcp integrados pon solo los necesarios default... como codebase memory, notebooklm, mcp search el claude mem, chrome devtools, y code graph rag... pasa a la fase 1"*.
+
+## Resumen
+
+| # | Cambio | Por qué |
+|---|---|---|
+| 41 | **Red corregida**: routatic = PROVIDER principal (router → deepseek). Omniroute NO es parte de la cadena; es gateway de FALLBACK multi-proveedor cuando routatic cae | El usuario corrigió: omniroute no es para el sistema/providers reales |
+| 42 | **MCP defaults del plugin = 5 necesarios**: codebase-memory, notebooklm, mcp-search (claude-mem), chrome-devtools, code-graph-rag | El resto (perplexity, playwright, figma, media, horario) = opcionales, activables por config |
+| 43 | config.toml: `mcp.clients.default = [5]` + `mcp.clients.optional = [...]` | Un solo lugar decide qué MCP arranca |
+| 44 | Mermaid red: omniroute fuera de la cadena, como rama fallback lateral | Diagrama refleja la realidad del routing |
+| 45 | Budget por tier ajustado a realidad: T1 = routatic directo; T2/T3 = headroom→mask→routatic | El coste depende de la ruta real |
+| 46 | Validar R1–R19 con red corregida; sin contradicciones | El plan debe ser consistente antes de codificar |
+| 47 | Mermaid MEGA v2: red corregida + MCP defaults destacados | Fase 1 arranca con arquitectura estable |
+
+## Mermaid clave #6 (iteración 41) — red corregida
+
+```mermaid
+flowchart LR
+    CC[Claude Code] --> H[headroom :8788 compresion]
+    H --> MASK[cc-model-mask :3460]
+    MASK --> R[routatic :3456 PROVIDER]
+    R --> DS[deepseek-v4-flash]
+    OMNI[omniroute :20128 fallback gateway] -.->|solo si routatic cae| R
+    BR[cc-openai-bridge :3461] -.-> R
+```
+
+## Mermaid clave #7 (iteración 42) — MCP defaults del plugin
+
+```mermaid
+flowchart LR
+    ALX[alx-mcp-client] -->|DEFAULT 5| CM[codebase-memory]
+    ALX --> CM2[notebooklm]
+    ALX --> MS[mcp-search claude-mem]
+    ALX --> CD[chrome-devtools]
+    ALX --> CGR[code-graph-rag]
+    ALX -.->|opcionales| P[perplexity]
+    ALX -.-> PW[playwright]
+    ALX -.-> FG[figma]
+    ALX -.-> MD[media]
+    ALX -.-> HR[horario]
+```
+
+## Iteración 47 (FINAL) — Mermaid MEGA v2
+
+Diagrama único en `../02-architecture.md` §2: red corregida (routatic=provider, omniroute=fallback), MCP defaults destacados, 15 crates.
+
+## Lecciones de las iteraciones 41–47
+
+1. **La red es del usuario, no del diagrama** — corregir el modelo de red ANTES de codificar el governor; el fallback no es cadena principal.
+2. **Defaults minimalistas** — 5 MCP necesarios arrancan por defecto; el resto se activa cuando la fase lo necesita. Menos superficie, menos coste, menos rotura.
+3. **Iterar hasta consistencia** — 47 iteraciones = el plan se corrige a sí mismo antes de tocar código. Ahora sí, Fase 1.

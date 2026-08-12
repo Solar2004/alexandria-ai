@@ -1,0 +1,8 @@
+[package]
+name = "alx-night"
+version.workspace = true
+edition.workspace = true
+description = "Scheduler autonomo: cron, informe, commit atomico"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

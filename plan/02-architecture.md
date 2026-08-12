@@ -66,26 +66,26 @@ flowchart TB
         M2["alx-mcp-client"]
     end
 
-    subgraph S["SERVIDORES MCP (10)"]
-        S1["codebase-memory"]
-        S2["code-graph-rag"]
-        S3["horario"]
-        S4["media"]
-        S5["notebooklm"]
-        S6["perplexity"]
-        S7["playwright"]
-        S8["figma (HTTP)"]
-        S9["mcp-search (claude-mem)"]
-        S10["chrome-devtools"]
+    subgraph S["SERVIDORES MCP (default 5 + opcionales)"]
+        S1["codebase-memory [DEFAULT]"]
+        S2["code-graph-rag [DEFAULT]"]
+        S3["notebooklm [DEFAULT]"]
+        S4["mcp-search claude-mem [DEFAULT]"]
+        S5["chrome-devtools [DEFAULT]"]
+        S6["perplexity (opcional)"]
+        S7["playwright (opcional)"]
+        S8["figma (opcional)"]
+        S9["media (opcional)"]
+        S10["horario (opcional)"]
     end
 
-    subgraph NET["RED REAL (verificada)"]
+    subgraph NET["RED (corregida iter 41: routatic=PROVIDER)"]
         direction LR
         N1["headroom :8788 compresion"]
         N2["cc-model-mask :3460"]
-        N3["routatic :3456"]
+        N3["routatic :3456 PROVIDER"]
         N4["deepseek-v4-flash"]
-        N5["omniroute :20128 fallback"]
+        N5["omniroute :20128 fallback gateway (solo si routatic cae)"]
         N6["cc-openai-bridge :3461"]
     end
 
@@ -147,9 +147,9 @@ flowchart LR
 flowchart LR
     CC[Claude Code] --> H[headroom :8788 compresion]
     H --> MASK[cc-model-mask :3460]
-    MASK --> R[routatic :3456]
+    MASK --> R[routatic :3456 PROVIDER]
     R --> DS[deepseek-v4-flash]
-    OMNI[omniroute :20128 fallback] -.-> R
+    OMNI[omniroute :20128 fallback gateway] -.->|solo si routatic cae| R
     BR[cc-openai-bridge :3461 OpenAI↔Anthropic] -.-> R
     CC2[Codex futuro] --> H
 ```

@@ -1,0 +1,8 @@
+[package]
+name = "alx-audit"
+version.workspace = true
+edition.workspace = true
+description = "Registry dedup: skills/agents/plugins/hooks, doctor"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

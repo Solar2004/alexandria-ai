@@ -1,0 +1,8 @@
+[package]
+name = "alx-memory"
+version.workspace = true
+edition.workspace = true
+description = "Auto-recalls: capturar, comprimir caveman, inyectar"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

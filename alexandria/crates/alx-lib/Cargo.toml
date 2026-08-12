@@ -1,0 +1,8 @@
+[package]
+name = "alx-lib"
+version.workspace = true
+edition.workspace = true
+description = "Fachada publica: todo lo que PHALANX expone"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

@@ -3,3 +3,5 @@ backups/
 .qdrant_code_embeddings/
 .claude/hooks/node_modules/
 night-ops/report/
+.playwright-mcp/
+plan/media/

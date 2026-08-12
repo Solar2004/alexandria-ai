@@ -1,0 +1,8 @@
+[package]
+name = "alx-harness"
+version.workspace = true
+edition.workspace = true
+description = "Pipeline de fases: contratos, compuertas, reanudable"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

@@ -53,7 +53,7 @@
 ## 4. Estado de la build (actualizar siempre)
 
 - [x] Fase 0: Plan maestro + memoria (este archivo + plan/)
-- [ ] Fase 1: Workspace Rust + tipos core + CLI skeleton
+- [x] Fase 1: Workspace Rust + alx-core (tipos, event bus, store JSONL) — 15 crates, 13 tests verdes
 - [ ] Fase 2: CLI skeleton + TUI
 - [ ] Fase 3: alx-hooks (engine de eventos)
 - [ ] Fase 4: alx-memory (auto-recalls)

@@ -16,13 +16,15 @@ Clasificador de dificultad — reglas + heurística sobre el prompt:
 
 Score → tier:
 
-| Score | Tier | Modelos (por ruta) | Uso |
-|---|---|---|---|
-| < 0.3 | T1Cheap | deepseek-v4-flash (routatic :3456), haiku | mecánico, search, format, lint-fix |
-| 0.3–0.7 | T2Medium | sonnet (headroom :8788) | implementación normal, tests |
-| > 0.7 | T3Premium | opus (headroom/omniroute) | planificación, review, ambigüedad, seguridad |
+| Score | Tier | Qué controla | Ruta real | Uso |
+|---|---|---|---|---|
+| < 0.3 | T1Cheap | budget 2k, effort bajo | routatic :3456 (deepseek-v4-flash) | mecánico, search, format, lint-fix |
+| 0.3–0.7 | T2Medium | budget 15k, effort medio | headroom :8788 → mask :3460 → routatic :3456 | implementación normal, tests |
+| > 0.7 | T3Premium | budget 60k, effort alto | headroom :8788 → mask :3460 → routatic :3456 | planificación, review, ambigüedad, seguridad |
 
-**Ruta por disponibilidad**: governor comprueba `/readyz` de cada proxy y fallback en orden: headroom → routatic → omniroute → directo.
+**Nota de red (corregida, iteración 41)**: hoy el provider real es UNO — `routatic` → `deepseek-v4-flash`. `headroom` comprime el contexto antes, `cc-model-mask` enmascara el nombre de modelo (`claude-opus-4-6[1m]` ↔ `deepseek-v4-flash`) para que CC no se desconfíe. Los tiers T1/T2/T3 **no seleccionan modelos distintos todavía**: controlan presupuesto, effort y nivel de compresión. El `mask` oculta el modelo real en la cadena.
+
+**Ruta por disponibilidad**: governor comprueba `/readyz` de headroom. Cadena canónica: `headroom → mask → routatic`. **Fallback**: si `routatic` no responde → `omniroute :20128` (gateway multi-proveedor) como única alternativa. Si `headroom` no responde → directo a routatic (sin compresión). Omniroute NO es parte de la cadena principal — solo entra cuando routatic cae.
 
 ## 2. Compresión (optimización de hablar)
 

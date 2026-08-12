@@ -1,0 +1,8 @@
+[package]
+name = "alx-critic"
+version.workspace = true
+edition.workspace = true
+description = "Auto-critica: feedback loop, escalada T3, critic.learn"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

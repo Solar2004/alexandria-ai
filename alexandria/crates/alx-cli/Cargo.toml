@@ -1,0 +1,8 @@
+[package]
+name = "alx-cli"
+version.workspace = true
+edition.workspace = true
+description = "Binario alx: subcomandos, TUI estado, merge atg"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

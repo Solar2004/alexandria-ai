@@ -1,0 +1,8 @@
+[package]
+name = "alx-governor"
+version.workspace = true
+edition.workspace = true
+description = "Gobernador de coste: routing dificultad a tier, budget, ledger"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

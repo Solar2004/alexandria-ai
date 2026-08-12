@@ -1,0 +1,8 @@
+[package]
+name = "alx-task"
+version.workspace = true
+edition.workspace = true
+description = "DAG de tareas + decomposition engine (micro-tareas con assert)"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/alx-core",
+  "crates/alx-hooks",
+  "crates/alx-memory",
+  "crates/alx-governor",
+  "crates/alx-task",
+  "crates/alx-harness",
+  "crates/alx-gate",
+  "crates/alx-bench",
+  "crates/alx-critic",
+  "crates/alx-audit",
+  "crates/alx-night",
+  "crates/alx-mcp",
+  "crates/alx-agents",
+  "crates/alx-cli",
+  "crates/alx-lib",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[profile.release]
+lto = true
+strip = true

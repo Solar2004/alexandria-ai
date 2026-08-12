@@ -1,0 +1,8 @@
+[package]
+name = "alx-gate"
+version.workspace = true
+edition.workspace = true
+description = "Verificacion: build/test/lint, LSP discovery, evidencia"
+
+[dependencies]
+alx-core = { path = "../alx-core" }

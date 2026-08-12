@@ -71,8 +71,23 @@ apply_theme() {
   [ -f "$src" ] && cp "$src" /home/artorias/.config/ccstatusline/settings.json
 }
 
+# ---------- auto-repatch tras updates de Claude Code ----------
+ensure_patched() {
+  local VDIR=/home/artorias/.local/share/claude/versions
+  local BIN=$(ls -1t "$VDIR"/2.* 2>/dev/null | head -1)
+  [ -n "$BIN" ] || return 0
+  if grep -aq "AlexanderTheGreat" "$BIN" 2>/dev/null; then
+    return 0  # ya parchado
+  fi
+  echo "atg: detectada versión nueva de Claude Code ($(basename "$BIN")) — re-parcheando..."
+  HOME=/home/artorias /home/artorias/.local/bin/uvx patch-cc apply --brand "AlexanderTheGreat" --org-label --suffix "atg-build" >/dev/null 2>&1 \
+    && bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-logo.sh "$BIN" >/dev/null 2>&1 \
+    && echo "atg: parche aplicado ✓" || echo "atg: ⚠ no se pudo re-parchear (revisar patch-cc)"
+}
+
 auto_init
 apply_theme
+ensure_patched
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

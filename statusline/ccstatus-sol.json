@@ -5,50 +5,54 @@
    {
     "id": "1",
     "type": "custom-symbol",
-    "customSymbol": "☀",
     "color": "hex:1c1917",
-    "backgroundColor": "hex:facc15"
+    "backgroundColor": "hex:facc15",
+    "customSymbol": "☀"
    },
    {
     "id": "3",
     "type": "model",
     "color": "hex:1c1917",
-    "backgroundColor": "hex:f59e0b"
+    "backgroundColor": "hex:f59e0b",
+    "rawValue": true
    },
    {
     "id": "5",
     "type": "context-percentage",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:d97706"
+    "backgroundColor": "hex:d97706",
+    "rawValue": true
    },
    {
     "id": "7",
     "type": "session-cost",
     "color": "hex:1c1917",
-    "backgroundColor": "hex:fde047"
+    "backgroundColor": "hex:fde047",
+    "rawValue": true
    },
    {
     "id": "9",
     "type": "git-branch",
     "color": "hex:fffbeb",
     "backgroundColor": "hex:b45309"
-   },
+   }
+  ],
+  [
    {
     "id": "12",
     "type": "custom-command",
-    "commandPath": "/home/artorias/.local/bin/ccclock",
-    "timeout": 2000,
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:92400e"
+    "backgroundColor": "hex:92400e",
+    "commandPath": "/home/artorias/.local/bin/ccclock",
+    "timeout": 2000
    },
    {
     "id": "14",
     "type": "free-memory",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:57534e"
+    "backgroundColor": "hex:854d0e"
    }
   ],
-  [],
   []
  ],
  "flexMode": "full-minus-40",
@@ -68,7 +72,9 @@
    false
   ],
   "startCaps": [],
-  "endCaps": [],
+  "endCaps": [
+   ""
+  ],
   "autoAlign": false,
   "continueThemeAcrossLines": false
  }

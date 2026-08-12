@@ -5,12 +5,8 @@
    {
     "id": "1",
     "type": "custom-symbol",
-    "customSymbol": "\u2694",
+    "customSymbol": "☀",
     "color": "#ca8a04"
-   },
-   {
-    "id": "2",
-    "type": "separator"
    },
    {
     "id": "3",
@@ -18,17 +14,9 @@
     "color": "#a16207"
    },
    {
-    "id": "4",
-    "type": "separator"
-   },
-   {
     "id": "5",
     "type": "context-percentage",
     "color": "#b45309"
-   },
-   {
-    "id": "6",
-    "type": "separator"
    },
    {
     "id": "7",
@@ -36,33 +24,20 @@
     "color": "#65a30d"
    },
    {
-    "id": "8",
-    "type": "separator"
-   },
-   {
     "id": "9",
     "type": "git-branch",
     "color": "#b45309"
    },
    {
-    "id": "10",
-    "type": "git-changes",
-    "color": "#78716c"
-   },
-   {
     "id": "11",
-    "type": "separator"
+    "type": "flex-separator"
    },
    {
     "id": "12",
     "type": "custom-command",
     "commandPath": "/home/artorias/.local/bin/ccclock",
     "timeout": 2000,
-    "color": "#ca8a04"
-   },
-   {
-    "id": "13",
-    "type": "separator"
+    "color": "#a16207"
    },
    {
     "id": "14",
@@ -70,7 +45,58 @@
     "color": "#78716c"
    }
   ],
-  [],
+  [
+   {
+    "id": "21",
+    "type": "current-working-dir",
+    "color": "#a16207"
+   },
+   {
+    "id": "22",
+    "type": "separator"
+   },
+   {
+    "id": "23",
+    "type": "git-changes",
+    "color": "#78716c"
+   },
+   {
+    "id": "24",
+    "type": "separator"
+   },
+   {
+    "id": "25",
+    "type": "git-ci-status",
+    "color": "#65a30d"
+   },
+   {
+    "id": "26",
+    "type": "separator"
+   },
+   {
+    "id": "27",
+    "type": "sandbox-status",
+    "color": "#b45309"
+   },
+   {
+    "id": "28",
+    "type": "separator"
+   },
+   {
+    "id": "29",
+    "type": "cache-timer",
+    "color": "#ca8a04"
+   },
+   {
+    "id": "30",
+    "type": "separator"
+   },
+   {
+    "id": "31",
+    "type": "compaction-counter",
+    "color": "#78716c"
+   }
+  ],
   []
  ],
  "flexMode": "full-minus-40",
@@ -82,16 +108,16 @@
  "gitCacheTtlSeconds": 5,
  "minimalistMode": false,
  "powerline": {
-  "enabled": false,
+  "enabled": true,
   "separators": [
-   "\ue0b0"
+   ""
   ],
   "separatorInvertBackground": [
    false
   ],
   "startCaps": [],
   "endCaps": [],
-  "autoAlign": false,
-  "continueThemeAcrossLines": false
+  "autoAlign": true,
+  "continueThemeAcrossLines": true
  }
 }

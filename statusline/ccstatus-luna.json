@@ -5,12 +5,8 @@
    {
     "id": "1",
     "type": "custom-symbol",
-    "customSymbol": "\u2694",
+    "customSymbol": "☾",
     "color": "#818cf8"
-   },
-   {
-    "id": "2",
-    "type": "separator"
    },
    {
     "id": "3",
@@ -18,17 +14,9 @@
     "color": "#a5b4fc"
    },
    {
-    "id": "4",
-    "type": "separator"
-   },
-   {
     "id": "5",
     "type": "context-percentage",
     "color": "#c7d2fe"
-   },
-   {
-    "id": "6",
-    "type": "separator"
    },
    {
     "id": "7",
@@ -36,22 +24,13 @@
     "color": "#86efac"
    },
    {
-    "id": "8",
-    "type": "separator"
-   },
-   {
     "id": "9",
     "type": "git-branch",
     "color": "#818cf8"
    },
    {
-    "id": "10",
-    "type": "git-changes",
-    "color": "#94a3b8"
-   },
-   {
     "id": "11",
-    "type": "separator"
+    "type": "flex-separator"
    },
    {
     "id": "12",
@@ -61,16 +40,63 @@
     "color": "#a5b4fc"
    },
    {
-    "id": "13",
-    "type": "separator"
-   },
-   {
     "id": "14",
     "type": "free-memory",
     "color": "#94a3b8"
    }
   ],
-  [],
+  [
+   {
+    "id": "21",
+    "type": "current-working-dir",
+    "color": "#a5b4fc"
+   },
+   {
+    "id": "22",
+    "type": "separator"
+   },
+   {
+    "id": "23",
+    "type": "git-changes",
+    "color": "#94a3b8"
+   },
+   {
+    "id": "24",
+    "type": "separator"
+   },
+   {
+    "id": "25",
+    "type": "git-ci-status",
+    "color": "#86efac"
+   },
+   {
+    "id": "26",
+    "type": "separator"
+   },
+   {
+    "id": "27",
+    "type": "sandbox-status",
+    "color": "#c7d2fe"
+   },
+   {
+    "id": "28",
+    "type": "separator"
+   },
+   {
+    "id": "29",
+    "type": "cache-timer",
+    "color": "#818cf8"
+   },
+   {
+    "id": "30",
+    "type": "separator"
+   },
+   {
+    "id": "31",
+    "type": "compaction-counter",
+    "color": "#94a3b8"
+   }
+  ],
   []
  ],
  "flexMode": "full-minus-40",
@@ -82,16 +108,16 @@
  "gitCacheTtlSeconds": 5,
  "minimalistMode": false,
  "powerline": {
-  "enabled": false,
+  "enabled": true,
   "separators": [
-   "\ue0b0"
+   ""
   ],
   "separatorInvertBackground": [
    false
   ],
   "startCaps": [],
   "endCaps": [],
-  "autoAlign": false,
-  "continueThemeAcrossLines": false
+  "autoAlign": true,
+  "continueThemeAcrossLines": true
  }
 }

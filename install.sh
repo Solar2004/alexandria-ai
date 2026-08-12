@@ -112,6 +112,22 @@ print("ok")
 PYEOF
 ok "MCPs globales configurados"
 
+# ---------- 3d. Scripts propios + plugin agent-skills (addyosmani) ----------
+step "Scripts propios (ccmodel, oc-go-cc-wrapper, cc-model-mask)"
+install -m 755 "$ATGHOME/scripts/ccmodel" /home/artorias/.local/bin/ccmodel 2>/dev/null || true
+install -m 755 "$ATGHOME/scripts/oc-go-cc-wrapper" /home/artorias/.local/bin/oc-go-cc-wrapper 2>/dev/null || true
+install -m 755 "$ATGHOME/scripts/cc-model-mask.py" /home/artorias/.local/bin/cc-model-mask.py 2>/dev/null || true
+ok "scripts instalados"
+
+step "Plugin agent-skills (marketplace local portátil)"
+if ! claude plugin marketplace list 2>/dev/null | grep -q addys; then
+  claude plugin marketplace add "$ATGHOME/plugins/agent-skills" >/dev/null 2>&1 || warn "marketplace addys ya existe o falló (continúo)"
+fi
+claude plugin marketplace update addys-agent-skills >/dev/null 2>&1 || true
+claude plugin install agent-skills@addys-agent-skills >/dev/null 2>&1 \
+  && ok "agent-skills instalado (24 skills + 8 commands)" \
+  || warn "agent-skills no instalado — verifica con: claude plugin install agent-skills@addys-agent-skills"
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

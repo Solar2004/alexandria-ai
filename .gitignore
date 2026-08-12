@@ -1,3 +1,5 @@
 backups/
 *.bak*
 .qdrant_code_embeddings/
+.claude/hooks/node_modules/
+night-ops/report/

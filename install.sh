@@ -194,6 +194,44 @@ SRVEOF
 fi
 ok "bridge OpenAI listo"
 
+# ---------- 3g. Showcase infra (auto-activacion skills) + fable-mode + night-ops ----------
+step "Showcase hooks (auto-activacion) + fable-mode + night-ops"
+if [ -d "$ATGHOME/.claude/hooks" ]; then
+  (cd "$ATGHOME/.claude/hooks" && npm install --no-audit --no-fund >/dev/null 2>&1 || true)
+  chmod +x "$ATGHOME"/.claude/hooks/*.sh "$ATGHOME"/.claude/scripts/*.sh 2>/dev/null || true
+  ok "hooks showcase listos (npm deps + exec)"
+fi
+mkdir -p /home/artorias/.claude/skills
+for s in fable-mode fable-opus fable-sonnet fable-haiku execution-guardrails night-ops; do
+  cp -r "$ATGHOME/skills/fable/$s" /home/artorias/.claude/skills/ 2>/dev/null
+  [ "$s" = "night-ops" ] && cp -r "$ATGHOME/skills/night-ops" /home/artorias/.claude/skills/
+done
+ok "skills fable-mode (5) + night-ops instaladas"
+install -m 755 "$ATGHOME/scripts/night-run.sh" "$ATGHOME/scripts/night-run.sh" 2>/dev/null || true
+if [ ! -f /home/artorias/.config/systemd/user/night-ops.timer ]; then
+  cat > /home/artorias/.config/systemd/user/night-ops.service <<'SRVEOF'
+[Unit]
+Description=night-ops: ejecuta la cola nocturna con Claude Code
+
+[Service]
+Type=oneshot
+ExecStart=/home/artorias/Projectos/AlexanderTheGreat/scripts/night-run.sh
+SRVEOF
+  cat > /home/artorias/.config/systemd/user/night-ops.timer <<'SRVEOF'
+[Unit]
+Description=night-ops: procesa la cola a las 02:00
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+SRVEOF
+  systemctl --user daemon-reload && systemctl --user enable --now night-ops.timer || true
+fi
+ok "modo nocturno listo (timer 02:00)"
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

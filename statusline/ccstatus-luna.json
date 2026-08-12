@@ -24,6 +24,13 @@
     "rawValue": true
    },
    {
+    "id": "6",
+    "type": "context-window",
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:ca8a04",
+    "rawValue": true
+   },
+   {
     "id": "7",
     "type": "session-cost",
     "color": "hex:1c1917",
@@ -34,15 +41,34 @@
     "id": "9",
     "type": "git-branch",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:ca8a04"
+    "backgroundColor": "hex:a16207"
    }
   ],
   [
    {
+    "id": "23",
+    "type": "git-changes",
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:854d0e",
+    "rawValue": true
+   },
+   {
+    "id": "27",
+    "type": "cache-timer",
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:fde047"
+   },
+   {
+    "id": "31",
+    "type": "compaction-counter",
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:57534e"
+   },
+   {
     "id": "12",
     "type": "custom-command",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:a16207",
+    "backgroundColor": "hex:854d0e",
     "commandPath": "/home/artorias/.local/bin/ccclock",
     "timeout": 2000
    },
@@ -50,7 +76,8 @@
     "id": "14",
     "type": "free-memory",
     "color": "hex:fffbeb",
-    "backgroundColor": "hex:854d0e"
+    "backgroundColor": "hex:57534e",
+    "rawValue": true
    }
   ],
   []

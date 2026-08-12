@@ -166,6 +166,34 @@ mkdir -p /home/artorias/.claude/agents /home/artorias/.claude/skills
 cp "$ATGHOME"/agents/*.md /home/artorias/.claude/agents/ 2>/dev/null && ok "265 agentes instalados" || warn "sin agentes"
 cp -r "$ATGHOME"/skills/emil/* /home/artorias/.claude/skills/ 2>/dev/null && ok "10 skills emil instaladas" || warn "sin skills emil"
 
+# ---------- 3f. Agent-volt (156) + planning-with-files + bridge OpenAI ----------
+step "Agent-volt (156) + planning-with-files + cc-openai-bridge"
+cp "$ATGHOME"/agents-volt/*.md /home/artorias/.claude/agents/ 2>/dev/null && ok "156 agentes volt instalados" || warn "sin agentes volt"
+if ! claude plugin marketplace list 2>/dev/null | grep -q planning-with-files; then
+  claude plugin marketplace add "$ATGHOME/plugins/planning-with-files" >/dev/null 2>&1 || true
+fi
+claude plugin marketplace update planning-with-files >/dev/null 2>&1 || true
+claude plugin install planning-with-files@planning-with-files >/dev/null 2>&1 \
+  && ok "planning-with-files instalado (planes persistentes)" \
+  || warn "planning-with-files falló"
+install -m 755 "$ATGHOME/scripts/cc-openai-bridge.py" /home/artorias/.local/bin/cc-openai-bridge.py 2>/dev/null || true
+if [ ! -f /home/artorias/.config/systemd/user/cc-openai-bridge.service ]; then
+  cat > /home/artorias/.config/systemd/user/cc-openai-bridge.service <<'SRVEOF'
+[Unit]
+Description=cc-openai-bridge — OpenAI chat/completions -> Anthropic routatic (:3461)
+After=oc-go-cc.service
+
+[Service]
+ExecStart=/usr/bin/env -u PYTHONPATH /home/artorias/.local/bin/cc-openai-bridge.py 3461
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+SRVEOF
+  systemctl --user daemon-reload && systemctl --user enable --now cc-openai-bridge.service || true
+fi
+ok "bridge OpenAI listo"
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

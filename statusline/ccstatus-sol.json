@@ -6,27 +6,32 @@
     "id": "1",
     "type": "custom-symbol",
     "customSymbol": "☀",
-    "color": "#ca8a04"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:f59e0b"
    },
    {
     "id": "3",
     "type": "model",
-    "color": "#a16207"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:d97706"
    },
    {
     "id": "5",
     "type": "context-percentage",
-    "color": "#b45309"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:b45309"
    },
    {
     "id": "7",
     "type": "session-cost",
-    "color": "#65a30d"
+    "color": "hex:052e16",
+    "backgroundColor": "hex:a3e635"
    },
    {
     "id": "9",
     "type": "git-branch",
-    "color": "#b45309"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:92400e"
    },
    {
     "id": "11",
@@ -37,19 +42,22 @@
     "type": "custom-command",
     "commandPath": "/home/artorias/.local/bin/ccclock",
     "timeout": 2000,
-    "color": "#a16207"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:78350f"
    },
    {
     "id": "14",
     "type": "free-memory",
-    "color": "#78716c"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:57534e"
    }
   ],
   [
    {
     "id": "21",
     "type": "current-working-dir",
-    "color": "#a16207"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:d97706"
    },
    {
     "id": "22",
@@ -58,7 +66,8 @@
    {
     "id": "23",
     "type": "git-changes",
-    "color": "#78716c"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:78350f"
    },
    {
     "id": "24",
@@ -67,7 +76,8 @@
    {
     "id": "25",
     "type": "git-ci-status",
-    "color": "#65a30d"
+    "color": "hex:052e16",
+    "backgroundColor": "hex:a3e635"
    },
    {
     "id": "26",
@@ -76,7 +86,8 @@
    {
     "id": "27",
     "type": "sandbox-status",
-    "color": "#b45309"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:b45309"
    },
    {
     "id": "28",
@@ -85,7 +96,8 @@
    {
     "id": "29",
     "type": "cache-timer",
-    "color": "#ca8a04"
+    "color": "hex:1c1917",
+    "backgroundColor": "hex:f59e0b"
    },
    {
     "id": "30",
@@ -94,7 +106,8 @@
    {
     "id": "31",
     "type": "compaction-counter",
-    "color": "#78716c"
+    "color": "hex:fffbeb",
+    "backgroundColor": "hex:57534e"
    }
   ],
   []

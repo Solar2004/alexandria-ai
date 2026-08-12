@@ -15,6 +15,7 @@ members = [
   "crates/alx-mcp",
   "crates/alx-agents",
   "crates/alx-cli",
+  "crates/alx-evolve",
   "crates/alx-lib",
 ]
 

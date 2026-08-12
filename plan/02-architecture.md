@@ -44,7 +44,7 @@ flowchart TB
         P8["security.toml (allowlists)"]
     end
 
-    subgraph A["ALEXANDRIA · Motor Rust (workspace 15 crates)"]
+    subgraph A["ALEXANDRIA · Motor Rust (workspace 16 crates)"]
         direction TB
         C1["alx-core<br/>tipos · estado · event bus · reloj"]
         C2["alx-hooks<br/>eventos → cadena Pre/Async/Post · timeout · lock"]
@@ -59,6 +59,7 @@ flowchart TB
         C11["alx-night<br/>cron autonomo · informe · commit atomico"]
         C12["alx-mcp<br/>server stdio/SSE · client"]
         C13["alx-agents<br/>registry · router · spawn · headless sessions"]
+        C14["alx-evolve<br/>harness evolutivo · lifecycle temporal/permanente · doc-min"]
     end
 
     subgraph M["BUS MCP"]
@@ -149,7 +150,7 @@ flowchart LR
     CC2[Codex futuro] --> H
 ```
 
-## 5. Workspace de crates (15)
+## 5. Workspace de crates (16)
 
 | Crate | Responsabilidad | Deps clave |
 |---|---|---|
@@ -168,6 +169,7 @@ flowchart LR
 | `alx-agents` | Registry, router, spawn, headless sessions (summoning) | alx-core |
 | `alx-cli` | Binario `alx`: subcomandos, TUI estado, merge atg | clap, ratatui |
 | `alx-lib` | Fachada pública: todo lo que PHALANX expone | — |
+| `alx-evolve` | **Harness evolutivo**: detecta/crea/documenta/aplica harnesses, watcher de objetivos, temporal↔permanente | alx-core, alx-critic, alx-audit |
 
 **Regla de dependencias**: apuntan hacia abajo (core es hoja). `alx-cli` y `alx-lib` son las únicas entradas.
 
@@ -182,7 +184,7 @@ flowchart LR
 7. `alx-critic` aprende: errores corregidos → `must_check` futuros.
 8. `alx-memory` captura aprendizajes → store. Hook `Stop` → night agenda siguiente pasada.
 
-## 7. Mapa a requisitos (R1–R19)
+## 7. Mapa a requisitos (R1–R23)
 
 | Requisito | Componente |
 |---|---|
@@ -204,7 +206,11 @@ flowchart LR
 | R16 mermaid grande con ifs | este doc §2–4 |
 | R17 descomponer tareas (imposible fallar) | alx-task decomposition engine |
 | R18 auto-crítica sin aprobación | alx-critic |
-| R19 sesiones headless simples | alx-agents headless + summoning |
+| R19 | sesiones headless simples | alx-agents headless + summoning |
+| R20 | la AI crea harnesses en tiempo real (self-evolución) | alx-evolve |
+| R21 | temporal (autodestrucción) vs permanente | alx-evolve (watcher lifecycle) |
+| R22 | documentación mínima obligatoria de todo | alx-evolve (docmin.verify) |
+| R23 | mejora de harnesses (diseño, consistencia) | alx-evolve (critic + refine) |
 
 ## 8. Decisión clave
 

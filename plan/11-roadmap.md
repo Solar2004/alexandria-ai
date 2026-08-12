@@ -191,6 +191,20 @@
 | 17.5 | MCP registry | 10 servers registrados como clientes | test: discovery ok |
 | 17.6 | doctor | valida todo; informe de salud | `alx doctor` → 0 críticos |
 
+## FASE 18 — `alx-evolve` (harness evolutivo / self-evolución)
+
+**Objetivo**: la AI crea harnesses en tiempo real. Temporal por defecto, permanente con evidencia, doc-min obligatoria, watcher de objetivos.
+
+| # | Tarea | Subtareas | Verificación |
+|---|---|---|---|
+| 18.1 | Harness struct | `Harness`, `HarnessKind`, `HarnessState`, `Trigger`, serialización TOML | test: parse/roundtrip |
+| 18.2 | Registry | `harnesses/active/*.toml` + `index.toml`; archive | test: register → index |
+| 18.3 | evolve.detect | detecta candidatos en PostToolUse (regla/patrón/objetivo) | test: patrón → candidato |
+| 18.4 | docmin.verify | doc-min obligatoria en cada Edit/Write; complementa si falta | test: archivo sin doc → recall |
+| 18.5 | Watcher | vigila temporales; cumple objetivo → Retired; zombie → retirar | test: objetivo cumplido → retired |
+| 18.6 | Promoción | temporal que sirvió N veces → Permanent (con aval del critic) | test: N usos → promoted |
+| 18.7 | refine | falso positivo ×3 → ajusta regla del harness | test: 3 rechazos erróneos → refine |
+
 ## Criterio de "fase completa"
 
 Cada fase termina con: **tests verdes + comando real ejecutado + evidencia capturada**. Sin eso, la fase NO está completa y se revisa antes de avanzar.
@@ -202,7 +216,7 @@ F1 → F2 → F3 → F4 ─┐
                 ├→ F5 → F6 → F7 → F8 → F9 ─┐
 F3 ──────────────┘                          ├→ F10 → F11 → F12 → F13 → F14 → F15
                                             │
-                                            └→ F16 (critic) → F17 (audit) → F13–F15
+                                            └→ F16 (critic) → F17 (audit) → F18 (evolve)
 ```
 
-F3 (hooks) desbloquea F4 (memory) y F10 (mcp). F5 (governor) alimenta F6–F9. F12 (PHALANX) solo se completa cuando F3–F9 existen. F16 (critic) se apoya en F6/F7/F3; F17 (audit) es independiente y puede correr en paralelo con F10.
+F3 (hooks) desbloquea F4 (memory) y F10 (mcp). F5 (governor) alimenta F6–F9. F12 (PHALANX) solo se completa cuando F3–F9 existen. F16 (critic) se apoya en F6/F7/F3; F17 (audit) es independiente y puede correr en paralelo con F10. F18 (evolve) se apoya en F16 (critic) y F17 (audit).

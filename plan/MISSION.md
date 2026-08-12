@@ -15,6 +15,8 @@
 
 > "NOno yo creo que falta iterar aun mas osea existen mas plugins scripts skills y mcps creables de lo que es nuestro claude que tenemos y este mismo directorio comprendes? tiene plugins skills hooks etc que no podemos perder, osea porlomenos unas 10 iteraciones mas para que nos aseguremos que todo esta conectado y ya no tenemos skills repetidas sino una version final que si funcione osea cuando en nuestro harness un problema es que le damos a la ai una tarea grande rompamosla en nuestro harness para que sea facil de hacer que sea imposible que falle y la ai de rendimiento alto etc. que la hacer un plan investigue cree fases no solo 1 documento grande como hacen sino que lo haga poco a poco que tome el tiempo que deba hasta tener algo que porlomenos pasa por una cantidad alta de iteraciones, ojo esto es una idea buena que se pueda establecer iteraciones al crear y asi la ai se encarga de ver sus propios errores para que los humanos no lo tengan que hacer etc. vamos el mermaid este tiene que ser grande quiero verlo vamos osea pero el mermaid de todo el harness con skills hooks de cuando pasa etc ifs mucha cosa asi que tienes trabajo para hacer vamos 20 iteraciones mas y tu eres autonomo una ves acabes vamos continua tu solo no necesitas aprobacion ten todo terminado se tu propio critico y asegurate de hacer la cantidad de iteracioens necesarias osea necesitamos hacer un sistema por codigo que ayude a la ai a ser su propia critica y solita pueda hacer mas iteracioens mejrorar ver errores etc ver no solo errores sino mejorar lo que ya tiene sin que se lo digan o que tengan que verificar o decir algo que la ai siga y siga y que pues si tenga que seguir lo que haga sea tan poco comprendes? que sean solo detalles y aun si continue lustrandolo"
 
+> "Eres un agente autonomo empieza acrear todo comprendes vamos osea pero aslo en esta carpeta crea una carpeta tipo proyecto-final o algo asi aca mismo y vas metiendo documentos etc osea y vas creando todo poco a poco. Una idea que yo tengo es que la ai pueda crear harnesses osea nuestro plugin cree harnesses en tiempo real para que la ai self evoluya basicamente digamos un ejemplo mientras tu creas este sistema que pienses en un harness o cosas que deberias tomar en cuenta y basicamente mientras creas codigo crear la documentacion necesaria minima para poder entender etc, y asi siempre todo lo que crees esta documentado y no se te escape nada o asi etc osea que cree harnesses la ai se pregunte cuales hasta que punto y que haya un harness que se dedique a ver que uno cumplio su objetivo y lo destruya sabes? harnesses que sean temporales pero otros tambien q sean permanentes para el proyecto tipo el ve que sirve etc ya sabes y el investiga cosas a tomar en cuenta y los crea y les pone documentacion Incluso los mejora imagina que hace una web, asegurarse que usa mismos colores, sigue reglas de un harness especifico de diseño establecido etc etc etc comprendes? es la mejor idea que se me ocurrio que mejoren etc pero tendras que agregarlo a nuestro sistema asi que te dejo hacer 10 iteraciones implementando y mejorando esto y puliendolo incluso mas iteraciones hasta que lo tengas listo"
+
 ## 2. Traducción a requisitos de ingeniería
 
 | # | Requisito | Componente |
@@ -38,6 +40,10 @@
 | R17 | Descomponer tareas grandes en micro-tareas (imposible fallar) | alx-task (decomposition engine) |
 | R18 | Auto-crítica por código: la AI se critica, itera sola, lustra sin aprobación | alx-critic (self-review loop) |
 | R19 | Sesiones headless simples (tareas simples, contexto mínimo, un agente summona a otro) | alx-agent (headless spawn) |
+| R20 | La AI crea harnesses en tiempo real (self-evolución) | alx-evolve (harness generator) |
+| R21 | Harnesses temporales (se autodestruyen al cumplir su objetivo) vs permanentes (los que sirven) | alx-evolve (lifecycle) |
+| R22 | Documentación mínima obligatoria de todo lo creado — nada se escapa | alx-evolve (auto-doc) |
+| R23 | Mejora de harnesses (reglas de diseño, consistencia, colores) | alx-evolve (critic + refine) |
 
 ## 3. Principios no negociables
 
@@ -70,8 +76,10 @@
 - [ ] Fase 15: Docs + packaging + instalador
 - [ ] Fase 16: Auto-crítica alx-critic (spec: `plan/15-critic.md`)
 - [ ] Fase 17: Auditoría/dedup alx-audit (spec: `plan/14-auditoria.md`)
+- [ ] Fase 18: Harness evolutivo alx-evolve (spec: `plan/16-evolve.md`) — crate skeleton + 6 tests
 
 ## 5. Progreso de este intento (bitácora)
 
 - 2026-08-12: Creación plan maestro. Auditados aicli-ultimate (solo instalador) y AlexanderTheGreat (harness disperso, sin motor). Decisión: ALEXANDER/ALEXANDRIA/PHALANX. Ver plan/.
 - 2026-08-12 (tarde): Auditoría exhaustiva del ecosistema (86 skills globales, 842 agentes, 26 plugins, 10 MCP servers, 8 servicios de red, ~15 duplicados). 20 iteraciones más de arquitectura (total 40). Mermaid MEGA con pipeline+ifs, red real, hooks. Specs `alx-critic` (auto-crítica R18) y `alx-audit` (dedup R15). Roadmap ampliado a 17 fases. Los recalls que la AI aprende se vuelven checks del crítico = se mejora sola.
+- 2026-08-12 (noche): Corrección de red (iter 41-47): routatic=PROVIDER, omniroute=fallback solo si cae; MCP defaults=5. Fase 1 construida: workspace `alexandria/` 15 crates, alx-core con 13 tests. Mover a `proyecto-final/alexandria/`. IDEA DEL USUARIO (R20-R23): harnesses evolutivos — la AI crea harnesses en tiempo real, temporales (autodestrucción) vs permanentes, doc-min obligatoria. Spec `plan/16-evolve.md`, iteraciones 48-57 (total 57), crate `alx-evolve` con 6 tests. 19 tests verdes en total.

@@ -28,6 +28,7 @@ todo lo que está aquí se construye, se testea y se verifica.
 | `13-glosario.md` | Términos del dominio |
 | `14-auditoria.md` | Auditoría exhaustiva del ecosistema (global + repo + MCP + red), duplicados |
 | `15-critic.md` | Auto-crítica por código (`alx-critic`) + decomposition engine |
+| `16-evolve.md` | Harness evolutivo (`alx-evolve`): la AI crea harnesses en tiempo real, temporal/permanente, doc-min |
 
 ## Orden de lectura
 

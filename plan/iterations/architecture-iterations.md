@@ -209,3 +209,62 @@ Diagrama único en `../02-architecture.md` §2: red corregida (routatic=provider
 1. **La red es del usuario, no del diagrama** — corregir el modelo de red ANTES de codificar el governor; el fallback no es cadena principal.
 2. **Defaults minimalistas** — 5 MCP necesarios arrancan por defecto; el resto se activa cuando la fase lo necesita. Menos superficie, menos coste, menos rotura.
 3. **Iterar hasta consistencia** — 47 iteraciones = el plan se corrige a sí mismo antes de tocar código. Ahora sí, Fase 1.
+
+---
+
+# Iteraciones 48–57 (cuarta pasada — harness evolutivo / self-evolución)
+
+> Disparadas por el usuario: *"la ai pueda crear harnesses osea nuestro plugin cree harnesses en tiempo real para que la ai self evoluya... un harness que se dedique a ver que uno cumplio su objetivo y lo destruya... harnesses temporales pero otros permanentes... crea la documentacion necesaria minima... incluso los mejora"*.
+
+## Resumen
+
+| # | Cambio | Por qué |
+|---|---|---|
+| 48 | Idea bruta: `alx-evolve` — la AI crea harnesses en tiempo real | Self-evolución: el sistema se construye a sí mismo mientras trabaja |
+| 49 | Lifecycle completo: detectar→crear→documentar→aplicar→vigilar→destruir/promover→mejorar | Sin ciclo, los harnesses serían skills muertas |
+| 50 | Tipos: Temporal (muere al cumplir objetivo) vs Permanente (sirve al proyecto) | Dos vidas distintas: tareas puntuales vs reglas duraderas |
+| 51 | **Watcher de objetivos**: vigila harnesses temporales, autodestruye zombies | Anti-acumulación: lo que no sirve se retira con diagnóstico |
+| 52 | **Doc-min obligatoria**: todo lo creado lleva documentación mínima (hook docmin.verify) | "Nada se escapa" — el sistema se auto-documenta mientras se construye |
+| 53 | Integración con critic: los harnesses alimentan `must_check` | Una regla permanente se vuelve check automático del crítico |
+| 54 | Ejemplo diseño: harness `design-system` permanente (tokens, sin hex hardcodeado) | La consistencia visual se verifica por gate, no por suerte |
+| 55 | Mejora continua: datos de uso → refine → auto-poda de falsos positivos | El harness evoluciona con cada iteración (R23) |
+| 56 | Registry en `proyecto-final/harnesses/` (active/archive/index.toml) | Los harnesses son datos versionables, no código |
+| 57 | crate `alx-evolve` + validación de schema en alx-audit | Implementación y calidad: harnesses validados como todo el sistema |
+
+## Mermaid clave #8 (iteración 51) — lifecycle con autodestrucción
+
+```mermaid
+flowchart LR
+    D[DETECTAR en trabajo] --> C[CREAR harness]
+    C --> DOC[DOCUMENTAR doc-min]
+    DOC --> A[APLICAR gate/hook]
+    A --> W[WATCHER vigila objetivo]
+    W -->|cumplido| R[RETIRED + archive]
+    W -->|sirvio N veces| P[PROMOTED permanente]
+    W -->|zombie sin cumplir| Z[Retirar + diagnostico]
+    P --> M[MEJORAR con datos de uso]
+    M --> A
+```
+
+## Mermaid clave #9 (iteración 54) — ejemplo design-system
+
+```mermaid
+flowchart LR
+    UI[Componente nuevo] --> G{gate design-system}
+    G -->|usa tokens| OK[pasa]
+    G -->|#F00 hardcodeado| REJ[rechazado + evidencia]
+    OK --> REFINE[critic refine reglas]
+    REFINE --> G
+```
+
+## Iteración 57 (FINAL) — `alx-evolve` integrado
+
+Spec completo en `../16-evolve.md`. crate alx-evolve añadido al workspace (16 crates). Roadmap: Fase 18.
+
+## Lecciones de las iteraciones 48–57
+
+1. **La self-evolución necesita ciclo de vida, no solo generación** — sin autodestrucción, cada harness nuevo es deuda acumulada.
+2. **Doc-min es la compuerta que hace posible "nada se escapa"** — documentar en el momento de crear, no después.
+3. **Temporal por defecto, permanente por evidencia** — un harness solo se queda si demostró servir.
+4. **Los harnesses son datos** — en `harnesses/active/*.toml`, validados por audit, versionados con el proyecto.
+5. **El critic y el evolve se retroalimentan** — harness → must_check → critic lo aplica → datos → refine del harness.

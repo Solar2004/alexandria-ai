@@ -1,0 +1,3 @@
+iter = 2
+max_iter = 20
+work_unit = "iteracion 2/20: implementar harness (pipeline fases), gate (verificacion), bench (umbrales), agents (registry/router/spawn)"

@@ -1,3 +1,3 @@
-iter = 3
+iter = 4
 max_iter = 20
-work_unit = "iteracion 3/20: implementar alx-mcp (server+client), alx-audit (registry dedup), alx-night (scheduler), alx-lib (fachada)"
+work_unit = "iteracion 4/20: integracion end-to-end — alx run pipeline (task+harness+gate+governor+critic), binario usa alx-lib"

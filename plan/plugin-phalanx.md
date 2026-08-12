@@ -77,9 +77,7 @@ server_stdio = true
 server_sse = { enabled = true, port = 8770 }
 
 [mcp.clients]
-# Default = los 5 necesarios (arrancan siempre). El resto opcional (se activan por fase).
 default = ["codebase-memory", "code-graph-rag", "notebooklm", "mcp-search", "chrome-devtools"]
-optional = ["perplexity", "playwright", "figma", "media", "horario"]
 ```
 
 **Este archivo ES la configuración de PHALANX.** El motor lo lee y se configura solo. Cambiar `config.toml` cambia el comportamiento del sistema — sin recompilar.

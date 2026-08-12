@@ -66,17 +66,12 @@ flowchart TB
         M2["alx-mcp-client"]
     end
 
-    subgraph S["SERVIDORES MCP (default 5 + opcionales)"]
-        S1["codebase-memory [DEFAULT]"]
-        S2["code-graph-rag [DEFAULT]"]
-        S3["notebooklm [DEFAULT]"]
-        S4["mcp-search claude-mem [DEFAULT]"]
-        S5["chrome-devtools [DEFAULT]"]
-        S6["perplexity (opcional)"]
-        S7["playwright (opcional)"]
-        S8["figma (opcional)"]
-        S9["media (opcional)"]
-        S10["horario (opcional)"]
+    subgraph S["SERVIDORES MCP (5 default)"]
+        S1["codebase-memory"]
+        S2["code-graph-rag"]
+        S3["notebooklm"]
+        S4["mcp-search (claude-mem)"]
+        S5["chrome-devtools"]
     end
 
     subgraph NET["RED (corregida iter 41: routatic=PROVIDER)"]

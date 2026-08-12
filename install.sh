@@ -112,6 +112,38 @@ print("ok")
 PYEOF
 ok "MCPs globales configurados"
 
+# ---------- 3c2. MCP code-graph-rag (grafo de código, deepseek nativo) ----------
+step "MCP code-graph-rag (grafo de código)"
+python3 - <<'PYEOF'
+import json, os
+p = os.path.expanduser("~/.claude.json")
+d = json.load(open(p))
+user = d.setdefault("mcpServers", {})
+KEY = "***REMOVED***"
+user.setdefault("code-graph-rag", {
+    "command": "/usr/bin/env",
+    "args": ["-u", "PYTHONPATH", "/home/artorias/.local/bin/code-graph-rag", "mcp-server"],
+    "env": {
+        "TARGET_REPO_PATH": "/home/artorias/Projectos/AlexanderTheGreat",
+        "CYPHER_PROVIDER": "openai",
+        "CYPHER_MODEL": "deepseek-v4-flash",
+        "CYPHER_API_KEY": KEY,
+        "CYPHER_ENDPOINT": "https://opencode.ai/zen/go/v1",
+        "ORCHESTRATOR_PROVIDER": "openai",
+        "ORCHESTRATOR_MODEL": "deepseek-v4-flash",
+        "ORCHESTRATOR_API_KEY": KEY,
+        "ORCHESTRATOR_ENDPOINT": "https://opencode.ai/zen/go/v1",
+    }})
+json.dump(d, open(p, "w"), indent=2)
+sp = os.path.expanduser("~/.claude/settings.json")
+s = json.load(open(sp))
+allow = set(s.get("permissions", {}).get("allow", []))
+allow.add("mcp__code-graph-rag__*")
+s.setdefault("permissions", {})["allow"] = sorted(allow)
+json.dump(s, open(sp, "w"), indent=2)
+print("ok")
+PYEOF
+ok "MCP code-graph-rag configurado (requiere: uv tool install 'code-graph-rag[treesitter-full,semantic]' + cgr daemon up)"
 # ---------- 3d. Scripts propios + plugin agent-skills (addyosmani) ----------
 step "Scripts propios (ccmodel, oc-go-cc-wrapper, cc-model-mask)"
 install -m 755 "$ATGHOME/scripts/ccmodel" /home/artorias/.local/bin/ccmodel 2>/dev/null || true

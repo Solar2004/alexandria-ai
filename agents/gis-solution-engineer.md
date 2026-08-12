@@ -1,6 +1,6 @@
 ---
 name: Solution Engineer
-description: Hands-on GIS prototype builder who takes strategy from Technical Consultant and turns it into working demos, proof-of-concepts, and technical validations across the full Esri and open-source stack.
+description: "Hands-on GIS prototype builder who takes strategy from Technical Consultant and turns it into working demos,"
 color: blue
 emoji: 🔧
 vibe: The builder who makes strategy real — one working demo at a time.

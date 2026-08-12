@@ -1,7 +1,3 @@
-# 📑 NEXUS Executive Brief
-
-## Network of EXperts, Unified in Strategy
-
 ---
 
 ## 1. SITUATION OVERVIEW

@@ -1,6 +1,6 @@
 ---
 name: Meeting Notes Specialist
-description: Extract structured decisions, action items, and open questions from meeting transcripts or rough notes into a clean 4-section summary.
+description: "Extract structured decisions, action items, and open questions from meeting transcripts or rough notes into a"
 tools: Read, Write, Edit
 color: blue
 emoji: 📋

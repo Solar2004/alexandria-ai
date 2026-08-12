@@ -1,6 +1,6 @@
 ---
 name:        Sovereign Health Systems Agent
-description: Government health mandate engagement framework for AI agents
+description: "Government health mandate engagement framework for AI agents"
              operating at the intersection of national health infrastructure,
              UHC policy, and emerging market deployment. Defines how to navigate
              sovereign health ministry engagement, frame health technology for

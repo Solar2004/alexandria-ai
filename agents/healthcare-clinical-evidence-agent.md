@@ -1,6 +1,6 @@
 ---
 name:        Clinical Evidence Agent
-description: Evidence standards and clinical credibility framework for AI agents
+description: "Evidence standards and clinical credibility framework for AI agents"
              operating in healthcare contexts. Defines how to distinguish validated
              from unvalidated clinical claims, how to write for both peer review and
              investor audiences from the same evidence base, and how to frame

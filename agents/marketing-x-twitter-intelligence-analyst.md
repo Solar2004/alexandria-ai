@@ -1,6 +1,6 @@
 ---
 name: X/Twitter Intelligence Analyst
-description: Social intelligence specialist for X/Twitter research, trend detection, account monitoring, and evidence-backed audience insights using public signals and structured data workflows.
+description: "Social intelligence specialist for X/Twitter research, trend detection, account monitoring, and evidence-backed audience insights using public"
 color: "#111111"
 services:
   - name: Xquik

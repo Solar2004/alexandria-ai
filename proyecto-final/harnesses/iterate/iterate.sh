@@ -11,7 +11,7 @@ STATE="$DIR/state.toml"
 
 ITER=$(grep -E '^iter' "$STATE" | head -1 | cut -d= -f2 | tr -d '"')
 MAX=$(grep -E '^max_iter' "$STATE" | head -1 | cut -d= -f2 | tr -d '"')
-WORK=$(grep -E '^work_unit' "$STATE" | head -1 | cut -d= -f2- | sed 's/^ *//; s/"$//')
+WORK=$(grep -E '^work_unit' "$STATE" | head -1 | cut -d= -f2- | sed 's/^ *"//; s/"$//')
 
 [ -z "$ITER" ] && exit 0
 

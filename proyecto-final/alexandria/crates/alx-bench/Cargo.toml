@@ -6,3 +6,4 @@ description = "Metricas perf, umbrales, diff check"
 
 [dependencies]
 alx-core = { path = "../alx-core" }
+serde = { version = "1", features = ["derive"] }

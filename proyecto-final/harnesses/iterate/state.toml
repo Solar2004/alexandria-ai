@@ -1,3 +1,3 @@
-iter = 2
+iter = 3
 max_iter = 20
-work_unit = "iteracion 2/20: implementar harness (pipeline fases), gate (verificacion), bench (umbrales), agents (registry/router/spawn)"
+work_unit = "iteracion 3/20: implementar alx-mcp (server+client), alx-audit (registry dedup), alx-night (scheduler), alx-lib (fachada)"

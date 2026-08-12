@@ -232,6 +232,17 @@ SRVEOF
 fi
 ok "modo nocturno listo (timer 02:00)"
 
+# ---------- 3h. Plugin propio alexander-harness (dispatcher de agentes) ----------
+step "Plugin propio alexander-harness (seleccion de agentes)"
+python3 "$ATGHOME/scripts/build-agent-index.py" >/dev/null 2>&1 || true
+if ! claude plugin marketplace list 2>/dev/null | grep -q alexander-harness; then
+  claude plugin marketplace add "$ATGHOME/plugins/alexander-harness" >/dev/null 2>&1 || true
+fi
+claude plugin marketplace update alexander-harness >/dev/null 2>&1 || true
+claude plugin install alexander-harness@alexander-harness >/dev/null 2>&1 \
+  && ok "plugin propio instalado (dispatcher + /agents + /spawn)" \
+  || warn "plugin alexander-harness fallo (reintenta tras login)"
+
 # ---------- 4. Skills élite ----------
 if [ "$SKILLS" = "1" ]; then
   step "Skills élite (hallmark, mattpocock, addyosmani, archify, cangjie, reverse-skill, diagram-design, anthropics)"

@@ -8,7 +8,7 @@
 # Re-aplicar tras: claude update, patch-cc apply, patch-cc restore.
 set -euo pipefail
 
-BIN="${1:-/home/artorias/.local/share/claude/versions/2.1.227}"
+BIN="${1:-/home/artorias/.local/share/claude/versions/2.1.228}"
 BAK="$BIN.atg.bak"
 
 [ -f "$BIN" ] || { echo "✗ binario no encontrado: $BIN"; exit 1; }

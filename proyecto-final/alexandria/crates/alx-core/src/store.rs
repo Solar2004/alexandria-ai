@@ -31,7 +31,7 @@ pub fn load_lines<T: DeserializeOwned>(path: &Path) -> Vec<T> {
     };
     BufReader::new(f)
         .lines()
-        .filter_map(|l| l.ok())
+        .map_while(Result::ok)
         .filter(|l| !l.trim().is_empty())
         .filter_map(|l| serde_json::from_str(&l).ok())
         .collect()

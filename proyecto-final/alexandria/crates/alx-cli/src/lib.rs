@@ -666,6 +666,16 @@ pub fn render_night_report() -> String {
     render_night(&report)
 }
 
+/// Telemetría: registra la ejecución de un comando (state/commands.log).
+pub fn log_command(name: &str) {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state");
+    let path = dir.join("commands.log");
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = writeln!(f, "{name}");
+    }
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
@@ -1119,6 +1129,14 @@ pub fn render_tui() -> String {
     let real_agents = count_real_agents();
     out.push_str(&format!(
         "\x1b[1;36m│ Agentes reales:\x1b[0m {real_agents} en el ecosistema\n"
+    ));
+
+    let cmds_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/commands.log");
+    let cmds_count = std::fs::read_to_string(&cmds_path)
+        .map(|t| t.lines().count())
+        .unwrap_or(0);
+    out.push_str(&format!(
+        "\x1b[1;36m│ Comandos ejecutados:\x1b[0m {cmds_count}\n"
     ));
 
     out.push_str("\x1b[1;36m│ Comandos:\x1b[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui\n");

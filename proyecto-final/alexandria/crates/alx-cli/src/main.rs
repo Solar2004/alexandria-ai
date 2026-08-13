@@ -10,7 +10,7 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    agents_run_parallel, agents_show, check_network, feature_run, iterate_next,
+    agents_run_parallel, agents_show, check_network, feature_run, iterate_next, log_command,
     load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_build, render_cost_report,
     render_doctor,
     render_iterate_state, render_metrics, render_network, render_night_report,
@@ -33,7 +33,7 @@ struct Cli {
     command: Option<Command>,
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum Command {
     /// Ejecuta el pipeline de demo end-to-end (task → DAG → descomposición → harness).
     Run {
@@ -109,7 +109,7 @@ enum Command {
     },
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 enum TaskCommand {
     /// Crea una tarea nueva.
     Add {
@@ -130,6 +130,12 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> ExitCode {
     let mut app = AppState::new();
+    let cmd_name = format!("{:?}", cli.command)
+        .split_whitespace()
+        .next()
+        .unwrap_or("?")
+        .to_string();
+    log_command(&cmd_name);
     match cli.command {
         None => print_help(),
         Some(Command::Run { titulo, real }) => {

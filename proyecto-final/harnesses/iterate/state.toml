@@ -1,6 +1,6 @@
-iter = 4
+iter = 5
 max_iter = 20
-work_unit = "ciclo 5 iteracion 4/20: MEJORA REAL critic — 9% y subiendo, seguir afinando (veredictos restantes), re-benchmark"
+work_unit = "ciclo 5 iteracion 5/20: MEJORA REAL critic — 12% y subiendo, seguir afinando, re-benchmark"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

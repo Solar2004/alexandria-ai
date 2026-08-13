@@ -1,6 +1,6 @@
-iter = 8
+iter = 9
 max_iter = 20
-work_unit = "ciclo 4 iteracion 8/20: pulido continuo — verificar y avanzar"
+work_unit = "ciclo 4 iteracion 9/20: pulido continuo — verificar y avanzar"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

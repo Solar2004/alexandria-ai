@@ -1,6 +1,6 @@
-iter = 9
+iter = 11
 max_iter = 20
-work_unit = "ciclo 9 iteracion 9/20: VEREDICTO INPUT-DEBUG — 13/30 vs 12/30 (+1, marginal). Techo I/O CONFIRMADO: feedback con input no converge en competitivo duro. El limite es del modelo, no del feedback. Siguiente: revertir input-debug (marginal) o mantener, y pulido / /compact"
+work_unit = "ciclo 9 iteracion 11/20: memoria completa (c5935b2): veredicto I/O, N=186 5.57x, agregado 380. Esperando decision del usuario: pulir / aplicar harness a tarea real / fable 5 (acceso). Capitulo benchmarks CERRADO con resultados solidos"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -215,6 +215,64 @@ pub fn render_run(result: &RunResult) -> String {
     out
 }
 
+/// Estado de un endpoint de la red real del governor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NetworkStatus {
+    /// Nombre del servicio (headroom, routatic, ...).
+    pub name: String,
+    /// URL del endpoint.
+    pub url: String,
+    /// Responde a /readyz (curl exit_code 0).
+    pub ready: bool,
+    /// Código HTTP devuelto (o stdout capturado).
+    pub http_code: String,
+}
+
+/// Comprueba la red real del governor (iter 41): headroom→mask→routatic
+/// (PROVIDER) y fallback omniroute. Cada endpoint único se sondea con
+/// `curl -s -m 2 <url>/readyz` vía `alx_gate::run_command`.
+pub fn check_network() -> Vec<NetworkStatus> {
+    // Infra real verificada (auditoría 14 §3). Orden = cadena canónica.
+    let endpoints = [
+        ("headroom (compresión)", "http://127.0.0.1:8788"),
+        ("cc-model-mask (enmascara)", "http://127.0.0.1:3460"),
+        ("routatic (PROVIDER)", "http://127.0.0.1:3456"),
+        ("omniroute (fallback)", "http://127.0.0.1:20128"),
+    ];
+
+    endpoints
+        .iter()
+        .map(|(name, url)| {
+            let cmd = format!("curl -s -m 2 -o /dev/null -w \"%{{http_code}}\" {url}/readyz");
+            let outcome = alx_gate::run_command(&cmd, 5000);
+            NetworkStatus {
+                name: name.to_string(),
+                url: url.to_string(),
+                ready: outcome.exit_code == 0,
+                http_code: outcome.stdout_head.trim().to_string(),
+            }
+        })
+        .collect()
+}
+
+/// Informe legible del estado de red.
+pub fn render_network(statuses: &[NetworkStatus]) -> String {
+    let mut out = String::from(
+        "## Red real (governor)\nCadena: headroom:8788 → mask:3460 → routatic:3456 (PROVIDER) → deepseek-v4-flash\nFallback: omniroute:20128 (solo si routatic cae)\n",
+    );
+    for s in statuses {
+        let mark = if s.ready { "✓" } else { "✗" };
+        out.push_str(&format!(
+            "\n{mark} {} — {} {} (http {})",
+            s.name,
+            s.url,
+            if s.ready { "listo" } else { "NO responde" },
+            s.http_code
+        ));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -305,5 +363,22 @@ mod tests {
     fn status_via_facade_mentions_alexandria() {
         let alex = Alexandria::new();
         assert!(alex.status().contains("ALEXANDRIA"));
+    }
+
+    #[test]
+    fn check_network_returns_four_endpoints() {
+        let statuses = check_network();
+        assert_eq!(statuses.len(), 4);
+        assert!(statuses.iter().any(|s| s.name.contains("routatic")));
+        assert!(statuses.iter().any(|s| s.name.contains("omniroute")));
+    }
+
+    #[test]
+    fn render_network_mentions_chain_and_provider() {
+        let statuses = check_network();
+        let text = render_network(&statuses);
+        assert!(text.contains("PROVIDER"));
+        assert!(text.contains("headroom"));
+        assert!(text.contains("routatic"));
     }
 }

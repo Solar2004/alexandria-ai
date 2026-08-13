@@ -9,7 +9,7 @@ use std::process::ExitCode;
 
 use clap::{CommandFactory, Parser, Subcommand};
 
-use alx_cli::{render_run, run_pipeline, AppState};
+use alx_cli::{check_network, render_network, render_run, run_pipeline, AppState};
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
 
@@ -34,6 +34,8 @@ enum Command {
     },
     /// Estado actual del sistema (fachada alx-lib).
     Status,
+    /// Comprueba la red real del governor (headroom→mask→routatic, fallback omniroute).
+    Network,
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -71,6 +73,10 @@ fn run(cli: Cli) -> ExitCode {
         Some(Command::Status) => {
             let alex = Alexandria::new();
             println!("{}", alex.status());
+        }
+        Some(Command::Network) => {
+            let statuses = check_network();
+            println!("{}", render_network(&statuses));
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

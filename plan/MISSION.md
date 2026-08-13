@@ -77,7 +77,7 @@
 - [~] alx-audit (AuditIndex dedup, Doctor, ejemplo ecosistema) — 9 tests
 - [~] alx-lib (fachada Alexandria + re-exports) — 8 tests
 - [~] Fase 12: PHALANX plugin (config.toml completo + 10 hooks TOML + README) — TOML validado
-- [ ] Fase 13: Integración total (atg, headroom, MCP existentes)
+- [~] Fase 13: alx network (verifica red real headroom→mask→routatic, fallback omniroute) + install.sh (binario en ~/.local/bin/alx)
 - [ ] Fase 14: Dogfood — usar ALEXANDER para construir una feature real
 - [ ] Fase 15: Docs + packaging + instalador
 - [ ] Fase 16: Auto-crítica alx-critic (spec: `plan/15-critic.md`)

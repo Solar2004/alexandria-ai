@@ -1,3 +1,3 @@
-iter = 6
+iter = 7
 max_iter = 20
-work_unit = "iteracion 6/20: conectar ALEXANDRIA al sistema real — alx usa red real (headroom→mask→routatic), integracion atg/hooks actuales, install.sh, primer dogfood"
+work_unit = "iteracion 7/20: integrar con el sistema real — hooks actuales usan alx, atg delega en alx, governor conecta red real en alx run, primer dogfood (alx construye algo del repo)"

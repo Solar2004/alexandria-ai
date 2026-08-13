@@ -1,6 +1,6 @@
 iter = 16
 max_iter = 20
-work_unit = "ciclo 6 iteracion 16/20: GATE FINAL VERIFICADO — cargo test --workspace: 33 bloques ok, 0 fallos; clippy 0 en 16 crates. Ciclo 6 cerrado con config optima (feedback simple, 34/60 = ~4x). Restan: plan-then-code (experimento final opcional), redefinir metrica 5x sobre otro task-set, pulido. REQUIERE /compact: contexto en limite"
+work_unit = "CICLO 6 CERRADO (16/20 reales, max_auto alcanzado). Benchmark REAL BigCodeBench integrado y verificado: harness ~4x (34/60 vs 9/60), 3 experimentos (2 revertidos con datos), gate final 0 fallos/clippy 0, memoria en MISSION.md/ESTADO.md. PENDIENTES (tras /compact): plan-then-code experimento final, redefinir 5x sobre task-set con margen, pulido."
 max_auto = 20
 target_iter = 20
 awaiting_user = false

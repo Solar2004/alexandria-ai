@@ -911,7 +911,7 @@ pub fn render_benchmark() -> String {
 /// pesados (permutaciones, etc.).
 fn run_bigcode(solution: &str, test: &str) -> (bool, String) {
     let runner = format!(
-        "{test}\nimport io, unittest\nbuf = io.StringIO()\nsuite = unittest.defaultTestLoader.loadTestsFromTestCase(TestCases)\nres = unittest.TextTestRunner(stream=buf, verbosity=1).run(suite)\nprint('ALX_RESULT:', res.wasSuccessful())\nprint(buf.getvalue()[:1500])\n"
+        "{test}\nimport io, unittest\nbuf = io.StringIO()\nsuite = unittest.defaultTestLoader.loadTestsFromTestCase(TestCases)\nres = unittest.TextTestRunner(stream=buf, verbosity=0).run(suite)\nprint('ALX_RESULT:', res.wasSuccessful())\nfor t in res.failures + res.errors: print('FAIL_TEST:', t[0].id())\nprint(buf.getvalue()[:1200])\n"
     );
     let path = std::env::temp_dir().join("alx-bigcode.py");
     if std::fs::write(&path, format!("{solution}\n\n{runner}")).is_err() {
@@ -927,9 +927,10 @@ fn run_bigcode(solution: &str, test: &str) -> (bool, String) {
     let frag = all
         .lines()
         .skip(1)
-        .find(|l| l.contains("AssertionError") || l.contains("Error"))
-        .unwrap_or("")
-        .to_string();
+        .filter(|l| l.starts_with("FAIL_TEST:") || l.contains("AssertionError"))
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" | ");
     (
         ok,
         if frag.is_empty() {
@@ -979,7 +980,7 @@ pub fn render_bench_bigcode() -> String {
         // HARNESS: iterar sobre los fallos del unittest con feedback.
         let mut h = false;
         let mut feedback = String::new();
-        for _ in 0..3 {
+        for _ in 0..4 {
             let prompt = format!(
                 "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa, respetando EXACTAMENTE la firma de la cabecera. {feedback}No escribas tests."
             );

@@ -1,6 +1,6 @@
-iter = 8
+iter = 9
 max_iter = 20
-work_unit = "ciclo 6 iteracion 8/20: BENCHMARK REAL VERIFICADO — BigCodeBench (ICLR'25) 10 problemas: directa 2/10 vs harness 8/10 (4x). Harness itera sobre fallos de unittest y recupera 6/6. Siguiente: mejorar convergencia en los 2 fallos restantes (BCB/8, BCB/10) o ampliar a pool de 186 problemas; apuntar a 5x"
+work_unit = "ciclo 6 iteracion 9/20: iter8 7/10 (variance, BCB/6 se volteo; FAIL_TEST feedback inconcluso en muestra de 10). Harness estocastico 7-8/10 vs directa 2/10 (~4x). Siguiente: AMPLIAR a pool real de 186 problemas para medir 5x con estadistica solida (no 1 run de 10); antes /compact (contexto critico ~94%)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

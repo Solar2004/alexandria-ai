@@ -1,6 +1,6 @@
-iter = 13
+iter = 14
 max_iter = 20
-work_unit = "ciclo 9 iteracion 13/20: CLI BENCHMARK COMPLETA (c06ae3e): alx bench unificado (3 familias) + bench-bigcode/humaneval/codecontests/benchmark + bench-all.sh. Fable 5 = workflow (no modelo) — plan-then-code ya lo encarna. LISTO PARA /COMPACT: capítulo benchmarks cerrado, memoria completa, CLI terminada"
+work_unit = "ciclo 9 iteracion 14/20: BINARIO REINSTALADO (22:08) con los 5 comandos bench + 22 del motor. Sistema VERIFICADO instalado: ~/.local/bin/alx, hooks (SessionStart/Stop/iterate), MCP alexandria. Guia de uso entregada al usuario. LISTO PARA /COMPACT"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

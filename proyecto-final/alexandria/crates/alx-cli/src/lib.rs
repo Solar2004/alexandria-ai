@@ -807,14 +807,18 @@ fn harness_attempt(task: &str, expected: &str) -> (bool, String) {
     let mut feedback = String::new();
     let mut last_out = String::from("(no ejecutado)");
     for attempt in 0..3 {
-        let prompt = format!("{task}. {feedback}Escribe SOLO el codigo Python.");
+        // Descomposición básica: función parametrizada + main que imprime el
+        // caso objetivo (permite testear la lógica, no un script fijo).
+        let prompt = format!(
+            "{task}. {feedback}Escribe SOLO codigo Python: define una funcion f(limite) que resuelva la tarea para un limite dado, y al final: print(f(100))."
+        );
         let script = extract_script(&generate_script(&prompt));
         last_out = execute_script(&script);
         if last_out == expected {
             return (true, last_out);
         }
         feedback = format!(
-            "El intento anterior imprimio '{}' pero el esperado es '{}'. Corrige el codigo. ",
+            "El intento anterior imprimio '{}' pero el esperado es '{}'. Revisa la logica de f (especialmente los limites < vs <= y los dobles). Corrige. ",
             last_out, expected
         );
     }

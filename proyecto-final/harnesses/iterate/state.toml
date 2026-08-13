@@ -1,6 +1,6 @@
-iter = 14
+iter = 15
 max_iter = 20
-work_unit = "ciclo 4 iteracion 14/20: seguir auditoria — buscar y corregir mas errores reales"
+work_unit = "ciclo 4 iteracion 15/20: seguir auditoria — verificar y avanzar"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -1,6 +1,6 @@
-iter = 2
+iter = 4
 max_iter = 20
-work_unit = "ciclo 9 iteracion 2/20: N=186 COMPLETO = 5.57x (directa 21/186 11% vs harness 117/186 63%). Metrica agregada 3 familias: 380 problemas, harness 285 (75%) vs directa 180 (47%), recupera 105. Matiz: CodeContests 1.0x. Siguiente: viz con familia 3 + N=186, pulido, o nuevo mecanismo para I/O"
+work_unit = "ciclo 9 iteracion 4/20: VIZ COMPLETO 3 FAMILIAS (febd142): BigCodeBench 186 (5.57x), CodeContests 1.0x, recuperados 96/20/9/0. Agregado 380 (75% vs 47%). Siguiente: mecanismo para I/O (CodeContests 1.0x — feedback expected/got no converge), o pulido, o /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

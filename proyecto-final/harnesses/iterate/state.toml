@@ -1,6 +1,6 @@
-iter = 6
+iter = 7
 max_iter = 20
-work_unit = "ciclo 3 iteracion 6/20: limpiar tareas demo persistidas, integrar tareas persistidas en el pipeline, verificar governor clasifica (tier en ledger)"
+work_unit = "ciclo 3 iteracion 7/20: TUI interactiva basica (ratatui), alx-harness con registry real de agentes, revision final del ciclo 3"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

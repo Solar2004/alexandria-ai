@@ -421,7 +421,7 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         ledger.record(LedgerEntry::new(
             "t-real",
             &child.title,
-            ModelTier::T2Medium,
+            spec.tier,
             "headroom→mask→routatic",
             in_tok,
             out_tok,

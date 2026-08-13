@@ -1,9 +1,6 @@
-iter = 0
+iter = 2
 max_iter = 20
-work_unit = "CICLO 3 COMPLETADO (20/20). Proximo: ciclo 4 — pon iter=1 y nuevo work_unit."
-max_auto = 20
-target_iter = 20
-awaiting_user = false
+work_unit = "ciclo 4 iteracion 2/20: TUI con agentes reales por fase, telemetria avanzada, pulir docs"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

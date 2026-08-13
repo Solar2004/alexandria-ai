@@ -376,29 +376,53 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
     let mut must_checks: Vec<String> = Vec::new();
     let mut harness_detected: Vec<String> = Vec::new();
 
+    // Registry REAL de agentes del ecosistema (sin decision AI: por fase).
+    let mut real_reg = AgentRegistry::new();
+    {
+        let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+        let mut files = Vec::new();
+        for dir in ["agents-volt", "agents"] {
+            if let Ok(rd) = std::fs::read_dir(repo_root.join(dir)) {
+                for e in rd.flatten().take(200) {
+                    if e.path().extension().map(|x| x == "md").unwrap_or(false) {
+                        files.push(e.path().to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+        let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
+        let _ = real_reg.register_from_markdowns(&refs);
+    }
+
     for child in &children {
-        // Agente especializado por fase (alx-agents router) + tier del governor.
-        let (aname, adesc, tier) = match child.phase {
-            PhaseId::Test => (
-                "test-engineer",
-                "Diseña y ejecuta tests para verificar cada micro-tarea.",
-                classify_prompt_text(title),
-            ),
-            PhaseId::Review => (
-                "code-reviewer",
-                "Revisa el código contra criterios de calidad y detecta bugs.",
-                ModelTier::T3Premium,
-            ),
-            PhaseId::Docs => (
-                "documentation-architect",
-                "Documenta la micro-tarea con doc-min obligatoria.",
-                ModelTier::T2Medium,
-            ),
-            _ => (
-                "worker-build",
-                "Agente ejecutor del pipeline ALEXANDRIA con evidencia verificable.",
-                classify_prompt_text(title),
-            ),
+        // Agente por fase: primero el REAL del ecosistema (by_phase), sin
+        // decision AI; fallback a los builtin.
+        let phase_agents: Vec<&AgentSpec> = real_reg.by_phase(child.phase);
+        let (aname, adesc, tier) = if let Some(a) = phase_agents.first() {
+            (a.name.as_str(), a.description.as_str(), a.tier)
+        } else {
+            match child.phase {
+                PhaseId::Test => (
+                    "test-engineer",
+                    "Diseña y ejecuta tests para verificar cada micro-tarea.",
+                    classify_prompt_text(title),
+                ),
+                PhaseId::Review => (
+                    "code-reviewer",
+                    "Revisa el código contra criterios de calidad y detecta bugs.",
+                    ModelTier::T3Premium,
+                ),
+                PhaseId::Docs => (
+                    "documentation-architect",
+                    "Documenta la micro-tarea con doc-min obligatoria.",
+                    ModelTier::T2Medium,
+                ),
+                _ => (
+                    "worker-build",
+                    "Agente ejecutor del pipeline ALEXANDRIA con evidencia verificable.",
+                    classify_prompt_text(title),
+                ),
+            }
         };
         let spec = AgentSpec {
             name: aname.into(),

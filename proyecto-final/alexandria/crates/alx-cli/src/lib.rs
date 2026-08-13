@@ -1258,6 +1258,17 @@ pub fn render_bench_codecontests() -> String {
     out
 }
 
+/// `alx bench` — ejecuta las 3 familias de benchmark en secuencia y agrega.
+pub fn render_bench_all() -> String {
+    let mut out = String::from("# ALEXANDRIA — benchmark suite (3 familias)\n\n");
+    out.push_str(&render_bench_bigcode());
+    out.push_str("\n");
+    out.push_str(&render_bench_humaneval());
+    out.push_str("\n");
+    out.push_str(&render_bench_codecontests());
+    out
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");

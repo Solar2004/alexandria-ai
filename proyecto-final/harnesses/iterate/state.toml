@@ -1,6 +1,6 @@
-iter = 0
+iter = 2
 max_iter = 20
-work_unit = "CICLO 5 COMPLETADO (20/20, MEJORA ENGINE). Proximo: ciclo 6 — pon iter=1 y nuevo work_unit."
+work_unit = "ciclo 6 iteracion 2/20: benchmark con EJECUCION real (compilar/correr el codigo) — el texto no distingue; medir ventaja real del harness"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

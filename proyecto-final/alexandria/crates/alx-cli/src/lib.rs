@@ -741,32 +741,85 @@ pub fn render_quality() -> String {
     out
 }
 
-/// Benchmark de tareas COMPLICADAS de IA: el harness (pipeline real + critic
-/// + iteración) debe resolverlas con alta tasa. Expectativa: 5x mejor que
-/// una AI directa (que falla sin descomposición + verificación).
+/// Intento DIRECTO (sin harness): una sola llamada al modelo + critic.
+/// La comparación: una AI directa (sin descomposición/critic-loop) vs el
+/// harness completo. Mide la ventaja real del pipeline.
+fn direct_attempt(task: &str) -> bool {
+    let body = serde_json::json!({
+        "model": "deepseek-v4-flash",
+        "max_tokens": 600,
+        "thinking": { "type": "disabled" },
+        "messages": [{
+            "role": "user",
+            "content": format!("Tarea: {task}. Responde en maximo 3 frases.")
+        }]
+    })
+    .to_string();
+    let body_path = std::env::temp_dir().join("alx-direct-body.json");
+    if std::fs::write(&body_path, &body).is_err() {
+        return false;
+    }
+    let cmd = format!(
+        "curl -s -m 30 http://127.0.0.1:8788/v1/messages -H 'content-type: application/json' -d @{}",
+        body_path.display()
+    );
+    let out = alx_gate::run_command(&cmd, 35_000);
+    if out.exit_code != 0 {
+        return false;
+    }
+    let resp = serde_json::from_str::<serde_json::Value>(&out.stdout_head)
+        .ok()
+        .and_then(|v| {
+            v["content"]
+                .as_array()?
+                .iter()
+                .find(|b| b["type"] == "text")?
+                .get("text")?
+                .as_str()
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_default();
+    if resp.is_empty() {
+        return false;
+    }
+    criticize_real(
+        &format!("Tarea: {task}. Respuesta: {resp}"),
+        &["responde la tarea correctamente", "es conciso", "sin contradicciones"],
+    )
+    .approved
+}
+
+/// Benchmark de tareas de CÓDIGO DIFÍCILES (tipo HumanEval/SWE): una AI
+/// directa tiende a fallar; el harness (descomposición + critic + iteración)
+/// debe resolverlas. Compara directa vs harness para medir la ventaja real.
 pub fn render_benchmark() -> String {
     let tasks = [
-        "explica en 2 frases que es un deadlock en concurrencia y como evitarlo",
-        "escribe en pseudocodigo la busqueda binaria y su complejidad",
-        "que diferencia hay entre una cola y una pila, con un ejemplo de uso",
+        "Escribe en Rust una funcion que detecte ciclos en un grafo dirigido usando DFS con estados (0 no visitado, 1 en pila, 2 cerrado). Incluye el codigo.",
+        "Dado: fn trailing_zeroes(mut n: i32) -> i32 { let mut c = 0; while n >= 5 { n /= 5; c += n; } c } — calcula trailing_zeroes(25). Explica si el codigo es correcto o tiene bug.",
+        "Explica como implementar un LRU cache con O(1) get y put: que estructuras de datos usarias y por que, con pseudocodigo.",
     ];
-    let mut out = String::from("## Benchmark — tareas complicadas (harness vs AI directa)\n");
-    let mut solved = 0usize;
-    let mut total_cost = 0.0f64;
+    let mut out = String::from("## Benchmark — tareas de código difíciles (harness vs directa)\n");
+    let (mut direct_ok, mut harness_ok) = (0usize, 0usize);
     for (i, t) in tasks.iter().enumerate() {
-        // El harness ejecuta la tarea con pipeline real + critic + iteración.
+        let d = direct_attempt(t);
         let r = run_pipeline_real(t);
-        total_cost += r.ledger.total_cost_usd();
-        let ok = r.run.gate_failures == 0;
-        if ok {
-            solved += 1;
+        let h = r.run.gate_failures == 0;
+        if d {
+            direct_ok += 1;
         }
-        let verdict = if ok { "✓" } else { "✗" };
-        out.push_str(&format!("  tarea {}: {verdict} ({t})\n", i + 1));
+        if h {
+            harness_ok += 1;
+        }
+        out.push_str(&format!(
+            "  tarea {}: directa {} | harness {}\n",
+            i + 1,
+            if d { "✓" } else { "✗" },
+            if h { "✓" } else { "✗" }
+        ));
     }
-    let pct = solved as f64 / tasks.len() as f64 * 100.0;
     out.push_str(&format!(
-        "Tasa de éxito: {solved}/{} ({pct:.0}%) (expect > 80% = 5x mejor que AI directa)\nCoste del benchmark: ${total_cost:.6}\n",
+        "Directa: {direct_ok}/{} · Harness: {harness_ok}/{} — la ventaja del harness = descomposición + critic + iteración\n",
+        tasks.len(),
         tasks.len()
     ));
     out

@@ -1,6 +1,6 @@
-iter = 3
+iter = 4
 max_iter = 20
-work_unit = "CICLO 2 (pulido): iteracion 3/20 — harness completo por fases con gates reales en alx feature, alx-harness integrado con task graph real, ideas de pulido (telemetria, mejor critic, docs por crate)"
+work_unit = "CICLO 2 (pulido): iteracion 4/20 — docs por crate (doc-min en libs), night-run usa alx report, telemetria (log de eventos en state/events.log), night scheduler verificado"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

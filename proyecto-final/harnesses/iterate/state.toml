@@ -1,6 +1,6 @@
-iter = 15
+iter = 17
 max_iter = 20
-work_unit = "ciclo 8 iteracion 15/20: VIZ VERIFICADO — playwright confirma 5 canvases + 5 chart.js renderizados (screenshot docs/viz-check.png). Deliverable visual completo y probado. Siguiente: feedback usuario, run N=186 (coste), CodeContests"
+work_unit = "ciclo 8 iteracion 17/20: dashboard visual descubrible desde ESTADO.md (a72297f). Deliverable completo: viz verificado + reporte detallado + metrica agregada + suite ejecutable. Siguiente: feedback usuario sobre graficas, run N=186 (coste API), CodeContests"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

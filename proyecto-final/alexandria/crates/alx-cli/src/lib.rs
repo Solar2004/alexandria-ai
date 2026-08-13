@@ -17,7 +17,7 @@ use alx_critic::{
 use alx_agents::{build_envelope, AgentRegistry, AgentSpec};
 use alx_audit::{AuditIndex, AuditItem, ItemKind};
 use alx_evolve::{detect_candidates, Harness, HarnessKind, HarnessRegistry, Trigger};
-use alx_governor::{Ledger, LedgerEntry};
+use alx_governor::{classify_prompt_text, Ledger, LedgerEntry};
 use alx_harness::{Phases, Pipeline};
 use alx_mcp::catalog::ToolCatalog;
 use alx_mcp::server::handle_line;
@@ -375,7 +375,8 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
                 "Agente ejecutor del pipeline ALEXANDRIA. Ejecuta la micro-tarea con evidencia verificable y concisa."
                     .into(),
             tools: Vec::new(),
-            tier: ModelTier::T2Medium,
+            // Governor clasifica la dificultad de la tarea → tier del agente.
+            tier: classify_prompt_text(title),
             phase: None,
             tags: Vec::new(),
         };
@@ -611,6 +612,52 @@ pub fn render_night_report() -> String {
     let _ = graph.transition("t-n-1", TaskStatus::Done, now);
     let report = build_report(&graph, "2026-08-13");
     render_night(&report)
+}
+
+/// Estado del loop de iteración gestionado por el MOTOR (no bash).
+/// Lee state.toml del harness iterate y decide si debe continuar.
+pub fn render_iterate_state() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../harnesses/iterate/state.toml");
+    let mut out = String::from("## Iteración (motor nativo)\n");
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        let v: toml::Value = toml::from_str(&text).unwrap_or(toml::Value::Table(Default::default()));
+        let iter = v.get("iter").and_then(|i| i.as_integer()).unwrap_or(0);
+        let max_iter = v.get("max_iter").and_then(|i| i.as_integer()).unwrap_or(20);
+        let target = v.get("target_iter").and_then(|i| i.as_integer()).unwrap_or(max_iter);
+        let awaiting = v.get("awaiting_user").and_then(|a| a.as_bool()).unwrap_or(false);
+        let work = v.get("work_unit").and_then(|w| w.as_str()).unwrap_or("").to_string();
+        out.push_str(&format!("iter: {iter}/{max_iter} (target {target})\n"));
+        out.push_str(&format!("awaiting_user: {awaiting}\n"));
+        out.push_str(&format!("unidad: {work}\n"));
+        if iter == 0 {
+            out.push_str("ESTADO: ciclo completado — el motor para solo.\n");
+        } else if awaiting {
+            out.push_str("ESTADO: esperando respuesta del humano — no forzar.\n");
+        } else if iter >= target {
+            out.push_str("ESTADO: objetivo alcanzado — no iterar más.\n");
+        } else {
+            out.push_str(&format!("ESTADO: puede continuar (iteración {})\n", iter + 1));
+        }
+    } else {
+        out.push_str("sin state.toml\n");
+    }
+    out
+}
+
+/// Avanza una iteración: el MOTOR incrementa iter en state.toml (sin bash).
+pub fn iterate_next() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../harnesses/iterate/state.toml");
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        let v: toml::Value = toml::from_str(&text).unwrap_or(toml::Value::Table(Default::default()));
+        let iter = v.get("iter").and_then(|i| i.as_integer()).unwrap_or(0);
+        let next = iter + 1;
+        let new_text = text.replace(&format!("iter = {iter}"), &format!("iter = {next}"));
+        let _ = std::fs::write(&path, new_text);
+        return format!("→ iteración {next} (motor nativo — auto-continue ya no necesario)\n");
+    }
+    "sin state.toml".to_string()
 }
 
 /// Estado del plugin PHALANX — CONFIG CARGADA por el motor.

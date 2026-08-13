@@ -10,11 +10,11 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    agents_run_parallel, check_network, feature_run, render_agents, render_build,
-    render_cost_report, render_doctor, render_metrics, render_network, render_night_report,
-    render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
-    run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent, verify_build,
-    AppState,
+    agents_run_parallel, check_network, feature_run, iterate_next, render_agents, render_build,
+    render_cost_report, render_doctor, render_iterate_state, render_metrics, render_network,
+    render_night_report, render_phalanx_status, render_real_run, render_report, render_run,
+    render_tui, render_weekly, run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio,
+    spawn_agent, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -82,6 +82,12 @@ enum Command {
     Metrics,
     /// Resumen semanal (coste, telemetría, harnesses, métricas).
     Weekly,
+    /// Loop de iteración gestionado por el motor (sin auto-continue bash).
+    Iterate {
+        /// Avanza una iteración en state.toml.
+        #[arg(long)]
+        next: bool,
+    },
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -184,6 +190,13 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Weekly) => {
             println!("{}", render_weekly());
+        }
+        Some(Command::Iterate { next }) => {
+            if next {
+                println!("{}", iterate_next());
+            } else {
+                println!("{}", render_iterate_state());
+            }
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

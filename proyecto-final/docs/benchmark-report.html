@@ -154,7 +154,19 @@
 <p class="legend">La mejora real del harness es la RECUPERACIÓN: convierte fallos de la directa en aciertos mediante ejecución+feedback. Eso es universal, no de benchmark.</p>
 </div>
 
-<h2>8 · Comando y reproducibilidad</h2>
+<h2>8 · HumanEval (familia 2) — generalidad confirmada</h2>
+<div class="card">
+<p class="small">164 problemas HumanEval, misma mecánica campeona (plan-then-code + feedback). <b>La ventaja del harness se mantiene en una 2ª familia distinta → NO es sobreajuste a BigCodeBench.</b></p>
+<table>
+<tr><th>Métrica</th><th>Directa</th><th>Harness</th></tr>
+<tr><td>Aciertos (N=164)</td><td>147/164 (89.6%)</td><td class="good">156/164 (95.1%)</td></tr>
+<tr><td>Problemas recuperados</td><td>—</td><td class="good">9</td></tr>
+<tr><td>Fallo de ambos</td><td colspan="2">8 (32, 38, 50, 115, 132, 145, 160, 163)</td></tr>
+</table>
+<p class="legend">La ventaja del harness ESCALA con la dificultad: 4.78x en BigCodeBench (hard), +6% en HumanEval (fácil, techo cerca de 100%). El mecanismo es universal: describir → codificar → ejecutar → corregir.</p>
+</div>
+
+<h2>9 · Comando y reproducibilidad</h2>
 <div class="card">
 <pre style="font-size:.85em; background:#f4f4f4; padding:.8em; border-radius:6px; overflow-x:auto;">ALX_BENCH_MAX=60 alx bench-bigcode</pre>
 <p class="small">Muestra fija: <code>harnesses/bench/bigcodebench-sample.jsonl</code> (60 problemas). El benchmark NO es nuestro: son tareas profesionales (BigCodeBench, ICLR'25) con tests verificables.</p>

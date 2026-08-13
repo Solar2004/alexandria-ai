@@ -9,11 +9,13 @@
 //! falla, acumulando feedback. `render_run` pinta el informe con gates reales,
 //! iteraciones usadas y el feedback acumulado.
 
-use alx_core::types::{now_ms, Evidence, PhaseId, Task, TaskStatus};
+use alx_core::types::{now_ms, Evidence, ModelTier, PhaseId, Task, TaskStatus};
 use alx_critic::{iteration_prompt, IterationState};
+use alx_governor::{Ledger, LedgerEntry};
 use alx_harness::{Phases, Pipeline};
 use alx_task::decompose::decompose;
 use alx_task::graph::TaskGraph;
+use std::time::Instant;
 
 /// Estado en memoria de la sesión del CLI.
 #[derive(Debug, Default)]
@@ -284,6 +286,138 @@ pub fn render_build(evidence: &alx_core::types::Evidence) -> String {
     }
 }
 
+/// Resultado de una ejecución real del pipeline contra la cadena de red
+/// (headroom→mask→routatic→deepseek) con ledger de coste.
+#[derive(Debug, Clone)]
+pub struct RealRunResult {
+    /// Resultado del pipeline (micro-tareas, gates, evidencia).
+    pub run: RunResult,
+    /// Ledger de coste por micro-tarea.
+    pub ledger: Ledger,
+    /// Respuestas truncadas del modelo por micro-tarea.
+    pub responses: Vec<String>,
+}
+
+/// Ejecuta el pipeline con llamadas REALES al modelo local vía headroom.
+///
+/// Por cada micro-tarea construye un envelope mínimo y hace
+/// `POST /v1/messages` (curl vía `alx_gate::run_command`). Parsea el `usage`
+/// de la respuesta (input/output tokens), registra la entrada en el `Ledger`
+/// y anexa la respuesta como evidencia. Si la red no responde o no hay usage,
+/// la micro-tarea cuenta como gate fallida (pero el ledger refleja el intento).
+pub fn run_pipeline_real(title: &str) -> RealRunResult {
+    const HEADROOM: &str = "http://127.0.0.1:8788";
+    let now = now_ms();
+    let mut graph = TaskGraph::new();
+    let parent = Task::new("t-real".to_string(), title.to_string(), PhaseId::Plan, 15_000, now);
+    graph.add(parent.clone());
+
+    let steps = vec![
+        ("preparar contexto".to_string(), "archivos listados".to_string()),
+        ("ejecutar paso".to_string(), "comando ok".to_string()),
+    ];
+    let children = decompose(&parent, steps);
+    for child in &children {
+        graph.add(child.clone());
+    }
+    let pipeline = Pipeline::new(Phases::default().0);
+
+    let mut run = RunResult {
+        task_title: title.to_string(),
+        micro_tasks: children.len(),
+        done: 0,
+        failed: 0,
+        evidence_count: 0,
+        gate_failures: 0,
+        iterations_used: 1,
+        feedback: Vec::new(),
+    };
+    let mut ledger = Ledger::new();
+    let mut responses = Vec::new();
+
+    for child in &children {
+        let envelope = format!("Tarea: {}. Devuelve solo el resultado en una frase.", child.title);
+        let cmd = format!(
+            "curl -s -m 30 {HEADROOM}/v1/messages -H 'content-type: application/json' -d '{{\"model\":\"deepseek-v4-flash\",\"max_tokens\":60,\"messages\":[{{\"role\":\"user\",\"content\":\"{envelope}\"}}]}}'"
+        );
+        let start = Instant::now();
+        let outcome = alx_gate::run_command(&cmd, 35_000);
+        let latency_ms = start.elapsed().as_millis();
+
+        let (in_tok, out_tok) = parse_usage(&outcome.stdout_head);
+        ledger.record(LedgerEntry::new(
+            "t-real",
+            &child.title,
+            ModelTier::T2Medium,
+            "headroom→mask→routatic",
+            in_tok,
+            out_tok,
+            latency_ms,
+        ));
+
+        let gate_pass = outcome.exit_code == 0 && in_tok > 0;
+        if !gate_pass {
+            run.gate_failures += 1;
+        }
+        responses.push(outcome.stdout_head.chars().take(150).collect());
+
+        let task = graph.by_id_mut(&child.id).expect("micro-tarea en el grafo");
+        let head: String = outcome.stdout_head.chars().take(400).collect();
+        task.evidence.push(Evidence::command_output(&cmd, outcome.exit_code, &head, gate_pass));
+        run.evidence_count += 1;
+        loop {
+            let r = pipeline.run_pipeline_step(task, gate_pass, now_ms());
+            run.evidence_count += r.evidence.len();
+            if r.completed {
+                match task.status {
+                    TaskStatus::Done => run.done += 1,
+                    TaskStatus::Failed => run.failed += 1,
+                    _ => {}
+                }
+                break;
+            }
+        }
+    }
+
+    RealRunResult { run, ledger, responses }
+}
+
+/// Extrae (input_tokens, output_tokens) del `usage` de una respuesta
+/// Anthropic-compatible. Devuelve (0,0) si no parsea.
+fn parse_usage(json: &str) -> (u32, u32) {
+    use serde_json::Value;
+    let v: Value = serde_json::from_str(json).unwrap_or(Value::Null);
+    let usage = &v["usage"];
+    let i = usage["input_tokens"].as_u64().unwrap_or(0) as u32;
+    let o = usage["output_tokens"].as_u64().unwrap_or(0) as u32;
+    (i, o)
+}
+
+/// Informe legible de la ejecución real: pipeline + ledger de coste.
+pub fn render_real_run(result: &RealRunResult) -> String {
+    let mut out = render_run(&result.run);
+    let (in_tok, out_tok) = result.ledger.total_tokens();
+    out.push_str(&format!(
+        "\n\n## Ledger de coste\nLlamadas reales: {}\nTokens: {} in / {} out\nCoste estimado: ${:.6}\n",
+        result.ledger.entry_count(),
+        in_tok,
+        out_tok,
+        result.ledger.total_cost_usd()
+    ));
+    for (i, e) in result.ledger.entries().iter().enumerate() {
+        out.push_str(&format!(
+            "\n  {} {} — {} in/{} out — ${:.6} — {}ms",
+            i + 1,
+            e.micro_task,
+            e.input_tokens,
+            e.output_tokens,
+            e.cost_usd,
+            e.latency_ms
+        ));
+    }
+    out
+}
+
 /// Informe legible del estado de red.
 pub fn render_network(statuses: &[NetworkStatus]) -> String {
     let mut out = String::from(
@@ -409,5 +543,18 @@ mod tests {
         assert!(text.contains("PROVIDER"));
         assert!(text.contains("headroom"));
         assert!(text.contains("routatic"));
+    }
+
+    #[test]
+    fn parse_usage_extracts_tokens() {
+        let json = r#"{"id":"x","usage":{"input_tokens":85,"output_tokens":20,"cache_creation_input_tokens":85}}"#;
+        let (i, o) = parse_usage(json);
+        assert_eq!((i, o), (85, 20));
+    }
+
+    #[test]
+    fn parse_usage_empty_on_garbage() {
+        let (i, o) = parse_usage("no-json");
+        assert_eq!((i, o), (0, 0));
     }
 }

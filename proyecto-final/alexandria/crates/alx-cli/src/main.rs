@@ -10,7 +10,8 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    check_network, render_build, render_network, render_run, run_pipeline, verify_build, AppState,
+    check_network, render_build, render_network, render_real_run, render_run, run_pipeline,
+    run_pipeline_real, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -33,6 +34,9 @@ enum Command {
     Run {
         /// Título de la tarea demo.
         titulo: String,
+        /// Llama a la cadena real (headroom→mask→routatic) con ledger de coste.
+        #[arg(long)]
+        real: bool,
     },
     /// Estado actual del sistema (fachada alx-lib).
     Status,
@@ -70,9 +74,14 @@ fn run(cli: Cli) -> ExitCode {
     let mut app = AppState::new();
     match cli.command {
         None => print_help(),
-        Some(Command::Run { titulo }) => {
-            let result = run_pipeline(&titulo);
-            println!("{}", render_run(&result));
+        Some(Command::Run { titulo, real }) => {
+            if real {
+                let result = run_pipeline_real(&titulo);
+                println!("{}", render_real_run(&result));
+            } else {
+                let result = run_pipeline(&titulo);
+                println!("{}", render_run(&result));
+            }
         }
         Some(Command::Status) => {
             let alex = Alexandria::new();

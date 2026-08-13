@@ -66,7 +66,7 @@
 - [~] Fase 2: CLI `alx` (status, task add/list, run pipeline end-to-end vía fachada alx-lib) — 6 tests
 - [~] Fase 3: alx-hooks (Hook, HookPriority, Registry, Dispatcher, DispatchPlan) — 12 tests
 - [~] Fase 4: alx-memory (compress caveman, RecallStore dedup/reinforce/inject/prune) — 12 tests
-- [~] Fase 5: alx-governor (classify→tier, router chains corregidas, budget) — 15 tests
+- [~] Fase 5: alx-governor (classify→tier, router chains, budget, ledger de coste) + alx run --real (cadena real headroom→mask→routatic, $/tokens) — 18 tests
 - [~] Fase 6: alx-task (TaskGraph transitions/ready/blocked, decompose micro-tareas) — 11 tests
 - [~] Fase 7: alx-harness (Phases, GateSpec, Pipeline runner con retries) — 9 tests
 - [~] Fase 8: alx-gate (run_command real con timeout, verify build/test/lint, LSP discovery) — 13 tests

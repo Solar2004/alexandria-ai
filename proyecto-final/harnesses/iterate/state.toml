@@ -1,3 +1,3 @@
-iter = 8
+iter = 9
 max_iter = 20
-work_unit = "iteracion 8/20: governor conectado de verdad — alx run pasa por headroom real (compresion), ledger de coste por micro-tarea, atg delega en alx"
+work_unit = "iteracion 9/20: critic real conectado — critic.run usa cadena real para criticar, critic.learn genera must_check, harness completo, alx-evolve detecta harnesses en trabajo real"

@@ -15,6 +15,11 @@ ATGHOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="cc"
 HEADROOM=/home/artorias/.local/bin/headroom
 
+# ---------- ALEXANDRIA: si alx está instalado, delega estado/red en él ----------
+if command -v alx >/dev/null 2>&1; then
+  echo "⚔ ALEXANDRIA: $(alx status) · red: $(alx network 2>/dev/null | sed -n '2p' | cut -d: -f1)" >&2
+fi
+
 # ---------- auto-init: CLAUDE.md si falta (mata el welcome screen + da memoria) ----------
 auto_init() {
   [ -f CLAUDE.md ] && return 0

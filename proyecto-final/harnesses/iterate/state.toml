@@ -1,6 +1,6 @@
-iter = 3
+iter = 4
 max_iter = 20
-work_unit = "ciclo 4 iteracion 3/20: feature real con tareas persistidas, pulir docs, verificar todo el ciclo"
+work_unit = "ciclo 4 iteracion 4/20: verificar perfil test .claude-alexandria, docs finales, telemetria avanzada"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

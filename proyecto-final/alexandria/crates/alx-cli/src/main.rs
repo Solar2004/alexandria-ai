@@ -12,7 +12,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use alx_cli::{
     agents_run_parallel, agents_show, check_network, feature_run, iterate_next, log_command,
     load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_benchmark,
-    render_bench_bigcode, render_bench_humaneval, render_build,
+    render_bench_bigcode, render_bench_codecontests, render_bench_humaneval, render_build,
     render_cost_report, render_doctor, render_quality,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
@@ -104,6 +104,8 @@ enum Command {
     BenchBigcode,
     /// Benchmark HumanEval (164, familia 2 para generalidad).
     BenchHumaneval,
+    /// Benchmark CodeContests (30, familia 3 I/O-based).
+    BenchCodecontests,
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -234,6 +236,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::BenchHumaneval) => {
             println!("{}", render_bench_humaneval());
+        }
+        Some(Command::BenchCodecontests) => {
+            println!("{}", render_bench_codecontests());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

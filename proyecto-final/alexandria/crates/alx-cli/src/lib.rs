@@ -1148,6 +1148,112 @@ pub fn render_bench_humaneval() -> String {
     out
 }
 
+/// Ejecuta una solución CodeContests (I/O-based): corre con cada input y
+/// compara stdout normalizado con el output esperado. (spec codecontests)
+fn run_codecontests(solution: &str, tests: &serde_json::Value) -> (bool, String) {
+    let sol_path = std::env::temp_dir().join("alx-codecontests.py");
+    if std::fs::write(&sol_path, solution).is_err() {
+        return (false, "error escribiendo solucion".to_string());
+    }
+    let Some(arr) = tests.as_array() else {
+        return (false, "sin tests".to_string());
+    };
+    let inp_path = std::env::temp_dir().join("alx-cc-input.txt");
+    for (i, t) in arr.iter().enumerate() {
+        let inp = t["input"].as_str().unwrap_or("");
+        let exp = t["output"].as_str().unwrap_or("").trim().to_string();
+        if std::fs::write(&inp_path, inp).is_err() {
+            return (false, "error escribiendo input".to_string());
+        }
+        let out = alx_gate::run_command(
+            &format!("python3 {} < {}", sol_path.display(), inp_path.display()),
+            15_000,
+        );
+        let got = out.stdout_head.trim().to_string();
+        if got != exp {
+            return (
+                false,
+                format!(
+                    "test {} fallo: expected '{}', got '{}'",
+                    i + 1,
+                    exp.chars().take(40).collect::<String>(),
+                    got.chars().take(40).collect::<String>()
+                ),
+            );
+        }
+    }
+    (true, "todos los tests pasan".to_string())
+}
+
+/// Benchmark CodeContests (30, familia 3 I/O-based para GENERALIDAD).
+/// Misma mecánica campeona: plan-then-code + feedback.
+pub fn render_bench_codecontests() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../harnesses/bench/codecontests-sample.jsonl");
+    let mut out = String::from("## Benchmark CodeContests (30) — familia 3 I/O\n");
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return out + "sin codecontests-sample.jsonl\n";
+    };
+    let mut tasks: Vec<serde_json::Value> = Vec::new();
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+            tasks.push(v);
+        }
+    }
+    if let Ok(cap) = std::env::var("ALX_BENCH_MAX") {
+        if let Ok(n) = cap.trim().parse::<usize>() {
+            tasks.truncate(n);
+        }
+    }
+    let (mut d_ok, mut h_ok) = (0usize, 0usize);
+    for (i, t) in tasks.iter().enumerate() {
+        let id_fallback = format!("CC/{i}");
+        let id = t["name"].as_str().unwrap_or(&id_fallback);
+        let desc = t["description"].as_str().unwrap_or("").to_string();
+        let tests = t["tests"].clone();
+        if desc.is_empty() || tests.as_array().map(|a| a.is_empty()).unwrap_or(true) {
+            continue;
+        }
+        let full_prompt = format!(
+            "{desc}\n\nEscribe SOLO codigo Python que lea de stdin y escriba a stdout para resolver el problema. PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe el codigo entre marcadores ```python."
+        );
+        let d_sol = extract_script(&generate_script(&full_prompt));
+        let (d, _df) = run_codecontests(&d_sol, &tests);
+        if d {
+            d_ok += 1;
+        }
+        let mut h = false;
+        let mut feedback = String::new();
+        for _ in 0..4 {
+            let prompt = format!(
+                "{desc}\n\nEscribe SOLO codigo Python que lea de stdin y escriba a stdout. PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe el codigo entre marcadores ```python. {feedback}"
+            );
+            let sol = extract_script(&generate_script(&prompt));
+            let (ok, frag) = run_codecontests(&sol, &tests);
+            if ok {
+                h = true;
+                break;
+            }
+            feedback = format!("El test fallo. Detalle: {frag}. Corrige. ");
+        }
+        if h {
+            h_ok += 1;
+        }
+        eprintln!("  {id}: directa {} | harness {}", if d { "✓" } else { "✗" }, if h { "✓" } else { "✗" });
+        out.push_str(&format!(
+            "  {id}: directa {} | harness {}\n",
+            if d { "✓" } else { "✗" },
+            if h { "✓" } else { "✗" },
+        ));
+    }
+    out.push_str(&format!(
+        "Directa: {d_ok}/{} · Harness: {h_ok}/{} — CodeContests\n",
+        tasks.len(),
+        tasks.len()
+    ));
+    out
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");

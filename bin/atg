@@ -20,6 +20,12 @@ if command -v alx >/dev/null 2>&1; then
   echo "⚔ ALEXANDRIA: $(alx status) · red: $(alx network 2>/dev/null | sed -n '2p' | cut -d: -f1)" >&2
 fi
 
+# atg --alx <subcomando> → delega directamente en ALEXANDRIA
+if [ "${1:-}" = "--alx" ]; then
+  shift
+  exec alx "$@"
+fi
+
 # ---------- auto-init: CLAUDE.md si falta (mata el welcome screen + da memoria) ----------
 auto_init() {
   [ -f CLAUDE.md ] && return 0

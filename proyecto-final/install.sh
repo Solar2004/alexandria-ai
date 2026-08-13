@@ -15,4 +15,13 @@ mkdir -p "${BIN}"
 cp "${ROOT}/alexandria/target/release/alx" "${TARGET}"
 echo "→ Instalado: ${TARGET}"
 "${TARGET}" --version
-echo "→ Listo. Probar: alx status · alx network · alx run \"objetivo\""
+
+# Verificar el plugin PHALANX (config + hooks)
+if [ -f "${ROOT}/phalanx/config.toml" ]; then
+    HOOKS=$(ls "${ROOT}/phalanx/hooks/"*.toml 2>/dev/null | wc -l)
+    echo "→ PHALANX plugin: config ✓ · ${HOOKS} hooks"
+else
+    echo "→ PHALANX plugin: (sin config en ${ROOT}/phalanx)"
+fi
+
+echo "→ Listo. Probar: alx status · alx network · alx run \"objetivo\" · alx doctor"

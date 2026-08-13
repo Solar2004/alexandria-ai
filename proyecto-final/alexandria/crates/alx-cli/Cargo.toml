@@ -14,5 +14,6 @@ alx-lib = { path = "../alx-lib" }
 alx-task = { path = "../alx-task" }
 alx-harness = { path = "../alx-harness" }
 alx-gate = { path = "../alx-gate" }
+alx-critic = { path = "../alx-critic" }
 alx-governor = { path = "../alx-governor" }
 clap = { version = "4", features = ["derive"] }

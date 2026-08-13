@@ -1,0 +1,10 @@
+# Doc-min: controla el coste clasificando la dificultad antes de actuar.
+id = "governor.classify"
+event = "PreToolUse"
+priority = "Pre"
+command = "alx-governor classify --difficulty auto --tier default --route chain"
+timeout_ms = 2000
+lock = false
+retry = 1
+enabled = true
+description = "Clasifica la dificultad de la operación y selecciona el tier de modelo y la ruta de red correspondiente."

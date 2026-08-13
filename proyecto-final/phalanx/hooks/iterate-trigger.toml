@@ -1,0 +1,10 @@
+# Doc-min: la AI itera sola (loop R24) hasta resolver la tarea.
+id = "iterate.trigger"
+event = "Stop"
+priority = "Async"
+command = "alx-evolve iterate --max 20 --read-state IterationState --emit IterateRequest"
+timeout_ms = 5000
+lock = false
+retry = 1
+enabled = true
+description = "Fuerza la iteración R24: lee/actualiza IterationState y emite IterateRequest con el feedback acumulado (responde también a TaskDone)."

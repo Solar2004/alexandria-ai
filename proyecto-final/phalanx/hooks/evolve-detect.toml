@@ -1,0 +1,10 @@
+# Doc-min: detecta patrones repetidos para convertirlos en harnesses.
+id = "evolve.detect"
+event = "PostToolUse"
+priority = "Async"
+command = "alx-evolve detect --candidates --harnesses-dir harnesses --min-repetitions 2"
+timeout_ms = 8000
+lock = false
+retry = 1
+enabled = true
+description = "Detecta operaciones repetidas o exitosas candidatas a convertirse en un harness evolutivo reutilizable."

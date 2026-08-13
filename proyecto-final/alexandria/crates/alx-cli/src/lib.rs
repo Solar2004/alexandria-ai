@@ -3,9 +3,14 @@
 //! `AppState` guarda las tareas en memoria (Fase 2: skeleton funcional, sin
 //! persistencia a disco) y `render_status` produce el texto de estado que el
 //! binario pinta. `run_pipeline` integra el pipeline end-to-end: task → DAG →
-//! descomposición → harness (gate simulado), y `render_run` pinta el informe.
+//! descomposición → harness, ejecutando un gate REAL de comandos por
+//! micro-tarea (`alx_gate::run_command`) y un critic loop (`IterationState`,
+//! max 2 iteraciones) que re-ejecuta el pipeline desde cero cuando algún gate
+//! falla, acumulando feedback. `render_run` pinta el informe con gates reales,
+//! iteraciones usadas y el feedback acumulado.
 
-use alx_core::types::{now_ms, PhaseId, Task, TaskStatus};
+use alx_core::types::{now_ms, Evidence, PhaseId, Task, TaskStatus};
+use alx_critic::{iteration_prompt, IterationState};
 use alx_harness::{Phases, Pipeline};
 use alx_task::decompose::decompose;
 use alx_task::graph::TaskGraph;
@@ -69,16 +74,60 @@ pub struct RunResult {
     pub failed: usize,
     /// Total de evidencias generadas por el harness.
     pub evidence_count: usize,
+    /// Micro-tareas cuyo gate real falló (exit_code != 0).
+    pub gate_failures: u32,
+    /// Número de pasadas del pipeline que usó el critic loop.
+    pub iterations_used: u32,
+    /// Feedback acumulado del `IterationState` (críticas de cada iteración).
+    pub feedback: Vec<String>,
 }
 
 /// Ejecuta el pipeline end-to-end sobre una tarea demo.
 ///
-/// Flujo: crea `Task("t-demo", Plan)` → la añade al `TaskGraph` → la
-/// descompone en 2 micro-tareas encadenadas → las corre por el `Pipeline`
-/// con el gate simulado en `true` (la integración aquí es de flujo; el gate
-/// real de comandos se conecta en otra fase). Cada micro-tarea avanza por el
-/// pipeline hasta que termina (`Done` o `Failed`).
+/// Por cada micro-tarea corre un gate real (`echo "gate ok para: <título>"`)
+/// vía `alx_gate::run_command`; si el comando sale con 0 la micro-tarea
+/// avanza por el `Pipeline`, si no queda `Failed` y cuenta como `gate_failure`.
+/// Un critic loop (`IterationState`, max 2 iteraciones) re-ejecuta el pipeline
+/// desde cero (Task nuevo por iteración) cuando hay gates fallidos, acumulando
+/// el feedback.
 pub fn run_pipeline(title: &str) -> RunResult {
+    run_pipeline_with_gate(title, |t| format!("echo \"gate ok para: {t}\""))
+}
+
+/// `run_pipeline` con el comando de gate personalizable (tests y sondeo).
+/// `gate_cmd` recibe el título de la micro-tarea y devuelve el comando real a
+/// ejecutar. Envuelve `run_once` en el critic loop: si tras una pasada hay
+/// `gate_failures > 0`, avanza el `IterationState` con el feedback y repite
+/// hasta `max_iter` o hasta que no queden fallos.
+fn run_pipeline_with_gate(title: &str, gate_cmd: impl Fn(&str) -> String) -> RunResult {
+    const MAX_ITER: u32 = 2;
+    let mut state = IterationState::new("t-demo", MAX_ITER);
+    let mut runs = 0u32;
+
+    loop {
+        runs += 1;
+        let mut run = run_once(title, &gate_cmd);
+        run.iterations_used = runs;
+        run.feedback = state.feedback.clone();
+        if run.gate_failures == 0 {
+            state.mark_passed();
+            return run;
+        }
+        state.advance(format!(
+            "{} gates fallaron en iteracion {runs}",
+            run.gate_failures
+        ));
+        run.feedback = state.feedback.clone();
+        if !state.should_iterate() {
+            return run;
+        }
+    }
+}
+
+/// Una pasada completa del pipeline: crea un `Task` nuevo (el estado de cada
+/// micro-tarea se reinicia), lo descompone y corre cada micro-tarea por el
+/// `Pipeline` con el resultado de un gate real de comandos.
+fn run_once(title: &str, gate_cmd: &dyn Fn(&str) -> String) -> RunResult {
     let now = now_ms();
     let mut graph = TaskGraph::new();
     let parent = Task::new("t-demo".to_string(), title.to_string(), PhaseId::Plan, 15_000, now);
@@ -98,10 +147,21 @@ pub fn run_pipeline(title: &str) -> RunResult {
     let mut done = 0usize;
     let mut failed = 0usize;
     let mut evidence_count = 0usize;
+    let mut gate_failures = 0u32;
     for child in &children {
         let task = graph.by_id_mut(&child.id).expect("micro-tarea en el grafo");
+        // Gate real: la salida capturada (`stdout_head`) es la evidencia.
+        let cmd = gate_cmd(&child.title);
+        let outcome = alx_gate::run_command(&cmd, 5000);
+        let gate_pass = outcome.exit_code == 0;
+        if !gate_pass {
+            gate_failures += 1;
+        }
+        let gate_ev = Evidence::command_output(&cmd, outcome.exit_code, &outcome.stdout_head, gate_pass);
+        task.evidence.push(gate_ev);
+        evidence_count += 1;
         loop {
-            let result = pipeline.run_pipeline_step(task, true, now_ms());
+            let result = pipeline.run_pipeline_step(task, gate_pass, now_ms());
             evidence_count += result.evidence.len();
             if result.completed {
                 match task.status {
@@ -120,15 +180,39 @@ pub fn run_pipeline(title: &str) -> RunResult {
         done,
         failed,
         evidence_count,
+        gate_failures,
+        iterations_used: 0,
+        feedback: Vec::new(),
     }
 }
 
 /// Informe legible del resultado de una ejecución del pipeline.
+///
+/// Incluye los gates reales ejecutados (`gates fallados`), las iteraciones del
+/// critic loop y, cuando hubo feedback, el prompt de iteración generado con
+/// `alx_critic::iteration_prompt`.
 pub fn render_run(result: &RunResult) -> String {
-    format!(
-        "## Pipeline run\nTítulo: {}\nMicro-tareas: {}, hechas: {}, fallidas: {}\nEvidencia: {}",
-        result.task_title, result.micro_tasks, result.done, result.failed, result.evidence_count
-    )
+    let mut out = format!(
+        "## Pipeline run\nTítulo: {}\nMicro-tareas: {}, hechas: {}, fallidas: {}\nEvidencia: {}\ngates fallados: {}\nIteraciones usadas: {}",
+        result.task_title,
+        result.micro_tasks,
+        result.done,
+        result.failed,
+        result.evidence_count,
+        result.gate_failures,
+        result.iterations_used
+    );
+    if !result.feedback.is_empty() {
+        let state = IterationState {
+            task_id: "t-demo".to_string(),
+            iter: result.iterations_used.saturating_sub(1),
+            max_iter: 2,
+            feedback: result.feedback.clone(),
+            passed: result.gate_failures == 0,
+        };
+        out.push_str(&format!("\n{}", iteration_prompt(&state)));
+    }
+    out
 }
 
 #[cfg(test)]
@@ -177,16 +261,44 @@ mod tests {
         assert_eq!(r.micro_tasks, 2);
         assert_eq!(r.done, 2);
         assert_eq!(r.failed, 0);
+        assert_eq!(r.gate_failures, 0); // el echo real sale 0 en todas las micro-tareas
+        assert_eq!(r.iterations_used, 1); // sin fallos → una sola pasada
         assert!(r.evidence_count > 0);
+        assert!(r.feedback.is_empty());
     }
 
     #[test]
-    fn render_run_contains_title() {
+    fn render_run_contains_gate_and_title() {
         let r = run_pipeline("feature demo");
         let text = render_run(&r);
         assert!(text.contains("feature demo"));
         assert!(text.contains("## Pipeline run"));
         assert!(text.contains("hechas: 2"));
+        assert!(text.contains("gates fallados: 0"));
+        assert!(text.contains("Iteraciones usadas: 1"));
+    }
+
+    #[test]
+    fn failing_gate_triggers_critic_loop_to_max_iter() {
+        // Comando que siempre falla: gate real exit_code 1 → critica → 2ª pasada.
+        let r = run_pipeline_with_gate("demo", |_| "exit 1".to_string());
+        assert_eq!(r.gate_failures, 2); // las 2 micro-tareas
+        assert_eq!(r.done, 0);
+        assert_eq!(r.failed, 2);
+        assert_eq!(r.iterations_used, 2); // max_iter=2 agotado
+        assert_eq!(r.feedback.len(), 2);
+        assert!(r.feedback[0].contains("2 gates fallaron en iteracion 1"));
+        assert!(r.feedback[1].contains("2 gates fallaron en iteracion 2"));
+    }
+
+    #[test]
+    fn render_run_uses_iteration_prompt_when_feedback() {
+        let r = run_pipeline_with_gate("demo", |_| "exit 1".to_string());
+        let text = render_run(&r);
+        // iteration_prompt se usa: cabecera de iteración + feedback acumulado.
+        assert!(text.contains("Feedback de iteraciones previas"));
+        assert!(text.contains("gates fallaron en iteracion"));
+        assert!(text.contains("Iteración 2 de 2"));
     }
 
     #[test]

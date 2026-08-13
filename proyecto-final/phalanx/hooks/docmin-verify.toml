@@ -1,0 +1,10 @@
+# Doc-min: cada archivo nuevo o editado lleva documentación mínima (doc-min).
+id = "docmin.verify"
+event = "PostToolUse"
+priority = "Post"
+command = "alx-audit docmin --tool Edit,Write --min-chars 20 --min-description 20"
+timeout_ms = 5000
+lock = false
+retry = 1
+enabled = true
+description = "Verifica la regla doc-min tras Ediciones y Escrituras: todo archivo nuevo o cambiado debe documentar qué resuelve."

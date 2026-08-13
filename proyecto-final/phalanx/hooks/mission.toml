@@ -1,0 +1,10 @@
+# Doc-min: re-inyecta la memoria maestra y las reglas globales en cada prompt.
+id = "phalanx.mission"
+event = "UserPromptSubmit"
+priority = "Pre"
+command = "alx-hooks mission --inject plan/MISSION.md --rules caveman,calidad,evidencia"
+timeout_ms = 3000
+lock = true
+retry = 1
+enabled = true
+description = "Re-inyecta la memoria maestra MISSION.md y las reglas de calidad (caveman, evidencia) en cada prompt del usuario."

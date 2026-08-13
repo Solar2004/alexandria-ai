@@ -1,0 +1,73 @@
+# =============================================================================
+# PHALANX — configuración del sistema ALEXANDRIA
+# Este archivo ES el sistema. El motor (16 crates Rust: alx-core, alx-hooks,
+# alx-governor, alx-evolve, alx-cli, ...) lo lee y se configura solo.
+# Cambiar este archivo cambia el comportamiento del sistema — sin recompilar.
+# Doc-min: cada sección documenta qué resuelve.
+# =============================================================================
+
+[phalanx]
+name = "phalanx"
+version = "0.1.0"
+mission = "plan/MISSION.md"          # memoria maestra inyectada por hook mission
+compression = "caveman"              # regla global de habla
+caveman_level = "ultra"
+
+[engine]
+state_dir = "~/.alexandria/state"
+event_log = "~/.alexandria/state/events.log"
+max_threads = 6
+model_mask = true                    # reusa cc-model-mask
+
+[governor]
+default_tier = "T2Medium"
+warn_at_pct = 80
+hard_cap_pct = 100
+routes = [
+  # routatic = PROVIDER (deepseek-v4-flash). headroom comprime, mask enmascara el modelo.
+  { tier = "T1Cheap",  chain = ["http://127.0.0.1:3456"] },                                        # routatic directo
+  { tier = "T2Medium", chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3460", "http://127.0.0.1:3456"] },  # headroom→mask→routatic
+  { tier = "T3Premium",chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3460", "http://127.0.0.1:3456"] },
+]
+fallback = "http://127.0.0.1:20128"   # omniroute: SOLO si routatic cae (no es cadena principal)
+
+[memory]
+store = "~/.alexandria/state/recalls.jsonl"
+max_inject_tokens = 2000
+cadence_days = 30
+
+[task]
+store = "~/.alexandria/state/tasks.jsonl"
+plans_dir = "phalanx/plans"
+
+[harness]
+phases = ["Ingest","Spec","Plan","Build","Test","Review","Docs","Ship"]
+retries = 2
+
+[gate]
+sandbox = true
+policy = "strict"                    # warnings = fail
+
+[critic]
+max_iterations = 3                   # rondas de crítica sobre el output de una fase
+escalate_after = 2                   # si el crítico falla N rondas, escala a humano
+
+[iterate]
+max_iterations = 20                  # iteration loop R24
+enabled = true                       # la AI itera sola hasta resolver
+
+[evolve]
+harnesses_dir = "harnesses"          # sistema de harnesses evolutivos
+watcher_interval = 300               # segundos entre barridos de candidatos a harness
+
+[night]
+enabled = true
+report = "plan/night-report.md"
+commit = true                        # commit atómico tras cada pasada
+
+[mcp]
+server_stdio = true
+server_sse = { enabled = true, port = 8770 }
+
+[mcp.clients]
+default = ["codebase-memory", "code-graph-rag", "notebooklm", "mcp-search", "chrome-devtools"]

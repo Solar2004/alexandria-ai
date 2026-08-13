@@ -1,3 +1,3 @@
-iter = 5
+iter = 6
 max_iter = 20
-work_unit = "iteracion 5/20: PHALANX plugin real — config.toml, hooks catalogo, gates reales de comandos en pipeline, critic loop conectado"
+work_unit = "iteracion 6/20: conectar ALEXANDRIA al sistema real — alx usa red real (headroom→mask→routatic), integracion atg/hooks actuales, install.sh, primer dogfood"

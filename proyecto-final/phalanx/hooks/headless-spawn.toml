@@ -1,0 +1,10 @@
+# Doc-min: micro-tareas listas se ejecutan en sesiones headless, en paralelo.
+id = "headless.spawn"
+event = "MicroTaskReady"
+priority = "Async"
+command = "alx-night spawn --headless --task ${TASK_ID} --mode session --threads 6"
+timeout_ms = 10000
+lock = false
+retry = 2
+enabled = true
+description = "Lanza sesiones headless para micro-tareas listas, en paralelo, sin bloquear la sesión principal del usuario."

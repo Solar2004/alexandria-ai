@@ -76,7 +76,7 @@
 - [~] Fase 11: alx-night (NightSchedule, NightReport, run_cycle) — 6 tests
 - [~] alx-audit (AuditIndex dedup, Doctor, ejemplo ecosistema) — 9 tests
 - [~] alx-lib (fachada Alexandria + re-exports) — 8 tests
-- [ ] Fase 12: PHALANX (el plugin único)
+- [~] Fase 12: PHALANX plugin (config.toml completo + 10 hooks TOML + README) — TOML validado
 - [ ] Fase 13: Integración total (atg, headroom, MCP existentes)
 - [ ] Fase 14: Dogfood — usar ALEXANDER para construir una feature real
 - [ ] Fase 15: Docs + packaging + instalador

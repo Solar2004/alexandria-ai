@@ -1,9 +1,9 @@
 //! alx — binario CLI de ALEXANDRIA.
 //!
-//! Subcomandos: `run <titulo>` (pipeline de demo end-to-end), `status`
-//! (fachada alx-lib), `task add/list` y `--version`. El estado del DAG vive
-//! en memoria por invocación; la persistencia a disco llega en fases
-//! posteriores.
+//! Subcomandos: `run <titulo>` (pipeline end-to-end con gates reales de
+//! comandos y critic loop), `status` (fachada alx-lib), `task add/list` y
+//! `--version`. El estado del DAG vive en memoria por invocación; la
+//! persistencia a disco llega en fases posteriores.
 
 use std::process::ExitCode;
 

@@ -1,0 +1,10 @@
+# Doc-min: el auto-recordarse — captura aprendizaje para no repetirlo.
+id = "memory.capture"
+event = "PostToolUse"
+priority = "Async"
+command = "alx-memory capture --source event --format caveman --store recalls.jsonl"
+timeout_ms = 5000
+lock = false
+retry = 2
+enabled = true
+description = "Si la tool dejó aprendizaje (error, fix, patrón), lo comprime a una frase caveman y lo guarda como Recall."

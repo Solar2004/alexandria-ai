@@ -1,6 +1,6 @@
-iter = 6
+iter = 9
 max_iter = 20
-work_unit = "ciclo 7 iteracion 6/20: GRAFICO COMPARATIVO LISTO (docs/benchmark-report.html, seccion 5): deepseek vs claude-opus con/sin harness, mismos 2 problemas. Ambos modelos: harness recupera. Claude via 3460 = lento (opus), N=2 preliminar. fable 5 ausente. Siguiente: expandir N claude (subset rapido) o plan-then-code"
+work_unit = "ciclo 7 iteracion 9/20: 🎯 PLAN-THEN-CODE ROMPE EL TECHO — N=60: directa 9/60 (15%) vs harness 43/60 (72%) = 4.78x (antes feedback simple 34/60). El modelo describe el algoritmo antes del codigo. Casi 5x logrado en benchmark REAL. Config campeona: plan-then-code (commit 3cd33d4). Pendiente: actualizar reporte HTML, memoria, y validar estabilidad (2do run)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

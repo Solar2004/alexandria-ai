@@ -26,8 +26,8 @@
 <div class="card">
   <div style="display:flex; gap:2em; flex-wrap:wrap;">
     <div><div class="small">Directa (sin harness)</div><div class="big bad">9/60</div><div class="small">15% · 1 intento</div></div>
-    <div><div class="small">Harness ALEXANDRIA</div><div class="big good">34/60</div><div class="small">57% · loop de ejecución+feedback</div></div>
-    <div><div class="small">Ventaja</div><div class="big">3.8x</div><div class="small">4.25x en N=30</div></div>
+    <div><div class="small">Harness ALEXANDRIA</div><div class="big good">43/60</div><div class="small">72% · plan-then-code + loop de ejecución</div></div>
+    <div><div class="small">Ventaja</div><div class="big">4.78x</div><div class="small">≈5x · objetivo logrado</div></div>
   </div>
 </div>
 
@@ -41,10 +41,10 @@
   <text x="70" y="45" font-size="12">Directa (sin harness)</text>
   <rect x="250" y="32" width="37.5" height="16" fill="#c62828"/>
   <text x="292" y="45" font-size="12" fill="#333">15%</text>
-  <!-- Harness 57% -->
-  <text x="70" y="75" font-size="12">Harness ALEXANDRIA</text>
-  <rect x="250" y="62" width="142.5" height="16" fill="#0a7d33"/>
-  <text x="397" y="75" font-size="12" fill="#333">57%</text>
+  <!-- Harness 72% -->
+  <text x="70" y="75" font-size="12">Harness ALEXANDRIA (plan-then-code)</text>
+  <rect x="250" y="62" width="180" height="16" fill="#0a7d33"/>
+  <text x="435" y="75" font-size="12" fill="#333">72%</text>
   <!-- GPT-4o ref 40% -->
   <text x="70" y="105" font-size="12">GPT-4o (ref., paper ICLR'25)</text>
   <rect x="250" y="92" width="100" height="16" fill="#9e9e9e"/>
@@ -58,30 +58,34 @@
 
 <h2>2 · Mecanismos del harness (N=60, 1 run cada uno)</h2>
 <div class="card">
-<svg viewBox="0 0 540 150" xmlns="http://www.w3.org/2000/svg">
-  <text x="70" y="45" font-size="12">Feedback simple (final)</text>
-  <rect x="250" y="32" width="283" height="16" fill="#0a7d33"/>
-  <text x="540" y="45" font-size="12" fill="#333">34/60</text>
-  <text x="70" y="75" font-size="12">Feedback rich expected/actual</text>
-  <rect x="250" y="62" width="242" height="16" fill="#b00020"/>
-  <text x="540" y="75" font-size="12" fill="#333">29/60</text>
+<svg viewBox="0 0 540 170" xmlns="http://www.w3.org/2000/svg">
+  <text x="70" y="45" font-size="12">Plan-then-code (CAMPEON)</text>
+  <rect x="250" y="32" width="358" height="16" fill="#0a7d33"/>
+  <text x="540" y="45" font-size="12" fill="#333">43/60</text>
+  <text x="70" y="75" font-size="12">Feedback simple</text>
+  <rect x="250" y="62" width="283" height="16" fill="#1565c0"/>
+  <text x="540" y="75" font-size="12" fill="#333">34/60</text>
   <text x="70" y="105" font-size="12">Ensamble pass@k (3+2)</text>
   <rect x="250" y="92" width="275" height="16" fill="#ef6c00"/>
   <text x="540" y="105" font-size="12" fill="#333">33/60</text>
-  <text x="245" y="140" font-size="10" fill="#888">0</text>
-  <text x="490" y="140" font-size="10" fill="#888">60</text>
+  <text x="70" y="135" font-size="12">Feedback rich expected/actual</text>
+  <rect x="250" y="122" width="242" height="16" fill="#b00020"/>
+  <text x="540" y="135" font-size="12" fill="#333">29/60</text>
+  <text x="245" y="160" font-size="10" fill="#888">0</text>
+  <text x="490" y="160" font-size="10" fill="#888">60</text>
 </svg>
-<p class="legend">Escala: 1px = 0.12 problemas. Config final = feedback simple. Rich y ensamble revertidos con datos (no mejoran).</p>
+<p class="legend">Escala: 1px = 0.12 problemas. Plan-then-code (el modelo describe el algoritmo antes de codificar) rompe el techo: 34→43/60. Rich y ensamble revertidos con datos.</p>
 </div>
 
 <h2>3 · Consistencia entre muestras</h2>
 <div class="card">
 <table>
 <tr><th>Muestra</th><th>Directa</th><th>Harness</th><th>Ratio</th></tr>
-<tr><td>N=30</td><td>4/30 (13%)</td><td class="good">17/30 (57%)</td><td>4.25x</td></tr>
-<tr><td>N=60</td><td>9/60 (15%)</td><td class="good">34/60 (57%)</td><td>3.8x</td></tr>
+<tr><td>N=30 (feedback simple)</td><td>4/30 (13%)</td><td class="good">17/30 (57%)</td><td>4.25x</td></tr>
+<tr><td>N=60 (feedback simple)</td><td>9/60 (15%)</td><td class="good">34/60 (57%)</td><td>3.8x</td></tr>
+<tr><td>N=60 (plan-then-code)</td><td>9/60 (15%)</td><td class="good">43/60 (72%)</td><td><b>4.78x</b></td></tr>
 </table>
-<p class="legend">La ventaja del harness es estable ~4x. El techo ~57% es capacidad del modelo, no del mecanismo.</p>
+<p class="legend">Plan-then-code rompe el techo del feedback simple: el modelo describe el algoritmo antes de codificar. Casi 5x.</p>
 </div>
 
 <h2>4 · Recuperación del harness (por problema, N=60)</h2>

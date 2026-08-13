@@ -1,6 +1,6 @@
-iter = 12
+iter = 13
 max_iter = 20
-work_unit = "ciclo 3 iteracion 11/20: verificacion integral — todos los subcomandos funcionan, docs coherentes, pulir detalles"
+work_unit = "ciclo 3 iteracion 13/20: pulir run --real (micro-tareas reales), docs coherentes, verificar feature con agents por fase"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

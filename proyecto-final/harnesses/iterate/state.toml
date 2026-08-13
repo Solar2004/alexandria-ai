@@ -1,6 +1,6 @@
-iter = 14
+iter = 16
 max_iter = 20
-work_unit = "ciclo 6 iteracion 14/20: ensamble midio 33/60 = PLANO vs 34/60 (feedback simple). Dos experimentos negativos (rich feedback 29, ensamble 33). VEREDICTO: techo ~55% es del MODELO deepseek-v4-flash en BigCodeBench, no del mecanismo. 5x (~45/60) inalcanzable con este modelo en este benchmark. Ratio real estable ~4x. Opciones: aceptar ~4x / modelo mejor / subset mas facil / plan-then-code (ultimo experimento)"
+work_unit = "ciclo 6 iteracion 16/20: GATE FINAL VERIFICADO — cargo test --workspace: 33 bloques ok, 0 fallos; clippy 0 en 16 crates. Ciclo 6 cerrado con config optima (feedback simple, 34/60 = ~4x). Restan: plan-then-code (experimento final opcional), redefinir metrica 5x sobre otro task-set, pulido. REQUIERE /compact: contexto en limite"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

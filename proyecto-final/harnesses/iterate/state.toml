@@ -1,6 +1,6 @@
-iter = 6
+iter = 7
 max_iter = 20
-work_unit = "ciclo 10 iteracion 6/20: alx setup = INSTALADOR DEFINITIVO (94c63ee): verifica motor + statusline + MCP + hooks + 8 plugins complementarios (caveman, ecc, remember, code-review, code-simplifier, claude-mem, agent-skills, superpowers) — todos ✓. Binario reinstalado. Pendiente: setup sincronizar theme al perfil. LISTO PARA /COMPACT"
+work_unit = "ciclo 10 iteracion 7/20: AUTO-CONTINUE ELIMINADO (a peticion del usuario) — el hook Stop que forzaba 'continuar' repetidamente ya no esta. Critica aceptada: cuando forzaba, se caia en 'mantengo posicion' en vez de trabajo real. El motor nativo alx iterate sigue para iteracion genuina. Pendiente: setup theme al perfil. LISTO PARA /COMPACT"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

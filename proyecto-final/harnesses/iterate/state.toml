@@ -1,6 +1,6 @@
-iter = 1
+iter = 2
 max_iter = 20
-work_unit = "CICLO 2 (pulido): iteracion 1/20 — TUI de estado del motor (alx tui), documentacion de uso actualizada"
+work_unit = "CICLO 2 (pulido): iteracion 2/20 — documentacion de uso completa (README+QUICKSTART), pulir alx run --real (critic mas confiable), mejorar spawn con tier"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

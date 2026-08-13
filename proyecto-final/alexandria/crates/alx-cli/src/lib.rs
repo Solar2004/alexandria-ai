@@ -9,10 +9,12 @@
 //! falla, acumulando feedback. `render_run` pinta el informe con gates reales,
 //! iteraciones usadas y el feedback acumulado.
 
-use alx_core::types::{now_ms, Evidence, ModelTier, PhaseId, Task, TaskStatus};
-use alx_critic::{iteration_prompt, IterationState};
+use alx_core::types::{now_ms, Evidence, ModelTier, PhaseId, Recall, RecallSource, Task, TaskStatus};
+use alx_critic::{criticize_real, derive_must_checks, iteration_prompt, CriticVerdict, IterationState};
+use alx_evolve::{detect_candidates, HarnessRegistry};
 use alx_governor::{Ledger, LedgerEntry};
 use alx_harness::{Phases, Pipeline};
+use alx_memory::RecallStore;
 use alx_task::decompose::decompose;
 use alx_task::graph::TaskGraph;
 use std::time::Instant;
@@ -296,6 +298,12 @@ pub struct RealRunResult {
     pub ledger: Ledger,
     /// Respuestas truncadas del modelo por micro-tarea.
     pub responses: Vec<String>,
+    /// Veredictos del crítico real por micro-tarea.
+    pub verdicts: Vec<CriticVerdict>,
+    /// Must-checks aprendidos por el crítico (derive_must_checks).
+    pub must_checks: Vec<String>,
+    /// Harnesses detectados en el trabajo real (alx-evolve).
+    pub harness_detected: Vec<String>,
 }
 
 /// Ejecuta el pipeline con llamadas REALES al modelo local vía headroom.
@@ -334,6 +342,11 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
     };
     let mut ledger = Ledger::new();
     let mut responses = Vec::new();
+    let mut memories = RecallStore::new();
+    let mut harnesses = HarnessRegistry::new();
+    let mut verdicts = Vec::new();
+    let mut must_checks: Vec<String> = Vec::new();
+    let mut harness_detected: Vec<String> = Vec::new();
 
     for child in &children {
         let envelope = format!("Tarea: {}. Devuelve solo el resultado en una frase.", child.title);
@@ -355,8 +368,52 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
             latency_ms,
         ));
 
-        let gate_pass = outcome.exit_code == 0 && in_tok > 0;
+        // Critic real: la salida del modelo se evalúa contra criterios.
+        let response_short: String = outcome.stdout_head.chars().take(300).collect();
+        let verdict = criticize_real(
+            &response_short,
+            &["el resultado responde la tarea", "no inventa evidencia", "es conciso"],
+        );
+
+        // critic.learn: must-checks aprendidos → memoria (se inyectan en el futuro).
+        for c in derive_must_checks(&verdict.findings) {
+            if !must_checks.contains(&c) {
+                must_checks.push(c.clone());
+            }
+            if memories.all().iter().all(|r| r.text != c) {
+                let recall = Recall {
+                    id: format!("r-mc-{}", memories.all().len() + 1),
+                    text: c.clone(),
+                    source: RecallSource::Tool,
+                    tags: vec!["must_check".to_string()],
+                    weight: 1,
+                    created: now_ms(),
+                };
+                memories.add(recall);
+            }
+        }
+
+        // evolve.detect: harnesses candidatos en el trabajo real.
+        let work = format!("Tarea: {}. Respuesta: {response_short}", child.title);
+        for cand in detect_candidates(&work) {
+            if let Some(id) = harnesses.add_candidate(cand, now_ms()) {
+                harness_detected.push(id);
+            }
+        }
+        verdicts.push(verdict.clone());
+
+        let gate_pass = outcome.exit_code == 0 && in_tok > 0 && verdict.approved;
         if !gate_pass {
+            let blockers: Vec<String> = verdict
+                .findings
+                .iter()
+                .filter(|f| matches!(f.severity, alx_critic::Severity::Block | alx_critic::Severity::Major))
+                .map(|f| f.message.clone())
+                .collect();
+            if !blockers.is_empty() {
+                run.feedback
+                    .push(format!("critic bloquea: {}", blockers.join("; ")));
+            }
             run.gate_failures += 1;
         }
         responses.push(outcome.stdout_head.chars().take(150).collect());
@@ -379,7 +436,7 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         }
     }
 
-    RealRunResult { run, ledger, responses }
+    RealRunResult { run, ledger, responses, verdicts, must_checks, harness_detected }
 }
 
 /// Extrae (input_tokens, output_tokens) del `usage` de una respuesta
@@ -414,6 +471,33 @@ pub fn render_real_run(result: &RealRunResult) -> String {
             e.cost_usd,
             e.latency_ms
         ));
+    }
+
+    if !result.verdicts.is_empty() {
+        out.push_str("\n\n## Crítica real por micro-tarea\n");
+        for (i, v) in result.verdicts.iter().enumerate() {
+            let mark = if v.approved { "✓" } else { "✗" };
+            out.push_str(&format!(
+                "\n  {mark} micro-{}: {}",
+                i + 1,
+                if v.approved { "aprobado" } else { "rechazado" }
+            ));
+            for f in &v.findings {
+                out.push_str(&format!("\n    {:?}: {}", f.severity, f.message));
+            }
+        }
+    }
+    if !result.must_checks.is_empty() {
+        out.push_str("\n\n## Must-checks aprendidos (memoria)\n");
+        for c in &result.must_checks {
+            out.push_str(&format!("\n  - {c}"));
+        }
+    }
+    if !result.harness_detected.is_empty() {
+        out.push_str("\n\n## Harnesses detectados (evolve)\n");
+        for h in &result.harness_detected {
+            out.push_str(&format!("\n  - {h}"));
+        }
     }
     out
 }

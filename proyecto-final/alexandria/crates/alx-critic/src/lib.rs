@@ -156,9 +156,15 @@ pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
         "messages": [{ "role": "user", "content": prompt }]
     })
     .to_string();
+    // Escribir el body a un archivo temporal evita el quoting shell frágil
+    // cuando la salida a criticar contiene comillas/apóstrofes.
+    let body_path = std::env::temp_dir().join("alx-critic-body.json");
+    if std::fs::write(&body_path, &body).is_err() {
+        return fail_closed();
+    }
     let cmd = format!(
-        "curl -s -m 30 {LLM_URL} -H 'content-type: application/json' -d {}",
-        shell_single_quote(&body)
+        "curl -s -m 30 {LLM_URL} -H 'content-type: application/json' -d @{}",
+        body_path.display()
     );
     let out = alx_gate::run_command(&cmd, 35_000);
     if out.exit_code != 0 {
@@ -168,10 +174,15 @@ pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
         Ok(v) => v,
         Err(_) => return fail_closed(),
     };
+    // La cadena devuelve bloques thinking primero; tomar el primer bloque de
+    // tipo "text" (el veredicto del crítico), no content[0].
     let text = value
         .get("content")
         .and_then(|c| c.as_array())
-        .and_then(|arr| arr.first())
+        .and_then(|arr| {
+            arr.iter()
+                .find(|b| b.get("type").and_then(|t| t.as_str()) == Some("text"))
+        })
         .and_then(|b| b.get("text"))
         .and_then(|t| t.as_str())
         .unwrap_or("");

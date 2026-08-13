@@ -1,3 +1,3 @@
-iter = 10
+iter = 11
 max_iter = 20
-work_unit = "iteracion 10/20: pipeline completo con critic real — alx run --real critica la salida del modelo (Block -> re-itera), derive_must_checks -> memoria, evolve.detect en el trabajo real, informe final por fase"
+work_unit = "iteracion 11/20: alx-night conectado (informe nocturno real desde DAG), alx-mcp server sirviendo tools reales, phalanx status, dogfood feature real (alx construye un cambio del repo)"

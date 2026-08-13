@@ -9,5 +9,13 @@ Crear un harness con hook para esto para que pues asi ahorramos tokens etc.
   mínimo (compresión caveman antes de enviar).
 - Hook `headless.spawn` en PHALANX (`phalanx/hooks/headless-spawn.toml`).
 
+## Idea nueva: resumen semanal del sistema
+`alx report --weekly` → genera un resumen markdown semanal:
+- coste total y por día (ledger persistido + telemetría)
+- nº de pipelines ejecutados, gates fallados, must_checks aprendidos
+- harnesses creados/retirados/promovidos (evolve)
+- agentes spawnados
+[PENDIENTE — para próxima iteración]
+
 ...
 Crear mas ideas asi de buenas en el worflow gigante que crearemos

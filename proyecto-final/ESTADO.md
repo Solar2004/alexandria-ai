@@ -41,6 +41,22 @@
 - Red real: headroom→mask→routatic→deepseek (cadena verificada).
 - Ledger persistido en `state/ledger.jsonl` (coste real por llamada).
 
+## Diagrama de estado (mermaid)
+
+```mermaid
+flowchart LR
+    ALX[alx CLI 18 subcomandos] --> ENGINE[Motor Rust 16 crates · 207 tests]
+    ENGINE --> RED[headroom→mask→routatic→deepseek]
+    ENGINE --> CRITIC[critic real + escalada T3]
+    ENGINE --> MEM[memory + must_checks]
+    ENGINE --> EVOLVE[harnesses evolutivos + watcher]
+    ENGINE --> LEDGER[ledger coste + telemetria por dia]
+    HOOKS[Hooks sistema] --> ALX
+    ATG[atg --alx] --> ALX
+    MCP[alx mcp en ~/.claude.json] --> ALX
+    SYSTEMD[alx-night.timer 02:00] --> ALX
+```
+
 ## Filosofía
 
 - **Evidencia real en cada fase** (tests, comandos, outputs).

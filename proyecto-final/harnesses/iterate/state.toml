@@ -1,6 +1,6 @@
-iter = 3
+iter = 4
 max_iter = 20
-work_unit = "ciclo 3 iteracion 3/20: agentes por fase en el pipeline — alx run usa agentes especializados (Build/Test/Review) via alx-agents router, alx feature construye feature real end-to-end"
+work_unit = "ciclo 3 iteracion 4/20: alx-mcp tools/call ejecuta tools reales del motor, persistencia de tareas (JSONL), verificar feature real end-to-end"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

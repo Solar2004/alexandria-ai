@@ -345,7 +345,13 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         ("ejecutar paso".to_string(), "comando ok".to_string()),
     ];
     let children = decompose(&parent, steps);
-    for child in &children {
+    // Asignar una fase distinta a cada micro-tarea (Build, Test, Review...)
+    // para que cada una use el agente especializado de su fase.
+    let phases = [PhaseId::Build, PhaseId::Test, PhaseId::Review, PhaseId::Docs];
+    for (i, child) in children.iter().enumerate() {
+        if let Some(task) = graph.by_id_mut(&child.id) {
+            task.phase = phases[i % phases.len()];
+        }
         graph.add(child.clone());
     }
     let pipeline = Pipeline::new(Phases::default().0);
@@ -369,15 +375,35 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
     let mut harness_detected: Vec<String> = Vec::new();
 
     for child in &children {
+        // Agente especializado por fase (alx-agents router) + tier del governor.
+        let (aname, adesc, tier) = match child.phase {
+            PhaseId::Test => (
+                "test-engineer",
+                "Diseña y ejecuta tests para verificar cada micro-tarea.",
+                classify_prompt_text(title),
+            ),
+            PhaseId::Review => (
+                "code-reviewer",
+                "Revisa el código contra criterios de calidad y detecta bugs.",
+                ModelTier::T3Premium,
+            ),
+            PhaseId::Docs => (
+                "documentation-architect",
+                "Documenta la micro-tarea con doc-min obligatoria.",
+                ModelTier::T2Medium,
+            ),
+            _ => (
+                "worker-build",
+                "Agente ejecutor del pipeline ALEXANDRIA con evidencia verificable.",
+                classify_prompt_text(title),
+            ),
+        };
         let spec = AgentSpec {
-            name: "worker".into(),
-            description:
-                "Agente ejecutor del pipeline ALEXANDRIA. Ejecuta la micro-tarea con evidencia verificable y concisa."
-                    .into(),
+            name: aname.into(),
+            description: adesc.into(),
             tools: Vec::new(),
-            // Governor clasifica la dificultad de la tarea → tier del agente.
-            tier: classify_prompt_text(title),
-            phase: None,
+            tier,
+            phase: Some(child.phase),
             tags: Vec::new(),
         };
         let agent_env = build_envelope(&spec, &child.title, Vec::new(), 2000);

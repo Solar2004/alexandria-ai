@@ -1,6 +1,6 @@
-iter = 4
+iter = 5
 max_iter = 20
-work_unit = "ciclo 7 iteracion 4/20: VERIFICADO — claude-opus-4-6[1m] listado pero ROTO (content vacio, probado). No hay modelo Claude funcional en la cadena; solo deepseek-v4-flash. fable 5 no existe en routatic. Grafico 'con Claude' o 'vs fable' NO construible con acceso actual. Disponible: reporte visual deepseek ~4x (docs/benchmark-report.html). Siguiente: arreglar acceso claude (revisar routatic config/headroom auth) o plan-then-code"
+work_unit = "ciclo 7 iteracion 5/20: RUTA A CLAUDE ENCONTRADA — headroom 502 para claude; cc-model-mask:3460 responde Claude real. ALX_BENCH_URL parametrizado. Smoke: claude directa 0/2, harness 1/2 (recupera). Corriendo N=10 claude-via-3460 para grafico deepseek vs claude con/sin harness. fable 5 sigue ausente"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

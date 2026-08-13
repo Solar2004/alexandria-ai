@@ -1,6 +1,6 @@
-iter = 12
+iter = 13
 max_iter = 20
-work_unit = "ciclo 4 iteracion 12/20: auditoria de errores — buscar y corregir bugs reales (panics, expects, comandos rotos)"
+work_unit = "ciclo 4 iteracion 13/20: verificar conexiones (MCP tools, perfil, hooks) y pulir errores"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

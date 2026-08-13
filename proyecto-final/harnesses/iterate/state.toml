@@ -1,6 +1,6 @@
-iter = 20
+iter = 1
 max_iter = 20
-work_unit = "ciclo 8 iteracion 20/20: bench-codecontests IMPLEMENTADO (d877fb0) — familia 3 I/O. Runs en background: N=186 BigCodeBench + N=30 CodeContests (results/). Siguiente bloque (tras /compact): analizar ambos resultados, actualizar metrica agregada a 3 familias, dashboard viz con familia 3"
+work_unit = "ciclo 9 iteracion 1/20: CODECONTESTS TERMINADO — directa 12/30 = harness 12/30 (40%): SIN ventaja del harness en I/O competitivo (feedback expected/got no converge). Generalidad MATIZADA: harness recupera en completar-funcion (BigCodeBench ~6x, HumanEval +6%) pero NO en I/O puro. BigCodeBench N=186 corriendo (141/186: harness 67% vs directa 11%). Siguiente: procesar N=186 final, metrica agregada 3 familias con matiz, viz"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -1080,6 +1080,41 @@ pub fn render_tui() -> String {
     out
 }
 
+/// Muestra un agente del registry REAL del ecosistema por nombre, con su
+/// envelope de spawn. Carga agentes reales (agents-volt/ + agents/) con
+/// frontmatter vía register_from_markdowns.
+pub fn agents_show(name: &str) -> String {
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+    let mut files = Vec::new();
+    for dir in ["agents-volt", "agents"] {
+        let p = repo_root.join(dir);
+        if let Ok(rd) = std::fs::read_dir(&p) {
+            for e in rd.flatten().take(60) {
+                if e.path().extension().map(|x| x == "md").unwrap_or(false) {
+                    files.push(e.path().to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+    let mut reg = AgentRegistry::new();
+    let file_refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
+    let _ = reg.register_from_markdowns(&file_refs);
+    if let Some(spec) = reg.by_name(name) {
+        let env = build_envelope(spec, "tarea de ejemplo", Vec::new(), 2000);
+        return format!(
+            "## {}\n{}\ntier: {:?} · fase: {:?} · tools: {}\n\nEnvelope:\nsystem: {}\ntask: {}",
+            spec.name,
+            spec.description,
+            spec.tier,
+            spec.phase,
+            spec.tools.len(),
+            env.system,
+            env.task
+        );
+    }
+    format!("agente '{name}' no encontrado en el registry real (frontmatter requerido)")
+}
+
 /// Spawn de N agentes headless EN PARALELO sobre una tarea (threads).
 /// Un agente summona a otros con su envelope; cada uno responde a la cadena.
 pub fn agents_run_parallel(task: &str) -> String {

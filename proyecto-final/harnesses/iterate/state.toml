@@ -1,6 +1,6 @@
-iter = 8
+iter = 9
 max_iter = 20
-work_unit = "ciclo 3 iteracion 8/20: cargar agentes reales en el registry (register_from_markdowns), alx agents show <nombre>, cerrar gaps restantes"
+work_unit = "ciclo 3 iteracion 9/20: cerrar gaps — verificar registry real completo, alx feature con tareas persistidas, revision final ciclo 3"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -10,8 +10,9 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    agents_run_parallel, check_network, feature_run, iterate_next, load_tasks_from_jsonl,
-    persist_task_to_jsonl, render_agents, render_build, render_cost_report, render_doctor,
+    agents_run_parallel, agents_show, check_network, feature_run, iterate_next,
+    load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_build, render_cost_report,
+    render_doctor,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
     run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent, verify_build,
@@ -70,6 +71,11 @@ enum Command {
     Cost,
     /// Agentes del registry + envelope de spawn (alx-agents).
     Agents,
+    /// Muestra un agente real del ecosistema por nombre.
+    AgentsShow {
+        /// Nombre del agente.
+        name: String,
+    },
     /// TUI dashboard del motor (estado, red, coste, comandos).
     Tui,
     /// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
@@ -173,6 +179,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Agents) => {
             println!("{}", render_agents());
+        }
+        Some(Command::AgentsShow { name }) => {
+            println!("{}", agents_show(&name));
         }
         Some(Command::Spawn { name, task }) => {
             println!("{}", spawn_agent(&name, &task));

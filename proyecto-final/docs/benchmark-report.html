@@ -167,7 +167,19 @@
 <p class="legend">La ventaja del harness ESCALA con la dificultad: 4.78x en BigCodeBench (hard), +6% en HumanEval (fácil, techo cerca de 100%). El mecanismo es universal: describir → codificar → ejecutar → corregir.</p>
 </div>
 
-<h2>9 · Comando y reproducibilidad</h2>
+<h2>9 · Métrica agregada (multi-benchmark, 3 sets reales)</h2>
+<div class="card">
+<p class="small">Agregación de TODOS los runs reales (sample 60 + held-out 30 + HumanEval 164 = 254 problemas, 2 familias de benchmark).</p>
+<table>
+<tr><th>Métrica</th><th>Directa</th><th>Harness</th><th>Δ</th></tr>
+<tr><td>Aciertos totales</td><td>158/254 (62.2%)</td><td class="good">221/254 (87.0%)</td><td>+63</td></tr>
+<tr><td>Problemas recuperados</td><td>—</td><td class="good">63</td><td>directa ✗ → harness ✓</td></tr>
+<tr><td>Fallos conjuntos</td><td colspan="3">33 (25 BigCodeBench + 8 HumanEval) — techo del modelo</td></tr>
+</table>
+<p class="legend">El harness convierte 63 fallos de la directa en aciertos (25% de todos los problemas). La recuperación es la métrica honesta de valor: universal, escala con dificultad.</p>
+</div>
+
+<h2>10 · Comando y reproducibilidad</h2>
 <div class="card">
 <pre style="font-size:.85em; background:#f4f4f4; padding:.8em; border-radius:6px; overflow-x:auto;">ALX_BENCH_MAX=60 alx bench-bigcode</pre>
 <p class="small">Muestra fija: <code>harnesses/bench/bigcodebench-sample.jsonl</code> (60 problemas). El benchmark NO es nuestro: son tareas profesionales (BigCodeBench, ICLR'25) con tests verificables.</p>

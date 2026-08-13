@@ -1,6 +1,6 @@
-iter = 10
+iter = 11
 max_iter = 20
-work_unit = "CICLO 2 (pulido): iteracion 10/20 — verificar agents run en paralelo real, docs de arquitectura (mermaid con estado ciclo 2), pulir spawn (forzar text block directo), night-report con telemetria"
+work_unit = "CICLO 2 (pulido): iteracion 11/20 — pulir spawn (forzar text block directo con system prompt mas corto), integrar metricas en report, verificar alx report completo, optimizar tiempo de build"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

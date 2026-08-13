@@ -25,6 +25,10 @@
 | `alx cost` | ✓ cost-report acumulado del ledger persistido |
 | `alx agents` | ✓ registry + envelope |
 | `alx spawn <a> <t>` | ✓ agente real contra la cadena |
+| `alx agents-run "<t>"` | ✓ 3 agentes en paralelo (ciclo 2) |
+| `alx tui` | ✓ dashboard ANSI con telemetría (ciclo 2) |
+| `alx report` | ✓ reporte markdown completo (ciclo 2) |
+| `alx metrics` | ✓ líneas por crate, 7833 total (ciclo 2) |
 
 ## Integraciones con el sistema real
 

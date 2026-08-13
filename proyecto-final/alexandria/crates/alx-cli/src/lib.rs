@@ -1019,6 +1019,20 @@ pub fn render_agents() -> String {
             env.system, env.task, env.budget_tokens
         ));
     }
+
+    // Agentes reales del ecosistema (repo: agents/ + agents-volt/).
+    let mut real = 0usize;
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+    for dir in ["agents", "agents-volt"] {
+        let p = repo_root.join(dir);
+        if let Ok(rd) = std::fs::read_dir(&p) {
+            real += rd
+                .flatten()
+                .filter(|e| e.path().extension().map(|x| x == "md").unwrap_or(false))
+                .count();
+        }
+    }
+    out.push_str(&format!("\n## Agentes reales del ecosistema (repo): {real}\n"));
     out
 }
 

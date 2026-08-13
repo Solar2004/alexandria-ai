@@ -1,6 +1,6 @@
-iter = 15
+iter = 16
 max_iter = 20
-work_unit = "ciclo 3 iteracion 15/20: verificar cierre, ultimos pulidos, state al cierre del ciclo 3"
+work_unit = "ciclo 3 iteracion 16/20: pulido — integracion tareas persistidas en pipeline, telemetria avanzada, cierre ciclo 3"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

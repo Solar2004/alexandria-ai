@@ -1,6 +1,6 @@
-iter = 12
+iter = 14
 max_iter = 20
-work_unit = "ciclo 6 iteracion 12/20: iter 11 = EXPERIMENTO NEGATIVO — feedback rich (expected/actual) midio PEOR (29/60 vs 34/60) y se revirtio. Techo real ~50-57%. Siguiente: ENSAMBLE (generar K soluciones independientes, aceptar cualquiera que pase) = pass@k, el mecanismo mas robusto; luego plan-then-code. REQUIERE contexto fresco: /compact"
+work_unit = "ciclo 6 iteracion 14/20: ensamble midio 33/60 = PLANO vs 34/60 (feedback simple). Dos experimentos negativos (rich feedback 29, ensamble 33). VEREDICTO: techo ~55% es del MODELO deepseek-v4-flash en BigCodeBench, no del mecanismo. 5x (~45/60) inalcanzable con este modelo en este benchmark. Ratio real estable ~4x. Opciones: aceptar ~4x / modelo mejor / subset mas facil / plan-then-code (ultimo experimento)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

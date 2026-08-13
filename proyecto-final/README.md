@@ -25,3 +25,24 @@ cd proyecto-final/alexandria
 cargo build
 cargo test
 ```
+
+## Comandos `alx`
+
+| Comando | Qué hace |
+|---|---|
+| `alx status` | Estado del motor (tareas, hooks, recalls, agentes) |
+| `alx network` | Verifica la red real (headroom→mask→routatic, fallback omniroute) |
+| `alx build` | Dogfood: verifica su propio build (cargo build) |
+| `alx run "título"` | Pipeline demo (task→DAG→decompose→harness, gates echo) |
+| `alx run "título" --real` | Pipeline REAL: cadena LLM + critic real + must_checks + evolve + ledger |
+| `alx night` | Informe nocturno desde el DAG |
+| `alx mcp` | Server MCP JSON-RPC por stdio |
+| `alx phalanx` | Estado del plugin PHALANX (config + hooks) |
+| `alx feature "X" [--real]` | Dogfood: ejecuta pipeline y escribe artefacto en docs/features/ |
+| `alx evolve` | Ciclo watcher de harnesses con persistencia |
+| `alx doctor` | Indexa y valida el ecosistema (crates, hooks, harnesses) |
+| `alx cost` | Cost-report desde el ledger persistido |
+| `alx agents` | Agentes del registry + envelope de spawn |
+
+Instalar: `./proyecto-final/install.sh` → `~/.local/bin/alx`.
+Autónomo nocturno: `proyecto-final/scripts/night-run.sh` (cron/systemd 02:00).

@@ -11,6 +11,7 @@
 
 use alx_core::types::{now_ms, Evidence, ModelTier, PhaseId, Recall, RecallSource, Task, TaskStatus};
 use alx_critic::{criticize_real, derive_must_checks, iteration_prompt, CriticVerdict, IterationState};
+use alx_agents::{build_envelope, AgentRegistry, AgentSpec};
 use alx_audit::{AuditIndex, AuditItem, ItemKind};
 use alx_evolve::{detect_candidates, Harness, HarnessKind, HarnessRegistry, Trigger};
 use alx_governor::{Ledger, LedgerEntry};
@@ -353,7 +354,18 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
     let mut harness_detected: Vec<String> = Vec::new();
 
     for child in &children {
-        let envelope = format!("Tarea: {}. Devuelve solo el resultado en una frase.", child.title);
+        let spec = AgentSpec {
+            name: "worker".into(),
+            description:
+                "Agente ejecutor del pipeline ALEXANDRIA. Ejecuta la micro-tarea con evidencia verificable y concisa."
+                    .into(),
+            tools: Vec::new(),
+            tier: ModelTier::T2Medium,
+            phase: None,
+            tags: Vec::new(),
+        };
+        let agent_env = build_envelope(&spec, &child.title, Vec::new(), 2000);
+        let envelope = format!("{}\n\n{}", agent_env.system, agent_env.task);
         let cmd = format!(
             "curl -s -m 30 {HEADROOM}/v1/messages -H 'content-type: application/json' -d '{{\"model\":\"deepseek-v4-flash\",\"max_tokens\":60,\"messages\":[{{\"role\":\"user\",\"content\":\"{envelope}\"}}]}}'"
         );
@@ -713,6 +725,56 @@ pub fn render_cost_report() -> String {
     format!(
         "## Cost report (governor)\nLlamadas reales: {n}\nTokens: {in_tok} in / {out_tok} out\nCoste estimado total: ${cost:.6}\n"
     )
+}
+
+/// Agentes del registry ALEXANDRIA + envelope de spawn (alx-agents).
+pub fn render_agents() -> String {
+    let mut reg = AgentRegistry::new();
+    for (name, desc, tier, phase) in [
+        (
+            "general-purpose",
+            "Agente general para cualquier fase del pipeline ALEXANDRIA.",
+            ModelTier::T2Medium,
+            None,
+        ),
+        (
+            "code-reviewer",
+            "Revisa el código contra criterios de calidad y detecta bugs.",
+            ModelTier::T3Premium,
+            Some(PhaseId::Review),
+        ),
+        (
+            "test-engineer",
+            "Diseña y ejecuta tests para verificar cada micro-tarea.",
+            ModelTier::T2Medium,
+            Some(PhaseId::Test),
+        ),
+    ] {
+        reg.add(AgentSpec {
+            name: name.into(),
+            description: desc.into(),
+            tools: Vec::new(),
+            tier,
+            phase,
+            tags: Vec::new(),
+        });
+    }
+    let mut out = String::from("## Agentes ALEXANDRIA\n");
+    for a in reg.all() {
+        let phase = a.phase.map(|p| p.as_str()).unwrap_or("cualquiera");
+        out.push_str(&format!(
+            "\n- {} ({:?}, fase {phase}): {}",
+            a.name, a.tier, a.description
+        ));
+    }
+    if let Some(spec) = reg.by_name("general-purpose") {
+        let env = build_envelope(spec, "verificar que el build pasa", Vec::new(), 2000);
+        out.push_str(&format!(
+            "\n\n## Envelope (spawn general-purpose)\nsystem: {}\ntask: {}\nbudget: {} tokens",
+            env.system, env.task, env.budget_tokens
+        ));
+    }
+    out
 }
 
 /// Informe legible del estado de red.

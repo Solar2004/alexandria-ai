@@ -10,9 +10,9 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    check_network, feature_run, render_build, render_cost_report, render_doctor, render_network,
-    render_night_report, render_phalanx_status, render_real_run, render_run, run_evolve_cycle,
-    run_pipeline, run_pipeline_real, serve_mcp_stdio, verify_build, AppState,
+    check_network, feature_run, render_agents, render_build, render_cost_report, render_doctor,
+    render_network, render_night_report, render_phalanx_status, render_real_run, render_run,
+    run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -65,6 +65,8 @@ enum Command {
     Doctor,
     /// Cost-report del governor desde el ledger persistido.
     Cost,
+    /// Agentes del registry + envelope de spawn (alx-agents).
+    Agents,
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -139,6 +141,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Cost) => {
             println!("{}", render_cost_report());
+        }
+        Some(Command::Agents) => {
+            println!("{}", render_agents());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

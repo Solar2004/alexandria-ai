@@ -499,9 +499,31 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
     // Evolve continuo: watcher retira/promueve harnesses con el trabajo real.
     let _ = run_evolve_cycle();
 
-    // Persistir el ledger para el cost-report (state/ledger.jsonl, append).
+    // Telemetría: log de eventos del pipeline (state/events.log, append).
     let state_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state");
     let _ = std::fs::create_dir_all(&state_dir);
+    let event_line = serde_json::json!({
+        "ts": now_ms(),
+        "event": "pipeline_done",
+        "title": title,
+        "micro_tasks": run.micro_tasks,
+        "done": run.done,
+        "gate_failures": run.gate_failures,
+        "iterations": run.iterations_used,
+        "must_checks": must_checks.len(),
+        "harnesses": harness_detected.len(),
+    })
+    .to_string();
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(state_dir.join("events.log"))
+        .and_then(|mut f| {
+            use std::io::Write;
+            writeln!(f, "{event_line}")
+        });
+
+    // Persistir el ledger para el cost-report (state/ledger.jsonl, append).
     let ledger_path = state_dir.join("ledger.jsonl");
     for e in ledger.entries() {
         use std::io::Write;

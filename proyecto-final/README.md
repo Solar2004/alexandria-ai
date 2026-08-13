@@ -41,8 +41,14 @@ cargo test
 | `alx feature "X" [--real]` | Dogfood: ejecuta pipeline y escribe artefacto en docs/features/ |
 | `alx evolve` | Ciclo watcher de harnesses con persistencia |
 | `alx doctor` | Indexa y valida el ecosistema (crates, hooks, harnesses) |
-| `alx cost` | Cost-report desde el ledger persistido |
+| `alx cost` | Cost-report desde el ledger persistido + telemetría por día |
 | `alx agents` | Agentes del registry + envelope de spawn |
+| `alx spawn <a> <t>` | Ejecuta un agente real contra la cadena (text directo) |
+| `alx agents-run "<t>"` | 3 agentes en paralelo sobre una tarea |
+| `alx tui` | Dashboard ANSI del motor (estado, red, coste, métricas) |
+| `alx report` | Reporte markdown completo |
+| `alx metrics` | Líneas de código por crate |
+| `alx weekly` | Resumen semanal (coste, harnesses, métricas) |
 
 Instalar: `./proyecto-final/install.sh` → `~/.local/bin/alx`.
 Autónomo nocturno: `proyecto-final/scripts/night-run.sh` (cron/systemd 02:00).

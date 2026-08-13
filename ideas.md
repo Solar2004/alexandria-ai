@@ -15,7 +15,9 @@ Crear un harness con hook para esto para que pues asi ahorramos tokens etc.
 - nº de pipelines ejecutados, gates fallados, must_checks aprendidos
 - harnesses creados/retirados/promovidos (evolve)
 - agentes spawnados
-[PENDIENTE — para próxima iteración]
+**[IMPLEMENTADO — 2026-08-13]** como `alx weekly`: coste + telemetría por
+día + harnesses (vivos/retirados) + métricas + agentes. Incluido en el
+informe nocturno (night-run.sh).
 
 ...
 Crear mas ideas asi de buenas en el worflow gigante que crearemos

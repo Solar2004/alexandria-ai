@@ -682,6 +682,69 @@ pub fn log_command(name: &str) {
     }
 }
 
+/// Benchmark de desempeño del sistema contra EXPECTATIVAS.
+/// Objetivo: desempeño TOP (mejor que las alternativas solo con el harness).
+pub fn render_quality() -> String {
+    let mut out = String::from("## Quality — benchmark del sistema\n");
+
+    // Latencia de comandos clave (expect: < 500ms cada uno).
+    let mut total_ms: u128 = 0;
+    for (name, cmd) in [
+        ("status", "alx status"),
+        ("network", "alx network"),
+        ("cost", "alx cost"),
+        ("iterate", "alx iterate"),
+    ] {
+        let start = Instant::now();
+        let _ = std::process::Command::new("sh").arg("-c").arg(cmd).output();
+        let ms = start.elapsed().as_millis();
+        total_ms += ms;
+        let ok = if ms < 500 { "✓" } else { "✗" };
+        out.push_str(&format!("  latencia {name}: {ms}ms {ok} (expect < 500ms)\n"));
+    }
+
+    // Coste acumulado (expect: < $0.01 por sesión).
+    let state_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state");
+    let ledger_path = state_dir.join("ledger.jsonl");
+    let (mut n, mut cost) = (0usize, 0.0f64);
+    if let Ok(text) = std::fs::read_to_string(&ledger_path) {
+        for line in text.lines() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                n += 1;
+                cost += v["cost_usd"].as_f64().unwrap_or(0.0);
+            }
+        }
+    }
+    let cost_ok = if cost < 0.01 { "✓" } else { "✗" };
+    out.push_str(&format!("  coste: {n} llamadas, ${cost:.6} {cost_ok} (expect < $0.01)\n"));
+
+    // Éxito del critic (expect: > 50% de pipelines sin gates fallados).
+    let events_path = state_dir.join("events.log");
+    let (mut total_events, mut ok_events) = (0usize, 0usize);
+    if let Ok(text) = std::fs::read_to_string(&events_path) {
+        for line in text.lines() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                total_events += 1;
+                if v["gate_failures"].as_u64().unwrap_or(1) == 0 {
+                    ok_events += 1;
+                }
+            }
+        }
+    }
+    let critic_pct = if total_events > 0 {
+        (ok_events as f64 / total_events as f64) * 100.0
+    } else {
+        0.0
+    };
+    let critic_ok = if critic_pct >= 50.0 { "✓" } else { "✗" };
+    out.push_str(&format!(
+        "  critic éxito: {ok_events}/{total_events} ({critic_pct:.0}%) {critic_ok} (expect > 50%)\n"
+    ));
+
+    out.push_str(&format!("  latencia total: {total_ms}ms\n"));
+    out
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");

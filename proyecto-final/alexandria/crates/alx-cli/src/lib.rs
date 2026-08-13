@@ -666,6 +666,21 @@ pub fn render_night_report() -> String {
     render_night(&report)
 }
 
+/// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
+pub fn count_real_agents() -> usize {
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+    let mut real = 0usize;
+    for dir in ["agents", "agents-volt"] {
+        if let Ok(rd) = std::fs::read_dir(repo_root.join(dir)) {
+            real += rd
+                .flatten()
+                .filter(|e| e.path().extension().map(|x| x == "md").unwrap_or(false))
+                .count();
+        }
+    }
+    real
+}
+
 /// Estado del loop de iteración gestionado por el MOTOR (no bash).
 /// Lee state.toml del harness iterate y decide si debe continuar.
 pub fn render_iterate_state() -> String {
@@ -1100,6 +1115,11 @@ pub fn render_tui() -> String {
 
     let metrics_total = render_metrics().lines().last().unwrap_or("").to_string();
     out.push_str(&format!("\x1b[1;36m│ Métricas:\x1b[0m {metrics_total}\n"));
+
+    let real_agents = count_real_agents();
+    out.push_str(&format!(
+        "\x1b[1;36m│ Agentes reales:\x1b[0m {real_agents} en el ecosistema\n"
+    ));
 
     out.push_str("\x1b[1;36m│ Comandos:\x1b[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui\n");
     out.push_str("\x1b[1;33m╚══════════════════════════════════════════════════════════════════╝\x1b[0m\n");

@@ -1,6 +1,6 @@
-iter = 2
+iter = 3
 max_iter = 20
-work_unit = "ciclo 4 iteracion 2/20: TUI con agentes reales por fase, telemetria avanzada, pulir docs"
+work_unit = "ciclo 4 iteracion 3/20: feature real con tareas persistidas, pulir docs, verificar todo el ciclo"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

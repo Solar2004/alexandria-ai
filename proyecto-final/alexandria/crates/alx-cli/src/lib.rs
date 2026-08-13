@@ -795,9 +795,29 @@ pub fn render_cost_report() -> String {
             }
         }
     }
-    format!(
+    let mut out = format!(
         "## Cost report (governor)\nLlamadas reales: {n}\nTokens: {in_tok} in / {out_tok} out\nCoste estimado total: ${cost:.6}\n"
-    )
+    );
+
+    // Telemetría por día: eventos del pipeline agrupados por día civil.
+    let events_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/events.log");
+    let mut days: std::collections::BTreeMap<u64, usize> = std::collections::BTreeMap::new();
+    if let Ok(text) = std::fs::read_to_string(&events_path) {
+        for line in text.lines() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                if let Some(ts) = v["ts"].as_u64() {
+                    *days.entry(ts / 86_400_000).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+    if !days.is_empty() {
+        out.push_str("\nEventos por día:\n");
+        for (day, count) in &days {
+            out.push_str(&format!("  día {day}: {count} eventos\n"));
+        }
+    }
+    out
 }
 
 /// Agentes del registry ALEXANDRIA + envelope de spawn (alx-agents).

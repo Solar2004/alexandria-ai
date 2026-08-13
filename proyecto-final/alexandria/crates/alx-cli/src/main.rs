@@ -11,9 +11,9 @@ use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
     check_network, feature_run, render_agents, render_build, render_cost_report, render_doctor,
-    render_network, render_night_report, render_phalanx_status, render_real_run, render_run,
-    render_tui, run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent,
-    verify_build, AppState,
+    render_network, render_night_report, render_phalanx_status, render_real_run, render_report,
+    render_run, render_tui, run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio,
+    spawn_agent, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -70,6 +70,8 @@ enum Command {
     Agents,
     /// TUI dashboard del motor (estado, red, coste, comandos).
     Tui,
+    /// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
+    Report,
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -160,6 +162,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Tui) => {
             println!("{}", render_tui());
+        }
+        Some(Command::Report) => {
+            println!("{}", render_report());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

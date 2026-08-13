@@ -459,6 +459,18 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
             let r = pipeline.run_pipeline_step(task, gate_pass, now_ms());
             run.evidence_count += r.evidence.len();
             if r.completed {
+                // Gate real de la fase final: verificar la salida con el
+                // comando real de la fase (cargo build/test/clippy).
+                let phase_gate = gate_for_phase(task.phase);
+                let phase_out = alx_gate::run_command(phase_gate, 120_000);
+                let ph_head: String = phase_out.stdout_head.chars().take(200).collect();
+                task.evidence.push(Evidence::command_output(
+                    phase_gate,
+                    phase_out.exit_code,
+                    &ph_head,
+                    phase_out.exit_code == 0,
+                ));
+                run.evidence_count += 1;
                 match task.status {
                     TaskStatus::Done => run.done += 1,
                     TaskStatus::Failed => run.failed += 1,
@@ -847,6 +859,18 @@ pub fn render_tui() -> String {
     out.push_str("\x1b[1;36m│ Comandos:\x1b[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui\n");
     out.push_str("\x1b[1;33m╚══════════════════════════════════════════════════════════════════╝\x1b[0m\n");
     out
+}
+
+/// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
+/// Para night-run.sh e informes.
+pub fn render_report() -> String {
+    format!(
+        "{}\n\n{}\n\n{}\n\n{}",
+        render_tui(),
+        render_cost_report(),
+        render_doctor(),
+        render_agents()
+    )
 }
 
 /// Spawn REAL de un agente: construye el envelope (alx-agents), comprime con

@@ -1,6 +1,6 @@
-iter = 15
+iter = 16
 max_iter = 20
-work_unit = "ciclo 9 iteracion 15/20: TODO VERIFICADO Y FINALIZADO. Statusline funciona (ALEXANDRIA | tasks:1 | net:4/4 | cost | iter). Perfil .claude-alexandria usa ruta claude real (3460). Inicio: claude (alias atg) o CLAUDE_CONFIG_DIR=~/.claude-alexandria claude. ALEXANDRIA tiene sus propios gates/hooks/critic/audit (Rust). LISTO PARA /COMPACT"
+work_unit = "ciclo 9 iteracion 16/20: STATusLINE GLOBAL CONFIGURADO — ~/.claude/settings.json ahora usa alx-statusline (powerline ALEXANDRIA). JSON valido, output verificado. Requiere REINICIAR claude para verlo en la barra inferior. LISTO PARA /COMPACT"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -1,6 +1,6 @@
-iter = 7
+iter = 9
 max_iter = 20
-work_unit = "ciclo 8 iteracion 7/20: dataset completo pool listo (bigcodebench-full.jsonl, 186 ejecutables). Reproducibilidad + metrica agregada + gate verde. Siguiente: run comprehensivo N=186 (2-3h) o CodeContests (familia 3) — REQUIERE /compact"
+work_unit = "ciclo 8 iteracion 9/20: bench-all.sh VERIFICADO (scripts/, 3 familias, ALX_BENCH_MAX). Suite completa ejecutable: sample+held-out+humaneval, dataset completo 186, metrica agregada, reproducibilidad. Siguiente: run comprehensivo N=186 (2-3h) o CodeContests — REQUIERE /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

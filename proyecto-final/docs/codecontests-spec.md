@@ -3,6 +3,16 @@
 > Estado: ciclo 8, iteración ~18. Datos ya descargados: `harnesses/bench/codecontests-sample.jsonl` (30 problemas).
 > Origen: `deepmind/code_contests` (HuggingFace, datasets-server). Problemas I/O-based.
 
+## RESULTADO MEDIDO (ciclo 9, N=30): directa 12/30 = harness 12/30 (1.0x)
+
+- **16 problemas duros fallan en ambos** (1575_B a 1580_F) — cero recuperación.
+- El feedback expected/got NO converge cuando el modelo no produce una solución
+  cercana: un algoritmo fundamentalmente mal no se arregla con el output.
+- Conclusión: el harness NO aporta en I/O competitivo. Para ayudar aquí haría
+  falta: (a) mejor modelo base, o (b) mecanismo distinto — p.ej. dar un ejemplo
+  resuelto al modelo, o debug guiado por el test que falla (incluyendo el input
+  completo, no solo expected/got).
+
 ## Formato de datos (verificado en el archivo)
 
 ```json

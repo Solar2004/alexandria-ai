@@ -5,15 +5,17 @@
 
 set -euo pipefail
 
+# Ruta absoluta: systemd user no incluye ~/.local/bin en el PATH.
+ALX=/home/artorias/.local/bin/alx
 REPORT="/home/artorias/Projectos/AlexanderTheGreat/plan/night-report.md"
 
 {
     echo "# Informe nocturno — $(date '+%Y-%m-%d %H:%M')"
     echo
-    alx night
+    "${ALX}" night
     echo
     echo "--- Reporte completo del motor ---"
-    alx report
+    "${ALX}" report
 } > "${REPORT}"
 
 echo "Informe nocturno: ${REPORT}"

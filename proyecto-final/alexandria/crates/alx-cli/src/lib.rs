@@ -878,6 +878,14 @@ pub fn render_tui() -> String {
         .to_string();
     out.push_str(&format!("\x1b[1;36m│ Doctor:\x1b[0m {items_line}\n"));
 
+    let events_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/events.log");
+    let events_count = std::fs::read_to_string(&events_path)
+        .map(|t| t.lines().count())
+        .unwrap_or(0);
+    out.push_str(&format!(
+        "\x1b[1;36m│ Telemetría:\x1b[0m {events_count} eventos · night systemd: 02:00\n"
+    ));
+
     out.push_str("\x1b[1;36m│ Comandos:\x1b[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui\n");
     out.push_str("\x1b[1;33m╚══════════════════════════════════════════════════════════════════╝\x1b[0m\n");
     out

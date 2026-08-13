@@ -1,6 +1,6 @@
-iter = 4
+iter = 5
 max_iter = 20
-work_unit = "ciclo 3 iteracion 4/20: alx-mcp tools/call ejecuta tools reales del motor, persistencia de tareas (JSONL), verificar feature real end-to-end"
+work_unit = "ciclo 3 iteracion 5/20: verificar mcp tools reales via alx mcp, feature real end-to-end verificado, integracion tareas persistidas en el pipeline"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

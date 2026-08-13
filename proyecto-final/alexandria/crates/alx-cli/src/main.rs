@@ -10,11 +10,12 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    agents_run_parallel, check_network, feature_run, iterate_next, render_agents, render_build,
-    render_cost_report, render_doctor, render_iterate_state, render_metrics, render_network,
-    render_night_report, render_phalanx_status, render_real_run, render_report, render_run,
-    render_tui, render_weekly, run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio,
-    spawn_agent, verify_build, AppState,
+    agents_run_parallel, check_network, feature_run, iterate_next, load_tasks_from_jsonl,
+    persist_task_to_jsonl, render_agents, render_build, render_cost_report, render_doctor,
+    render_iterate_state, render_metrics, render_network, render_night_report,
+    render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
+    run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent, verify_build,
+    AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -209,14 +210,16 @@ fn run(cli: Cli) -> ExitCode {
                 };
                 let id = format!("t-{}", app.task_count() + 1);
                 let task = Task::new(id, title, phase_id, 15_000, now_ms());
-                app.add_task(task);
-                println!("Tarea creada: fase {}", phase_id.as_str());
+                app.add_task(task.clone());
+                let _ = persist_task_to_jsonl(&task);
+                println!("Tarea creada: fase {} (persistida)", phase_id.as_str());
             }
             TaskCommand::List => {
-                if app.task_count() == 0 {
-                    println!("(sin tareas)");
+                let tasks = load_tasks_from_jsonl();
+                if tasks.is_empty() {
+                    println!("(sin tareas persistidas)");
                 } else {
-                    for t in app.tasks() {
+                    for t in &tasks {
                         println!(
                             "{} | {} | {:?} | {}",
                             t.id,

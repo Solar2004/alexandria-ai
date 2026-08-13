@@ -761,17 +761,76 @@ pub fn feature_run(title: &str, real: bool, out_dir: &str) -> String {
     }
 }
 
-/// Sirve el protocolo MCP JSON-RPC por stdio (demo real): lee líneas de
-/// stdin, responde `initialize` / `tools/list` / `tools/call`.
+/// Sirve el protocolo MCP JSON-RPC por stdio: responde `initialize` /
+/// `tools/list` / `tools/call`. `tools/call` ejecuta la tool REAL del motor
+/// cuando existe (phalanx.status, cost, metrics, agents...).
 pub fn serve_mcp_stdio() -> i32 {
     use std::io::BufRead;
     let catalog = ToolCatalog::alexandria_default();
     for line in std::io::stdin().lock().lines().flatten() {
         if let Some(resp) = handle_line(&catalog, &line) {
+            if line.contains("\"tools/call\"") {
+                if let Some(real) = mcp_real_tool(&line) {
+                    println!("{real}");
+                    continue;
+                }
+            }
             println!("{resp}");
         }
     }
     0
+}
+
+/// Ejecuta una tool REAL del motor para un `tools/call` MCP.
+fn mcp_real_tool(line: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(line).ok()?;
+    let name = v["params"]["name"].as_str()?;
+    let out = match name {
+        "phalanx.status" => render_phalanx_status(),
+        "governor.cost_report" => render_cost_report(),
+        "task.list" => {
+            let tasks = load_tasks_from_jsonl();
+            if tasks.is_empty() {
+                "(sin tareas persistidas)".to_string()
+            } else {
+                tasks
+                    .iter()
+                    .map(|t| format!("{} | {} | {:?}", t.id, t.title, t.status))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
+        }
+        "bench.run" => render_metrics(),
+        "agent.list" => render_agents(),
+        "iterate.status" => render_iterate_state(),
+        _ => return None,
+    };
+    let id = v["id"].to_string();
+    let text = serde_json::to_string(&out).ok()?;
+    Some(format!(
+        r#"{{"jsonrpc":"2.0","id":{id},"result":{{"content":[{{"type":"text","text":{text}}}]}}}}"#
+    ))
+}
+
+/// Persiste una tarea en state/tasks.jsonl (append).
+pub fn persist_task_to_jsonl(task: &Task) -> std::io::Result<()> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state");
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("tasks.jsonl");
+    use std::io::Write;
+    let line = serde_json::to_string(task)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    let mut f = std::fs::OpenOptions::new().create(true).append(true).open(&path)?;
+    writeln!(f, "{line}")
+}
+
+/// Carga las tareas persistidas (state/tasks.jsonl).
+pub fn load_tasks_from_jsonl() -> Vec<Task> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/tasks.jsonl");
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        return text.lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
+    }
+    Vec::new()
 }
 
 /// Ciclo watcher de harnesses con persistencia real (alx-evolve).

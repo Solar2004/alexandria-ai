@@ -1,6 +1,6 @@
-iter = 6
+iter = 8
 max_iter = 20
-work_unit = "ciclo 9 iteracion 6/20: GAP I/O ANALIZADO (3f75c0b): 16 problemas duros fallan en ambos, feedback output no arregla algoritmo mal. Mecanismos alternativos documentados (ejemplo resuelto, debug test completo). Siguiente: probar debug con input completo para I/O, o /compact"
+work_unit = "ciclo 9 iteracion 8/20: INPUT-DEBUG IMPLEMENTADO (feedback con input del test fallido). Corriendo N=30 para veredicto (results/codecontests30-inputdebug.out). Si mejora el 12/30, el mecanismo I/O existe; si no, confirmar limite y pasar a pulido"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -1000,6 +1000,13 @@ pub fn render_bench_bigcode() -> String {
         if h {
             h_ok += 1;
         }
+        // Streaming: cada problema se imprime al momento (no al final) para
+        // sobrevivir a timeouts y monitorizar progreso.
+        eprintln!(
+            "  {id}: directa {} | harness {}",
+            if d { "✓" } else { "✗" },
+            if h { "✓" } else { "✗" },
+        );
         out.push_str(&format!(
             "  {id}: directa {} | harness {}\n",
             if d { "✓" } else { "✗" },

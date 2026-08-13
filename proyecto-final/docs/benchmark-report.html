@@ -181,8 +181,18 @@
 
 <h2>10 · Comando y reproducibilidad</h2>
 <div class="card">
-<pre style="font-size:.85em; background:#f4f4f4; padding:.8em; border-radius:6px; overflow-x:auto;">ALX_BENCH_MAX=60 alx bench-bigcode</pre>
-<p class="small">Muestra fija: <code>harnesses/bench/bigcodebench-sample.jsonl</code> (60 problemas). El benchmark NO es nuestro: son tareas profesionales (BigCodeBench, ICLR'25) con tests verificables.</p>
+<p class="small">Correr TODAS las familias (bench --all en versión reproducible):</p>
+<pre style="font-size:.85em; background:#f4f4f4; padding:.8em; border-radius:6px; overflow-x:auto;"># Familia 1a · BigCodeBench sample (60)
+alx bench-bigcode
+
+# Familia 1b · BigCodeBench HELD-OUT (30, set disjunto — robustez)
+ALX_BENCH_FILE=harnesses/bench/bigcodebench-holdout.jsonl alx bench-bigcode
+
+# Familia 2 · HumanEval (164)
+alx bench-humaneval
+
+# Opciones: ALX_BENCH_MAX=N limita runtime · ALX_BENCH_MODEL/URL cambian modelo</pre>
+<p class="small">Datasets: <code>harnesses/bench/</code> (BigCodeBench ICLR'25 + HumanEval — tareas profesionales, no nuestras). Los resultados agregados se reportan en la sección 9.</p>
 </div>
 
 </body>

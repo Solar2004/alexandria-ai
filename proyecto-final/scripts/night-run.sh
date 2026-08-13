@@ -16,6 +16,9 @@ REPORT="/home/artorias/Projectos/AlexanderTheGreat/plan/night-report.md"
     echo
     echo "--- Reporte completo del motor ---"
     "${ALX}" report
+    echo
+    echo "--- Resumen semanal ---"
+    "${ALX}" weekly
 } > "${REPORT}"
 
 echo "Informe nocturno: ${REPORT}"

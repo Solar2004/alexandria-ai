@@ -1,6 +1,6 @@
-iter = 2
+iter = 3
 max_iter = 20
-work_unit = "CICLO 2 (pulido): iteracion 2/20 — documentacion de uso completa (README+QUICKSTART), pulir alx run --real (critic mas confiable), mejorar spawn con tier"
+work_unit = "CICLO 2 (pulido): iteracion 3/20 — harness completo por fases con gates reales en alx feature, alx-harness integrado con task graph real, ideas de pulido (telemetria, mejor critic, docs por crate)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

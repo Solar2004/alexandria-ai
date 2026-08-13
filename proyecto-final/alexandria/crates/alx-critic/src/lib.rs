@@ -129,7 +129,7 @@ pub fn parse_verdict(json: &str) -> CriticVerdict {
     let slice = extract_json(json);
     let raw: RawVerdict = match serde_json::from_str(slice) {
         Ok(v) => v,
-        Err(_) => return fail_closed(),
+        Err(_) => return parse_verdict_fallback(json),
     };
     let findings: Vec<Finding> = raw
         .findings
@@ -228,6 +228,57 @@ pub fn derive_must_checks(findings: &[Finding]) -> Vec<String> {
     checks
 }
 
+/// Fallback: si el JSON del crítico no parsea (el modelo a veces no obedece),
+/// escanear señales en el texto — "approved: false", severities Block/Major.
+/// Nunca fail-closed a ciegas cuando hay evidencia de un defecto.
+fn parse_verdict_fallback(text: &str) -> CriticVerdict {
+    let lower = text.to_lowercase();
+    let mut findings = Vec::new();
+    for sev in ["block", "major"] {
+        if let Some(pos) = lower.find(sev) {
+            let msg: String = text
+                .chars()
+                .skip(pos + sev.len())
+                .take(80)
+                .collect::<String>()
+                .trim()
+                .to_string();
+            findings.push(Finding {
+                severity: if sev == "block" {
+                    Severity::Block
+                } else {
+                    Severity::Major
+                },
+                message: if msg.is_empty() {
+                    format!("defecto {sev} detectado")
+                } else {
+                    msg
+                },
+            });
+        }
+    }
+    let blocked = findings.iter().any(|f| f.severity == Severity::Block);
+    if lower.contains("approved: false") || blocked {
+        return CriticVerdict {
+            approved: false,
+            findings,
+        };
+    }
+    // Señal positiva explícita → aprobado (el modelo respondió con sentido,
+    // solo sin JSON perfecto).
+    if ["ok", "correcto", "aprobado", "sin defectos", "pass", "completo"]
+        .iter()
+        .any(|p| lower.contains(p))
+    {
+        return CriticVerdict {
+            approved: true,
+            findings,
+        };
+    }
+    // Sin señales → fail-closed (texto sin sentido).
+    fail_closed()
+}
+
 fn fail_closed() -> CriticVerdict {
     CriticVerdict {
         approved: false,
@@ -284,6 +335,23 @@ mod tests {
         assert_eq!(s.iter, 0);
         assert!(s.should_iterate());
         assert!(!s.passed);
+    }
+
+    #[test]
+    fn parse_verdict_fallback_scans_signals() {
+        // El modelo no devolvió JSON puro; el fallback detecta el defecto.
+        let text = "approved: false. El trabajo tiene un block en la salida porque falta evidencia.";
+        let v = parse_verdict(text);
+        assert!(!v.approved);
+        assert!(v.findings.iter().any(|f| f.severity == Severity::Block));
+    }
+
+    #[test]
+    fn parse_verdict_fallback_approves_clean() {
+        // Texto sin señales de defecto → aprobado (no fail-closed a ciegas).
+        let text = "todo ok, salida completa y verificada.";
+        let v = parse_verdict(text);
+        assert!(v.approved);
     }
 
     #[test]

@@ -1,6 +1,6 @@
-iter = 10
+iter = 11
 max_iter = 20
-work_unit = "ciclo 6 iteracion 10/20: N=30 VERIFICADO — directa 4/30 (13%) vs harness 17/30 (57%) = 4.25x. Harness recupera 13 problemas via iteracion. Techo: 13 fallos sin converger (6,8,10,12,15,33,48,49,55,61,65,84,85). Siguiente: reducir techo (feedback mas fino / plan en pasos / ensamble de intentos) o ampliar a 60; apuntar 5x; /compact"
+work_unit = "ciclo 6 iteracion 11/20: N=60 VERIFICADO — directa 9/60 (15%) vs harness 34/60 (57%) = 3.8x (consistente con N=30: 4.25x). Harness supera GPT-4o (~40%) en este subconjunto ejecutable. Para 5x faltan ~11: atacar techo con plan-antes-de-codigo, ensamble de intentos, o feedback con expected/actual; /compact primero"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

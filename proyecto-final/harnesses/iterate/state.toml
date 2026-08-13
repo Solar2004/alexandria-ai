@@ -1,6 +1,6 @@
-iter = 9
+iter = 11
 max_iter = 20
-work_unit = "ciclo 8 iteracion 9/20: bench-all.sh VERIFICADO (scripts/, 3 familias, ALX_BENCH_MAX). Suite completa ejecutable: sample+held-out+humaneval, dataset completo 186, metrica agregada, reproducibilidad. Siguiente: run comprehensivo N=186 (2-3h) o CodeContests — REQUIERE /compact"
+work_unit = "ciclo 8 iteracion 11/20: DASHBOARD VISUAL PURO LISTO (docs/benchmark-viz.html, Chart.js SRI): 4 graficas solo, tema oscuro, sin texto. Usuario pidio ver graficos. Siguiente: run N=186 (coste API, requiere OK usuario) o CodeContests"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

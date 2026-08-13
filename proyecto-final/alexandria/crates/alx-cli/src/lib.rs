@@ -985,20 +985,40 @@ pub fn render_bench_bigcode() -> String {
         if d {
             d_ok += 1;
         }
-        // HARNESS: iterar sobre los fallos del unittest con feedback.
+        // HARNESS (ensamble): 3 reintentos INDEPENDIENTES (pass@k) + 2 con
+        // feedback de las trazas fallidas. Independencia rompe el atascamiento.
+        let prompt_base = format!(
+            "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa, respetando EXACTAMENTE la firma de la cabecera. No escribas tests."
+        );
         let mut h = false;
-        let mut feedback = String::new();
-        for _ in 0..4 {
-            let prompt = format!(
-                "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa, respetando EXACTAMENTE la firma de la cabecera. {feedback}No escribas tests."
-            );
-            let sol = extract_script(&generate_script(&prompt));
+        let mut trazas: Vec<String> = Vec::new();
+        for _ in 0..3 {
+            let sol = extract_script(&generate_script(&prompt_base));
             let (ok, frag) = run_bigcode(&sol, &test);
             if ok {
                 h = true;
                 break;
             }
-            feedback = format!("El test fallo. Detalle: {frag}. Corrige task_func. ");
+            trazas.push(frag);
+        }
+        if !h {
+            let mut feedback = String::new();
+            for (i, tz) in trazas.iter().enumerate() {
+                feedback.push_str(&format!(
+                    "Intento {} fallo: {}. ",
+                    i + 1,
+                    tz.chars().take(80).collect::<String>()
+                ));
+                let prompt = format!(
+                    "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa, respetando EXACTAMENTE la firma de la cabecera. {feedback}No escribas tests."
+                );
+                let sol = extract_script(&generate_script(&prompt));
+                let (ok, _frag) = run_bigcode(&sol, &test);
+                if ok {
+                    h = true;
+                    break;
+                }
+            }
         }
         if h {
             h_ok += 1;

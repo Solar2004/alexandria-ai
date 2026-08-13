@@ -84,8 +84,9 @@
 <tr><td>N=30 (feedback simple)</td><td>4/30 (13%)</td><td class="good">17/30 (57%)</td><td>4.25x</td></tr>
 <tr><td>N=60 (feedback simple)</td><td>9/60 (15%)</td><td class="good">34/60 (57%)</td><td>3.8x</td></tr>
 <tr><td>N=60 (plan-then-code)</td><td>9/60 (15%)</td><td class="good">43/60 (72%)</td><td><b>4.78x</b></td></tr>
+<tr><td>N=30 HELD-OUT (plan-then-code, problemas nunca usados)</td><td>2/30 (7%)</td><td class="good">22/30 (73%)</td><td><b>11x</b></td></tr>
 </table>
-<p class="legend">Plan-then-code rompe el techo del feedback simple: el modelo describe el algoritmo antes de codificar. Casi 5x.</p>
+<p class="legend">Held-out = problemas del pool que NUNCA participaron en calibrar el prompt. Harness da 11x en el set disjunto (más difícil: directa 7%). El 4.78x es robusto, no suerte del subset.</p>
 </div>
 
 <h2>4 · Recuperación del harness (por problema, N=60)</h2>

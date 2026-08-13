@@ -11,7 +11,8 @@
 
 use alx_core::types::{now_ms, Evidence, ModelTier, PhaseId, Recall, RecallSource, Task, TaskStatus};
 use alx_critic::{criticize_real, derive_must_checks, iteration_prompt, CriticVerdict, IterationState};
-use alx_evolve::{detect_candidates, HarnessRegistry};
+use alx_audit::{AuditIndex, AuditItem, ItemKind};
+use alx_evolve::{detect_candidates, Harness, HarnessKind, HarnessRegistry, Trigger};
 use alx_governor::{Ledger, LedgerEntry};
 use alx_harness::{Phases, Pipeline};
 use alx_mcp::catalog::ToolCatalog;
@@ -578,6 +579,105 @@ pub fn serve_mcp_stdio() -> i32 {
         }
     }
     0
+}
+
+/// Ciclo watcher de harnesses con persistencia real (alx-evolve).
+/// Seed si vacío; retira temporales con uso, promueve con 5 usos, persiste.
+pub fn run_evolve_cycle() -> String {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../harnesses");
+    let mut reg = HarnessRegistry::load_from(&dir);
+    if reg.all().is_empty() {
+        let now = now_ms();
+        reg.add(Harness::new(
+            "hx-design-tokens",
+            "design-tokens",
+            HarnessKind::Temporal,
+            Trigger::Phase("Build".to_string()),
+            "consistencia visual",
+            "Usa tokens de diseño; sin hex literales hardcodeados en el proyecto.",
+            "alx-evolve",
+            now,
+        ));
+        let _ = reg.save_to(&dir);
+    }
+    let summary = HarnessRegistry::watcher_cycle(&dir, &|h| h.uses > 0, 5);
+    format!(
+        "## Evolve watcher\nDisco: {}\nCargados: {}\nRetirados: {}\nPromovidos: {}\nVivos: {}\n",
+        dir.display(),
+        summary.loaded,
+        summary.retired.len(),
+        summary.promoted.len(),
+        summary.live
+    )
+}
+
+/// Doctor del ecosistema ALEXANDRIA (alx-audit): indexa crates, hooks
+/// PHALANX y harnesses, y valida con el doctor.
+pub fn render_doctor() -> String {
+    let mut index = AuditIndex::new();
+    for name in [
+        "alx-core",
+        "alx-hooks",
+        "alx-memory",
+        "alx-governor",
+        "alx-task",
+        "alx-harness",
+        "alx-gate",
+        "alx-bench",
+        "alx-critic",
+        "alx-audit",
+        "alx-night",
+        "alx-mcp",
+        "alx-agents",
+        "alx-cli",
+        "alx-lib",
+        "alx-evolve",
+    ] {
+        index.add(AuditItem::new(
+            format!("crate-{name}"),
+            name,
+            ItemKind::Plugin,
+            format!("crates/{name}"),
+            "workspace",
+            format!("Crate del motor ALEXANDRIA que implementa su subsistema {name}."),
+        ));
+    }
+    for h in [
+        "mission",
+        "governor-classify",
+        "memory-capture",
+        "iterate-trigger",
+        "critic-run",
+        "gate-verify",
+        "evolve-detect",
+        "docmin-verify",
+        "bench-sample",
+        "headless-spawn",
+    ] {
+        index.add(AuditItem::new(
+            format!("hook-{h}"),
+            h,
+            ItemKind::Hook,
+            format!("phalanx/hooks/{h}.toml"),
+            "phalanx",
+            format!("Hook PHALANX que dispara la automatización {h} en el motor."),
+        ));
+    }
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../harnesses");
+    let harnesses = HarnessRegistry::load_from(&dir);
+    for h in harnesses.all() {
+        index.add(AuditItem::new(
+            format!("harness-{}", h.id),
+            h.id.clone(),
+            ItemKind::Harness,
+            dir.join("active/harnesses.jsonl").display().to_string(),
+            "evolve",
+            format!("Harness evolutivo {} con objetivo: {}.", h.name, h.objective),
+        ));
+    }
+    let mut out = format!("## Doctor ALEXANDRIA\nTotal items: {}\n", index.count());
+    out.push_str(&alx_audit::Doctor::doctor_report(&index));
+    out
 }
 
 /// Informe legible del estado de red.

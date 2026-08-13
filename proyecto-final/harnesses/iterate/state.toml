@@ -1,3 +1,3 @@
-iter = 12
+iter = 13
 max_iter = 20
-work_unit = "iteracion 12/20: alx-evolve watcher real — harnesses temporales se retiran al cumplir objetivo, promote_used, persistencia harnesses/active en disco, alx-audit doctor del ecosistema"
+work_unit = "iteracion 13/20: integracion con el sistema real completo — hooks del sistema usan alx, alx-night scheduler real (cron), atg modos delegan en alx, cost-report del governor, dogfood feature real"

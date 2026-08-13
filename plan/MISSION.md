@@ -81,8 +81,8 @@
 - [ ] Fase 14: Dogfood — usar ALEXANDER para construir una feature real
 - [ ] Fase 15: Docs + packaging + instalador
 - [~] Fase 16: alx-critic — critic REAL (criticize_real vía cadena, fail-closed), parse_verdict, learn_from_failure, derive_must_checks — 18 tests
-- [ ] Fase 17: Auditoría/dedup alx-audit (spec: `plan/14-auditoria.md`)
-- [~] Fase 18: alx-evolve — detect_candidates (hex/repetido/regla/bloque), add_candidate con doc-min — 14 tests
+- [~] Fase 17: alx doctor — indexa 16 crates + 10 hooks + harnesses, valida (27 items)
+- [~] Fase 18: alx-evolve — detect_candidates, add_candidate, persistencia JSONL (save/load), watcher_cycle real — 19 tests
 
 ## 5. Progreso de este intento (bitácora)
 

@@ -10,9 +10,9 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    check_network, feature_run, render_build, render_network, render_night_report,
-    render_phalanx_status, render_real_run, render_run, run_pipeline, run_pipeline_real,
-    serve_mcp_stdio, verify_build, AppState,
+    check_network, feature_run, render_build, render_doctor, render_network, render_night_report,
+    render_phalanx_status, render_real_run, render_run, run_evolve_cycle, run_pipeline,
+    run_pipeline_real, serve_mcp_stdio, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -59,6 +59,10 @@ enum Command {
         #[arg(long)]
         real: bool,
     },
+    /// Ciclo watcher de harnesses evolutivos con persistencia.
+    Evolve,
+    /// Doctor del ecosistema ALEXANDRIA (crates, hooks, harnesses).
+    Doctor,
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -124,6 +128,12 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Feature { titulo, real }) => {
             println!("{}", feature_run(&titulo, real, "docs/features"));
+        }
+        Some(Command::Evolve) => {
+            println!("{}", run_evolve_cycle());
+        }
+        Some(Command::Doctor) => {
+            println!("{}", render_doctor());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

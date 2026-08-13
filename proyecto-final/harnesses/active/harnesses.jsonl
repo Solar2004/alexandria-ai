@@ -1,0 +1,1 @@
+{"id":"hx-design-tokens","name":"design-tokens","kind":"Temporal","trigger":{"type":"phase","value":"Build"},"objective":"consistencia visual","doc":"Usa tokens de diseño; sin hex literales hardcodeados en el proyecto.","state":"WaitingObjective","created_by":"alx-evolve","created":1786621583714,"uses":0}

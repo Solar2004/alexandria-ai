@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
 
 /// Vida de un harness: temporal (muere al cumplir objetivo) o permanente.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,7 +27,7 @@ pub enum HarnessState {
 
 /// Cuándo corre el harness.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Trigger {
     Event(String),   // "PostToolUse", "PhasePassed", ...
     Phase(String),   // "Build", "Review", ...
@@ -125,6 +126,15 @@ pub struct HarnessRegistry {
     harnesses: Vec<Harness>,
 }
 
+/// Resumen de un ciclo del watcher persistente (`watcher_cycle`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WatcherSummary {
+    pub loaded: usize,
+    pub retired: Vec<String>,
+    pub promoted: Vec<String>,
+    pub live: usize,
+}
+
 impl HarnessRegistry {
     pub fn new() -> Self {
         Self::default()
@@ -200,6 +210,89 @@ impl HarnessRegistry {
     pub fn live_count(&self) -> usize {
         self.harnesses.iter().filter(|h| h.state != HarnessState::Retired).count()
     }
+
+    /// Persiste el registry como JSONL en `dir` (plan 16 §8): los activos
+    /// (Active/WaitingObjective/Promoted) sobrescriben `active/harnesses.jsonl`
+    /// y los retirados sobrescriben `archive/retired.jsonl`. Crea los dirs si
+    /// faltan. Write (no append) para reflejar el estado actual.
+    pub fn save_to(&self, dir: &std::path::Path) -> std::io::Result<()> {
+        let active_dir = dir.join("active");
+        let archive_dir = dir.join("archive");
+        std::fs::create_dir_all(&active_dir)?;
+        std::fs::create_dir_all(&archive_dir)?;
+
+        let active_path = active_dir.join("harnesses.jsonl");
+        let mut active_out = std::fs::File::create(&active_path)?;
+        for h in self.harnesses.iter().filter(|h| h.state != HarnessState::Retired) {
+            let line = serde_json::to_string(h).map_err(std::io::Error::other)?;
+            writeln!(active_out, "{line}")?;
+        }
+
+        let retired_path = archive_dir.join("retired.jsonl");
+        let mut retired_out = std::fs::File::create(&retired_path)?;
+        for h in self.harnesses.iter().filter(|h| h.state == HarnessState::Retired) {
+            let line = serde_json::to_string(h).map_err(std::io::Error::other)?;
+            writeln!(retired_out, "{line}")?;
+        }
+
+        Ok(())
+    }
+
+    /// Carga el registry desde `dir`: lee `active/harnesses.jsonl` (y
+    /// `archive/retired.jsonl` si existe) línea a línea; las corruptas se
+    /// ignoran. Devuelve un registry con todos los harnesses leídos.
+    pub fn load_from(dir: &std::path::Path) -> Self {
+        let mut reg = Self::new();
+        for h in read_jsonl(&dir.join("active").join("harnesses.jsonl")) {
+            reg.add(h);
+        }
+        for h in read_jsonl(&dir.join("archive").join("retired.jsonl")) {
+            reg.add(h);
+        }
+        reg
+    }
+
+    /// Nº de harnesses activos persistidos en disco (líneas válidas de
+    /// `active/harnesses.jsonl`).
+    pub fn count_in(dir: &std::path::Path) -> usize {
+        read_jsonl(&dir.join("active").join("harnesses.jsonl")).len()
+    }
+
+    /// Ciclo completo del watcher persistente: carga el estado, retira los
+    /// temporales que cumplieron objetivo, promueve los que demostraron uso,
+    /// y persiste el resultado. Devuelve un resumen del ciclo. Un fallo de
+    /// disco no aborta el ciclo (el estado en memoria ya quedó aplicado).
+    pub fn watcher_cycle(
+        dir: &std::path::Path,
+        goal_met: &dyn Fn(&Harness) -> bool,
+        min_uses: u32,
+    ) -> WatcherSummary {
+        let mut reg = Self::load_from(dir);
+        let loaded = reg.all().len();
+        let retired = reg.run_watcher(goal_met);
+        let promoted = reg.promote_used(min_uses);
+        let live = reg.live_count();
+        let _ = reg.save_to(dir);
+        WatcherSummary { loaded, retired, promoted, live }
+    }
+}
+
+/// Lee un archivo JSONL línea a línea; líneas vacías o corruptas se ignoran.
+/// Archivo ausente = lista vacía.
+fn read_jsonl(path: &std::path::Path) -> Vec<Harness> {
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    content
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if line.is_empty() {
+                return None;
+            }
+            serde_json::from_str(line).ok()
+        })
+        .collect()
 }
 
 /// doc-min: un harness sin documentación no puede registrarse.
@@ -501,5 +594,94 @@ mod tests {
         let mut reg = HarnessRegistry::new();
         assert_eq!(reg.add_candidate(candidate("corto", HarnessKind::Temporal, "corta"), 1), None);
         assert!(reg.by_id("hx-corto").is_none());
+    }
+
+    /// Directorio temporal único (pid + nanos), limpiado al final del test.
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let pid = std::process::id();
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.subsec_nanos())
+            .unwrap_or(0);
+        std::env::temp_dir().join(format!("alx-evolve-{tag}-{pid}-{nanos}"))
+    }
+
+    #[test]
+    fn save_load_roundtrip_preserves_ids_and_states() {
+        let dir = temp_dir("roundtrip");
+        let mut reg = HarnessRegistry::new();
+        reg.add(harness("t1", HarnessKind::Temporal, 1));  // WaitingObjective
+        reg.add(harness("p1", HarnessKind::Permanent, 1)); // Active
+        reg.save_to(&dir).expect("save_to");
+
+        let loaded = HarnessRegistry::load_from(&dir);
+        let ids: Vec<&str> = loaded.all().iter().map(|h| h.id.as_str()).collect();
+        assert_eq!(ids, vec!["t1", "p1"]);
+        assert_eq!(loaded.by_id("t1").unwrap().state, HarnessState::WaitingObjective);
+        assert_eq!(loaded.by_id("p1").unwrap().state, HarnessState::Active);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn watcher_cycle_retires_promotes_and_persists() {
+        let dir = temp_dir("cycle");
+        let mut reg = HarnessRegistry::new();
+        reg.add(harness("t1", HarnessKind::Temporal, 1)); // cumple objetivo -> retira
+        let mut t2 = harness("t2", HarnessKind::Temporal, 1);
+        t2.record_use();
+        t2.record_use();
+        reg.add(t2);
+        reg.save_to(&dir).expect("save inicial");
+
+        let summary = HarnessRegistry::watcher_cycle(&dir, &|h| h.id == "t1", 2);
+        assert_eq!(summary.loaded, 2);
+        assert_eq!(summary.retired, vec!["t1".to_string()]);
+        assert_eq!(summary.promoted, vec!["t2".to_string()]);
+        assert_eq!(summary.live, 1);
+
+        // el disco refleja los cambios
+        let after = HarnessRegistry::load_from(&dir);
+        assert_eq!(after.by_id("t1").unwrap().state, HarnessState::Retired);
+        assert_eq!(after.by_id("t2").unwrap().state, HarnessState::Promoted);
+        assert_eq!(after.by_id("t2").unwrap().kind, HarnessKind::Permanent);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn count_in_counts_active_persisted() {
+        let dir = temp_dir("count");
+        let mut reg = HarnessRegistry::new();
+        reg.add(harness("t1", HarnessKind::Temporal, 1));
+        reg.add(harness("p1", HarnessKind::Permanent, 1));
+        reg.save_to(&dir).expect("save_to");
+        assert_eq!(HarnessRegistry::count_in(&dir), 2);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_from_empty_dir_is_empty() {
+        let dir = temp_dir("empty");
+        let reg = HarnessRegistry::load_from(&dir);
+        assert_eq!(reg.all().len(), 0);
+        assert_eq!(reg.live_count(), 0);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_from_ignores_corrupt_lines() {
+        let dir = temp_dir("corrupt");
+        std::fs::create_dir_all(dir.join("active")).expect("mkdir");
+        let h = harness("t1", HarnessKind::Temporal, 1);
+        let line = serde_json::to_string(&h).expect("serialize");
+        let content = format!("{line}\nesto no es json\n");
+        std::fs::write(dir.join("active").join("harnesses.jsonl"), content).expect("write");
+
+        let reg = HarnessRegistry::load_from(&dir);
+        assert_eq!(reg.all().len(), 1);
+        assert_eq!(reg.by_id("t1").unwrap().state, HarnessState::WaitingObjective);
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

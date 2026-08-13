@@ -1171,11 +1171,15 @@ fn run_codecontests(solution: &str, tests: &serde_json::Value) -> (bool, String)
         );
         let got = out.stdout_head.trim().to_string();
         if got != exp {
+            // Debug guiado: incluir el INPUT del test que falla (no solo
+            // expected/got). Hipotesis ciclo 9: el modelo puede depurar mejor
+            // si ve el caso concreto que rompe su solucion.
             return (
                 false,
                 format!(
-                    "test {} fallo: expected '{}', got '{}'",
+                    "test {} fallo. INPUT: '{}'. expected: '{}', got: '{}'",
                     i + 1,
+                    inp.chars().take(60).collect::<String>(),
                     exp.chars().take(40).collect::<String>(),
                     got.chars().take(40).collect::<String>()
                 ),

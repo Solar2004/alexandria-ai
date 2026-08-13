@@ -1,6 +1,6 @@
-iter = 16
+iter = 19
 max_iter = 20
-work_unit = "ciclo 7 iteracion 16/20: ✅ GENERALIDAD CONFIRMADA — HumanEval N=164: directa 147 (89.6%) vs harness 156 (95.1%), recupera 9. Harness mejora en 2 familias (BigCodeBench 4.78x + HumanEval +6%) = NO sobreajuste. Dashboard seccion 8. Siguiente: CodeContests (familia 3), held-out, metrica agregada; /compact"
+work_unit = "ciclo 7 iteracion 19/20: 🎯 ROBUSTEZ CONFIRMADA — HELD-OUT (30 problemas NUNCA usados): directa 2/30 (7%) vs harness 22/30 (73%) = 11x. 4.78x no era suerte del subset. Generalidad (2 familias) + robustez (set disjunto) verificadas. Pendiente: CodeContests familia 3, metrica agregada, pulido; /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

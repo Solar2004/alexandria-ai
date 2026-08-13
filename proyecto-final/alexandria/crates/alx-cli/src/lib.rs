@@ -743,8 +743,12 @@ pub fn render_quality() -> String {
 
 /// Genera un script Python con el modelo para la tarea (una llamada).
 fn generate_script(task: &str) -> String {
+    // ALX_BENCH_MODEL permite correr el benchmark con otro modelo de la cadena
+    // (ej: claude-opus-4-6[1m]) para comparar modelos con/sin harness.
+    let model = std::env::var("ALX_BENCH_MODEL")
+        .unwrap_or_else(|_| "deepseek-v4-flash".to_string());
     let body = serde_json::json!({
-        "model": "deepseek-v4-flash",
+        "model": model,
         "max_tokens": 400,
         "thinking": { "type": "disabled" },
         "messages": [{

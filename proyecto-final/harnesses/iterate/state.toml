@@ -1,3 +1,6 @@
-iter = 13
+iter = 14
 max_iter = 20
-work_unit = "iteracion 13/20: integracion con el sistema real completo — hooks del sistema usan alx, alx-night scheduler real (cron), atg modos delegan en alx, cost-report del governor, dogfood feature real"
+work_unit = "iteracion 14/20: experiencia completa — alx run --real como flujo principal con envelope real de agentes, alx-agents spawn, PHALANX como plugin instalable, README de uso, night scheduler systemd"
+max_auto = 20
+target_iter = 1
+awaiting_user = false

@@ -7,6 +7,14 @@
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE="$DIR/state.toml"
 
+# Prompt real del usuario (no el reinyectado por auto-continue.sh) → resetea el
+# contador de ciclos automaticos.
+IN=$(cat)
+case "$IN" in
+    *"Continuemos con el proximo ciclo de iteracion"*) ;;
+    *) rm -f "$DIR/.auto_cycles" ;;
+esac
+
 [ -f "$STATE" ] || { echo "[iterate] sin estado — crea $DIR/state.toml"; exit 0; }
 
 ITER=$(grep -E '^iter' "$STATE" | head -1 | cut -d= -f2 | tr -d '"')

@@ -440,6 +440,21 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         }
     }
 
+    // Persistir el ledger para el cost-report (state/ledger.jsonl, append).
+    let state_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state");
+    let _ = std::fs::create_dir_all(&state_dir);
+    let ledger_path = state_dir.join("ledger.jsonl");
+    for e in ledger.entries() {
+        use std::io::Write;
+        if let Ok(line) = serde_json::to_string(e) {
+            let _ = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&ledger_path)
+                .and_then(|mut f| writeln!(f, "{line}"));
+        }
+    }
+
     RealRunResult { run, ledger, responses, verdicts, must_checks, harness_detected }
 }
 
@@ -678,6 +693,26 @@ pub fn render_doctor() -> String {
     let mut out = format!("## Doctor ALEXANDRIA\nTotal items: {}\n", index.count());
     out.push_str(&alx_audit::Doctor::doctor_report(&index));
     out
+}
+
+/// Cost-report del governor: lee el ledger persistido (state/ledger.jsonl)
+/// y resume tokens y coste de todas las llamadas reales acumuladas.
+pub fn render_cost_report() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/ledger.jsonl");
+    let (mut n, mut in_tok, mut out_tok, mut cost) = (0usize, 0u32, 0u32, 0.0f64);
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        for line in text.lines() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                n += 1;
+                in_tok = in_tok.saturating_add(v["input_tokens"].as_u64().unwrap_or(0) as u32);
+                out_tok = out_tok.saturating_add(v["output_tokens"].as_u64().unwrap_or(0) as u32);
+                cost += v["cost_usd"].as_f64().unwrap_or(0.0);
+            }
+        }
+    }
+    format!(
+        "## Cost report (governor)\nLlamadas reales: {n}\nTokens: {in_tok} in / {out_tok} out\nCoste estimado total: ${cost:.6}\n"
+    )
 }
 
 /// Informe legible del estado de red.

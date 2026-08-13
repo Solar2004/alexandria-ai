@@ -613,37 +613,57 @@ pub fn render_night_report() -> String {
     render_night(&report)
 }
 
-/// Estado del plugin PHALANX: config.toml (secciones) + hooks .toml.
-/// Resuelve la ruta desde el manifest del crate (funciona desde cualquier cwd).
+/// Estado del plugin PHALANX — CONFIG CARGADA por el motor.
+/// Parsea `config.toml` (governor routes, mcp clients, critic, iterate) y
+/// cada hook .toml (id, event, priority). Resuelve desde el manifest del crate.
 pub fn render_phalanx_status() -> String {
     let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../phalanx");
     let config_path = base.join("config.toml");
     let hooks_dir = base.join("hooks");
     let config_ok = config_path.exists();
-    let hooks = std::fs::read_dir(&hooks_dir)
+    let hook_files: Vec<String> = std::fs::read_dir(&hooks_dir)
         .map(|rd| {
             rd.flatten()
                 .filter(|e| e.path().extension().map(|x| x == "toml").unwrap_or(false))
-                .count()
+                .map(|e| e.file_name().to_string_lossy().to_string())
+                .collect()
         })
-        .unwrap_or(0);
-    let mut sections = Vec::new();
+        .unwrap_or_default();
+
+    let mut out = String::from("## PHALANX — config cargada por el motor\n");
     if config_ok {
         if let Ok(text) = std::fs::read_to_string(&config_path) {
-            for line in text.lines() {
-                let l = line.trim();
-                if l.starts_with('[') && l.ends_with(']') {
-                    sections.push(l.to_string());
-                }
+            let parsed: toml::Value =
+                toml::from_str(&text).unwrap_or(toml::Value::Table(Default::default()));
+            if let Some(r) = parsed.get("governor").and_then(|g| g.get("routes")) {
+                out.push_str(&format!("governor.routes: {r}\n"));
+            }
+            if let Some(c) = parsed.get("mcp").and_then(|m| m.get("clients")) {
+                out.push_str(&format!("mcp.clients: {c}\n"));
+            }
+            if let Some(c) = parsed.get("critic") {
+                out.push_str(&format!("critic: {c}\n"));
+            }
+            if let Some(i) = parsed.get("iterate") {
+                out.push_str(&format!("iterate: {i}\n"));
             }
         }
+    } else {
+        out.push_str("config.toml: ✗ falta\n");
     }
-    format!(
-        "## PHALANX\nconfig.toml: {}\nSecciones: {}\nHooks: {} .toml\n",
-        if config_ok { "✓" } else { "✗ falta" },
-        sections.join(" "),
-        hooks
-    )
+    out.push_str(&format!("Hooks declarados: {}\n", hook_files.len()));
+    for h in &hook_files {
+        let hpath = hooks_dir.join(h);
+        if let Ok(text) = std::fs::read_to_string(&hpath) {
+            let v: toml::Value =
+                toml::from_str(&text).unwrap_or(toml::Value::Table(Default::default()));
+            let id = v.get("id").and_then(|i| i.as_str()).unwrap_or(h);
+            let event = v.get("event").and_then(|e| e.as_str()).unwrap_or("?");
+            let prio = v.get("priority").and_then(|p| p.as_str()).unwrap_or("?");
+            out.push_str(&format!("  {id} — {event} — {prio}\n"));
+        }
+    }
+    out
 }
 
 /// Dogfood: ejecuta el pipeline y escribe el informe como artefacto real del

@@ -1,12 +1,6 @@
-iter = 0
+iter = 2
 max_iter = 20
-work_unit = "CICLO 2 COMPLETADO (20/20, pulido). Proximo: ciclo 3 — pon iter=1 y nuevo work_unit."
-max_auto = 20
-target_iter = 20
-awaiting_user = false
-max_auto = 20
-target_iter = 20
-awaiting_user = false
+work_unit = "ciclo 3 iteracion 2/20: motor nativo de iteracion — alx iterate (el motor dispara su propio loop sin hooks bash), governor clasifica en run --real (tier por dificultad)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

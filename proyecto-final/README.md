@@ -49,6 +49,8 @@ cargo test
 | `alx report` | Reporte markdown completo |
 | `alx metrics` | Líneas de código por crate |
 | `alx weekly` | Resumen semanal (coste, harnesses, métricas) |
+| `alx agents-show <n>` | Muestra un agente real del ecosistema con envelope |
+| `alx iterate [--next]` | Loop de iteración gestionado por el motor (sin bash) |
 
 Instalar: `./proyecto-final/install.sh` → `~/.local/bin/alx`.
 Autónomo nocturno: `proyecto-final/scripts/night-run.sh` (cron/systemd 02:00).

@@ -126,7 +126,35 @@
 <p class="legend">Preliminar: la ventaja del harness se mantiene con Claude (recupera el problema 1 que la directa falla en ambos modelos). N=2 insuficiente para ratio; se expande si el acceso a Claude se acelera.</p>
 </div>
 
-<h2>6 · Comando y reproducibilidad</h2>
+<h2>6 · Referencia — modelos publicados (set COMPLETO BigCodeBench)</h2>
+<div class="card">
+<p class="small"><b>ADVERTENCIA de comparabilidad:</b> los scores de abajo son del set COMPLETO de BigCodeBench (~1140 problemas, todos los libs). Nuestro 43/60 es un <b>subconjunto ejecutable</b> (solo stdlib/numpy/pandas/networkx, test &lt;5000 chars) — más fácil que el set completo. La comparación es INDICATIVA, no exacta. Fuente: abstract del paper BigCodeBench (ICLR'25, arXiv:2406.15877).</p>
+<table>
+<tr><th>Modelo</th><th>Set</th><th>pass@1</th><th>Nota</th></tr>
+<tr><td>Mejor LLM (paper)</td><td>Completo</td><td>~60%</td><td>cita verificada del abstract</td></tr>
+<tr><td>Humano</td><td>Completo</td><td>97%</td><td>cita verificada del abstract</td></tr>
+<tr><td>GPT-4o</td><td>Completo</td><td>~40%</td><td>aproximado (paper/liderboard)</td></tr>
+<tr><td>Nuestro harness (deepseek, plan-then-code)</td><td>Subset ejecutable</td><td>72%</td><td>medido · no comparable directo</td></tr>
+<tr><td>Directa (sin harness)</td><td>Subset ejecutable</td><td>15%</td><td>medido · mismo subset</td></tr>
+</table>
+<p class="legend">El harness multiplica por 4.78x la capacidad de SU MODELO BASE en el mismo subset — eso es lo comparable y verificable. Contra el set completo hace falta correr el harness en el set completo (futuro).</p>
+</div>
+
+<h2>7 · Principios de generalidad (sin sobreajustar al benchmark)</h2>
+<div class="card">
+<p class="small">Cómo se garantiza que el harness es bueno EN GENERAL y no solo en estos 60 problemas:</p>
+<table>
+<tr><th>Principio</th><th>Estado</th></tr>
+<tr><td>Mecanismo agnóstico: describir algoritmo → codificar → ejecutar → corregir</td><td>✅ No usa nada específico de BigCodeBench</td></tr>
+<tr><td>Agnóstico al modelo: verificado con deepseek Y claude-opus (ambos recuperan)</td><td>✅ N=2 preliminar con Claude</td></tr>
+<tr><td>Múltiples familias: BigCodeBench + HumanEval + CodeContests + Terminal-Bench</td><td>⏳ pendiente (agregar sets)</td></tr>
+<tr><td>Held-out: validar en problemas nunca usados para calibrar el prompt</td><td>⏳ pendiente (run en problemas frescos)</td></tr>
+<tr><td>Métrica agregada: media de varios benchmarks + "problemas recuperados"</td><td>⏳ pendiente (dashboards por familia)</td></tr>
+</table>
+<p class="legend">La mejora real del harness es la RECUPERACIÓN: convierte fallos de la directa en aciertos mediante ejecución+feedback. Eso es universal, no de benchmark.</p>
+</div>
+
+<h2>8 · Comando y reproducibilidad</h2>
 <div class="card">
 <pre style="font-size:.85em; background:#f4f4f4; padding:.8em; border-radius:6px; overflow-x:auto;">ALX_BENCH_MAX=60 alx bench-bigcode</pre>
 <p class="small">Muestra fija: <code>harnesses/bench/bigcodebench-sample.jsonl</code> (60 problemas). El benchmark NO es nuestro: son tareas profesionales (BigCodeBench, ICLR'25) con tests verificables.</p>

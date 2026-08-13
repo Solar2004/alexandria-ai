@@ -1,6 +1,6 @@
-iter = 4
+iter = 6
 max_iter = 20
-work_unit = "ciclo 9 iteracion 4/20: VIZ COMPLETO 3 FAMILIAS (febd142): BigCodeBench 186 (5.57x), CodeContests 1.0x, recuperados 96/20/9/0. Agregado 380 (75% vs 47%). Siguiente: mecanismo para I/O (CodeContests 1.0x — feedback expected/got no converge), o pulido, o /compact"
+work_unit = "ciclo 9 iteracion 6/20: GAP I/O ANALIZADO (3f75c0b): 16 problemas duros fallan en ambos, feedback output no arregla algoritmo mal. Mecanismos alternativos documentados (ejemplo resuelto, debug test completo). Siguiente: probar debug con input completo para I/O, o /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

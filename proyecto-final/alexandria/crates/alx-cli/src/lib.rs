@@ -743,27 +743,39 @@ pub fn render_quality() -> String {
 
 /// Genera un script Python con el modelo para la tarea (una llamada).
 fn generate_script(task: &str) -> String {
-    // ALX_BENCH_MODEL permite correr el benchmark con otro modelo de la cadena.
-    // NOTA: solo deepseek-v4-flash es funcional hoy; claude-opus-4-6[1m] esta
-    // listado pero devuelve content vacio por la cadena (verificado 2026-08-13).
+    // ALX_BENCH_MODEL / ALX_BENCH_URL permiten correr el benchmark con otro
+    // modelo u otro hop de la cadena. Ruta a CLAUDE real: cc-model-mask:3460
+    // (headroom:8788 da 502 para claude-opus; routatic:3456 siempre reescribe
+    // a deepseek). Verificado 2026-08-13.
+    let url = std::env::var("ALX_BENCH_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8788".to_string());
     let model = std::env::var("ALX_BENCH_MODEL")
         .unwrap_or_else(|_| "deepseek-v4-flash".to_string());
-    let body = serde_json::json!({
+    let claude_path = url.contains("3460") || model.contains("claude") || model.contains("opus");
+    let (max_tokens, thinking) = if claude_path {
+        // Claude razona: sin forzar thinking (la mask lo añade) y con presupuesto.
+        (3000, None)
+    } else {
+        (400, Some(serde_json::json!({"type": "disabled"})))
+    };
+    let mut body = serde_json::json!({
         "model": model,
-        "max_tokens": 400,
-        "thinking": { "type": "disabled" },
+        "max_tokens": max_tokens,
         "messages": [{
             "role": "user",
             "content": format!("{task}. Escribe SOLO el codigo Python, sin explicacion.")
         }]
-    })
-    .to_string();
+    });
+    if let Some(t) = thinking {
+        body["thinking"] = t;
+    }
+    let body = body.to_string();
     let body_path = std::env::temp_dir().join("alx-gen-script.json");
     if std::fs::write(&body_path, &body).is_err() {
         return String::new();
     }
     let cmd = format!(
-        "curl -s -m 30 http://127.0.0.1:8788/v1/messages -H 'content-type: application/json' -d @{}",
+        "curl -s -m 60 {url}/v1/messages -H 'content-type: application/json' -d @{}",
         body_path.display()
     );
     let out = alx_gate::run_command(&cmd, 35_000);

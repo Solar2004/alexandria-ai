@@ -1,6 +1,6 @@
-iter = 6
+iter = 7
 max_iter = 20
-work_unit = "CICLO 2 (pulido): iteracion 6/20 — docs por crate (indice docs/crates.md), revisar ideas.md e implementar ideas pendientes, pulir feature end-to-end con escalada"
+work_unit = "CICLO 2 (pulido): iteracion 7/20 — pulir alx feature end-to-end (critic escalada real en el artefacto), verificar spawn con code-reviewer, night-report incluye coste, revisar quality (clippy global)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

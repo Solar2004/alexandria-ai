@@ -192,6 +192,16 @@ pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
     parse_verdict(text)
 }
 
+/// Escalada T3 (plan 15 §2): tras agotar las iteraciones del critic barato,
+/// un crítico estricto decide en una última llamada. Reusa `criticize_real`
+/// con criterio de decisión final.
+pub fn escalate_real(output: &str) -> CriticVerdict {
+    criticize_real(
+        output,
+        &["DECISIÓN FINAL T3: aprobar SOLO si el trabajo no tiene defectos, la evidencia es verificable y cumple la tarea. Si hay cualquier duda, rechazar con Block."],
+    )
+}
+
 /// Convierte un hallazgo en un `must_check` aprendido: `"no <message>"` para
 /// Block/Major (prohibición), `"considera: <message>"` para Minor/Suggestion.
 pub fn learn_from_failure(finding: &Finding) -> String {

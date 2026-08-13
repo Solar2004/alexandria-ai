@@ -1,6 +1,6 @@
-iter = 17
+iter = 18
 max_iter = 20
-work_unit = "iteracion 17/20: alx-agents spawn real — alx agents spawn <nombre> <tarea> ejecuta un agente real (headless) con envelope, alx-critic escalada T3 real, integrar alx con los hooks del sistema (doctor en Stop)"
+work_unit = "iteracion 18/20: integracion total atg-alx (modos delegan), PHALANX instalable completo, cost-report acumulado real del sistema, documento de estado final del motor"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

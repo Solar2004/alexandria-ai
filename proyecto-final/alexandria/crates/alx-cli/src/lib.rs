@@ -10,7 +10,10 @@
 //! iteraciones usadas y el feedback acumulado.
 
 use alx_core::types::{now_ms, Evidence, ModelTier, PhaseId, Recall, RecallSource, Task, TaskStatus};
-use alx_critic::{criticize_real, derive_must_checks, iteration_prompt, CriticVerdict, IterationState};
+use alx_critic::{
+    criticize_real, derive_must_checks, escalate_real, iteration_prompt, CriticVerdict,
+    IterationState,
+};
 use alx_agents::{build_envelope, AgentRegistry, AgentSpec};
 use alx_audit::{AuditIndex, AuditItem, ItemKind};
 use alx_evolve::{detect_candidates, Harness, HarnessKind, HarnessRegistry, Trigger};
@@ -446,7 +449,7 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
             }
             run.gate_failures += 1;
         }
-        responses.push(outcome.stdout_head.chars().take(150).collect());
+        responses.push(outcome.stdout_head.chars().take(150).collect::<String>());
 
         let task = graph.by_id_mut(&child.id).expect("micro-tarea en el grafo");
         let head: String = outcome.stdout_head.chars().take(400).collect();
@@ -466,11 +469,19 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         }
     }
 
-    // Escalada T3: si el critic barato no resolvió, la decisión final la da un
-    // criterio estricto (el informe lo declara explícitamente).
+    // Escalada T3 real: si el critic barato no resolvió, un crítico estricto
+    // decide con una última llamada sobre la última respuesta.
     if run.gate_failures > 0 {
-        run.feedback
-            .push("ESCALADA T3: critic barato no resolvió; decisión final con criterio estricto.".into());
+        if let Some(last) = responses.last() {
+            let final_verdict = escalate_real(last);
+            let decision = if final_verdict.approved { "APROBADO" } else { "RECHAZADO" };
+            let why = final_verdict
+                .findings
+                .first()
+                .map(|f| f.message.clone())
+                .unwrap_or_default();
+            run.feedback.push(format!("ESCALADA T3: {decision} — {why}"));
+        }
     }
 
     // Evolve continuo: watcher retira/promueve harnesses con el trabajo real.
@@ -803,6 +814,78 @@ pub fn render_agents() -> String {
         ));
     }
     out
+}
+
+/// Spawn REAL de un agente: construye el envelope (alx-agents), comprime con
+/// caveman y ejecuta la tarea contra la cadena real (headroom). Devuelve la
+/// respuesta del modelo como resultado del agente.
+pub fn spawn_agent(name: &str, task: &str) -> String {
+    let spec = match name {
+        "code-reviewer" => AgentSpec {
+            name: "code-reviewer".into(),
+            description: "Revisa código contra criterios de calidad y detecta bugs.".into(),
+            tools: Vec::new(),
+            tier: ModelTier::T3Premium,
+            phase: Some(PhaseId::Review),
+            tags: Vec::new(),
+        },
+        "test-engineer" => AgentSpec {
+            name: "test-engineer".into(),
+            description: "Diseña y ejecuta tests para verificar cada micro-tarea.".into(),
+            tools: Vec::new(),
+            tier: ModelTier::T2Medium,
+            phase: Some(PhaseId::Test),
+            tags: Vec::new(),
+        },
+        _ => AgentSpec {
+            name: "general-purpose".into(),
+            description: "Agente general para cualquier fase del pipeline ALEXANDRIA.".into(),
+            tools: Vec::new(),
+            tier: ModelTier::T2Medium,
+            phase: None,
+            tags: Vec::new(),
+        },
+    };
+    let env = build_envelope(&spec, task, Vec::new(), 2000);
+    let mut prompt = caveman_compress(&format!("{}\n\n{}", env.system, env.task));
+    prompt.push_str("\nResponde directamente, sin razonamiento previo.");
+    let body = serde_json::json!({
+        "model": "deepseek-v4-flash",
+        "max_tokens": 800,
+        "messages": [{ "role": "user", "content": prompt }]
+    })
+    .to_string();
+    let body_path = std::env::temp_dir().join("alx-spawn-body.json");
+    if std::fs::write(&body_path, &body).is_err() {
+        return format!("✗ agente {name}: no se pudo escribir el body");
+    }
+    let cmd = format!(
+        "curl -s -m 30 http://127.0.0.1:8788/v1/messages -H 'content-type: application/json' -d @{}",
+        body_path.display()
+    );
+    let out = alx_gate::run_command(&cmd, 35_000);
+    if out.exit_code != 0 {
+        return format!("✗ agente {name}: falló (exit {})", out.exit_code);
+    }
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&out.stdout_head) {
+        let arr = v["content"].as_array();
+        if let Some(text) = arr
+            .and_then(|a| a.iter().find(|b| b["type"] == "text"))
+            .and_then(|b| b["text"].as_str())
+        {
+            return format!("✓ {name}: {text}");
+        }
+        // Fallback: el modelo aún está razonando (thinking largo); devolver lo
+        // que hay en vez de "sin texto".
+        if let Some(th) = arr
+            .and_then(|a| a.first())
+            .and_then(|b| b["thinking"].as_str())
+        {
+            let t: String = th.chars().take(200).collect();
+            return format!("✓ {name} (razonamiento): {t}…");
+        }
+    }
+    format!("✗ agente {name}: respuesta sin texto")
 }
 
 /// Informe legible del estado de red.

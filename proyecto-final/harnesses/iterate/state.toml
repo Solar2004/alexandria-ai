@@ -1,6 +1,6 @@
-iter = 2
+iter = 3
 max_iter = 20
-work_unit = "ciclo 6 iteracion 2/20: benchmark con EJECUCION real (compilar/correr el codigo) — el texto no distingue; medir ventaja real del harness"
+work_unit = "ciclo 6 iteracion 3/20: benchmark ejecucion funcional (3/3); ahora tareas MAS dificiles donde directa falle, o mas tareas, re-benchmark"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

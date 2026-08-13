@@ -741,6 +741,65 @@ pub fn render_quality() -> String {
     out
 }
 
+/// Genera un script Python con el modelo para la tarea (una llamada).
+fn generate_script(task: &str) -> String {
+    let body = serde_json::json!({
+        "model": "deepseek-v4-flash",
+        "max_tokens": 400,
+        "thinking": { "type": "disabled" },
+        "messages": [{
+            "role": "user",
+            "content": format!("{task}. Escribe SOLO el codigo Python, sin explicacion.")
+        }]
+    })
+    .to_string();
+    let body_path = std::env::temp_dir().join("alx-gen-script.json");
+    if std::fs::write(&body_path, &body).is_err() {
+        return String::new();
+    }
+    let cmd = format!(
+        "curl -s -m 30 http://127.0.0.1:8788/v1/messages -H 'content-type: application/json' -d @{}",
+        body_path.display()
+    );
+    let out = alx_gate::run_command(&cmd, 35_000);
+    if out.exit_code != 0 {
+        return String::new();
+    }
+    serde_json::from_str::<serde_json::Value>(&out.stdout_head)
+        .ok()
+        .and_then(|v| {
+            v["content"]
+                .as_array()?
+                .iter()
+                .find(|b| b["type"] == "text")?
+                .get("text")?
+                .as_str()
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_default()
+}
+
+/// Extrae el código Python de una respuesta del modelo (entre ``` o directo).
+fn extract_script(resp: &str) -> String {
+    if let Some(start) = resp.find("```python") {
+        let rest = &resp[start + 10..];
+        if let Some(end) = rest.find("```") {
+            return rest[..end].trim().to_string();
+        }
+    }
+    resp.trim().to_string()
+}
+
+/// Ejecuta un script Python y devuelve su stdout.
+fn execute_script(script: &str) -> String {
+    let path = std::env::temp_dir().join("alx-bench.py");
+    if std::fs::write(&path, script).is_err() {
+        return String::new();
+    }
+    let out = alx_gate::run_command(&format!("python3 {}", path.display()), 15_000);
+    out.stdout_head.trim().to_string()
+}
+
 /// Intento DIRECTO (sin harness): una sola llamada al modelo + critic.
 /// La comparación: una AI directa (sin descomposición/critic-loop) vs el
 /// harness completo. Mide la ventaja real del pipeline.
@@ -789,36 +848,54 @@ fn direct_attempt(task: &str) -> bool {
     .approved
 }
 
-/// Benchmark de tareas de CÓDIGO DIFÍCILES (tipo HumanEval/SWE): una AI
-/// directa tiende a fallar; el harness (descomposición + critic + iteración)
-/// debe resolverlas. Compara directa vs harness para medir la ventaja real.
+/// Benchmark de EJECUCIÓN REAL: el modelo genera código, se ejecuta, y la
+/// verificación es por OUTPUT (no texto). Mide la ventaja del harness:
+/// directa = genera y ejecuta sin verificar; harness = genera + critic
+/// verifica el código antes de ejecutar.
 pub fn render_benchmark() -> String {
-    let tasks = [
-        "Escribe en Rust una funcion que detecte ciclos en un grafo dirigido usando DFS con estados (0 no visitado, 1 en pila, 2 cerrado). Incluye el codigo.",
-        "Dado: fn trailing_zeroes(mut n: i32) -> i32 { let mut c = 0; while n >= 5 { n /= 5; c += n; } c } — calcula trailing_zeroes(25). Explica si el codigo es correcto o tiene bug.",
-        "Explica como implementar un LRU cache con O(1) get y put: que estructuras de datos usarias y por que, con pseudocodigo.",
+    let tasks: [(&str, &str); 3] = [
+        ("Escribe un script Python que imprima la suma de los numeros del 1 al 10", "55"),
+        ("Escribe un script Python que imprima el 10mo numero de Fibonacci (indexado desde 1)", "55"),
+        ("Escribe un script Python que imprima True si 7 es un numero primo", "True"),
     ];
-    let mut out = String::from("## Benchmark — tareas de código difíciles (harness vs directa)\n");
+    let mut out = String::from("## Benchmark — ejecución real (generar + ejecutar + verificar output)\n");
     let (mut direct_ok, mut harness_ok) = (0usize, 0usize);
-    for (i, t) in tasks.iter().enumerate() {
-        let d = direct_attempt(t);
-        let r = run_pipeline_real(t);
-        let h = r.run.gate_failures == 0;
+    for (i, (task, expected)) in tasks.iter().enumerate() {
+        // Directa: generar script + ejecutar sin verificación.
+        let d_script = extract_script(&generate_script(task));
+        let d_out = execute_script(&d_script);
+        let d = d_out == *expected;
         if d {
             direct_ok += 1;
         }
+
+        // Harness: generar + CRITIC verifica el código antes de ejecutar.
+        let h_script = extract_script(&generate_script(task));
+        let verdict = criticize_real(
+            &format!("Tarea: {task}. Código:\n{h_script}"),
+            &["el código es correcto y cumple la tarea", "sin errores de sintaxis", "conciso"],
+        );
+        let h_out = if verdict.approved {
+            execute_script(&h_script)
+        } else {
+            "(rechazado por critic)".to_string()
+        };
+        let h = verdict.approved && h_out == *expected;
         if h {
             harness_ok += 1;
         }
+
         out.push_str(&format!(
-            "  tarea {}: directa {} | harness {}\n",
+            "  tarea {}: directa {} (out: {}) | harness {} (out: {})\n",
             i + 1,
             if d { "✓" } else { "✗" },
-            if h { "✓" } else { "✗" }
+            d_out,
+            if h { "✓" } else { "✗" },
+            h_out
         ));
     }
     out.push_str(&format!(
-        "Directa: {direct_ok}/{} · Harness: {harness_ok}/{} — la ventaja del harness = descomposición + critic + iteración\n",
+        "Directa: {direct_ok}/{} · Harness: {harness_ok}/{} — verificación por EJECUCIÓN real\n",
         tasks.len(),
         tasks.len()
     ));

@@ -1,6 +1,6 @@
-iter = 18
+iter = 19
 max_iter = 20
-work_unit = "iteracion 18/20: integracion total atg-alx (modos delegan), PHALANX instalable completo, cost-report acumulado real del sistema, documento de estado final del motor"
+work_unit = "iteracion 19/20: prueba dogfood real — alx construye una feature real del repo (harness completo en una tarea), verifica end-to-end, informe final del ciclo de 20 iteraciones"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

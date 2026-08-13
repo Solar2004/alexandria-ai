@@ -95,7 +95,34 @@
 </table>
 </div>
 
-<h2>5 · Comando y reproducibilidad</h2>
+<h2>5 · Comparación de modelos (preliminar, N=2, mismos problemas 0 y 1)</h2>
+<div class="card">
+<p class="small">Ruta a Claude real: <code>cc-model-mask:3460</code> (headroom:8788 da 502; routatic reescribe a deepseek). Claude vía 3460 es lento (opus razona), por eso N=2 preliminar. Ambos modelos: el harness recupera 1 problema.</p>
+<table>
+<tr><th>Modelo</th><th>Directa</th><th>Harness</th><th>Recupera</th></tr>
+<tr><td>deepseek-v4-flash</td><td>1/2</td><td class="good">2/2</td><td>sí (prob 1)</td></tr>
+<tr><td>claude-opus-4-6[1m] (via 3460)</td><td>0/2</td><td class="good">1/2</td><td>sí (prob 1)</td></tr>
+</table>
+<svg viewBox="0 0 520 160" xmlns="http://www.w3.org/2000/svg">
+  <text x="70" y="45" font-size="12">deepseek — directa</text>
+  <rect x="220" y="32" width="150" height="16" fill="#c62828"/>
+  <text x="375" y="45" font-size="12" fill="#333">1/2</text>
+  <text x="70" y="75" font-size="12">deepseek — harness</text>
+  <rect x="220" y="62" width="300" height="16" fill="#0a7d33"/>
+  <text x="525" y="75" font-size="12" fill="#333">2/2</text>
+  <text x="70" y="105" font-size="12">claude-opus — directa</text>
+  <rect x="220" y="92" width="0" height="16" fill="#c62828"/>
+  <text x="225" y="105" font-size="12" fill="#333">0/2</text>
+  <text x="70" y="135" font-size="12">claude-opus — harness</text>
+  <rect x="220" y="122" width="150" height="16" fill="#0a7d33"/>
+  <text x="375" y="135" font-size="12" fill="#333">1/2</text>
+  <text x="215" y="155" font-size="10" fill="#888">0</text>
+  <text x="515" y="155" font-size="10" fill="#888">2</text>
+</svg>
+<p class="legend">Preliminar: la ventaja del harness se mantiene con Claude (recupera el problema 1 que la directa falla en ambos modelos). N=2 insuficiente para ratio; se expande si el acceso a Claude se acelera.</p>
+</div>
+
+<h2>6 · Comando y reproducibilidad</h2>
 <div class="card">
 <pre style="font-size:.85em; background:#f4f4f4; padding:.8em; border-radius:6px; overflow-x:auto;">ALX_BENCH_MAX=60 alx bench-bigcode</pre>
 <p class="small">Muestra fija: <code>harnesses/bench/bigcodebench-sample.jsonl</code> (60 problemas). El benchmark NO es nuestro: son tareas profesionales (BigCodeBench, ICLR'25) con tests verificables.</p>

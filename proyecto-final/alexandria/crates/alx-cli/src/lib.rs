@@ -1337,7 +1337,30 @@ pub fn run_setup() -> String {
     let iterate_ok = std::path::Path::new(&hooks_path).join("auto-continue.sh").exists();
     out.push_str(&format!("hook iterate/auto-continue: {}\n", ok(iterate_ok)));
 
-    out.push_str("\nReinicia Claude Code para aplicar el statusline.\n");
+    // 6. Plugins complementarios necesarios (caveman, ecc, etc.) — ALEXANDRIA
+    // como instalador definitivo: verifica que estén habilitados en settings.json.
+    let key_plugins: [&str; 8] = [
+        "caveman@", "ecc@", "remember@", "code-review@", "code-simplifier@",
+        "claude-mem@", "agent-skills@", "superpowers@",
+    ];
+    if let Ok(text) = std::fs::read_to_string(&settings_path) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(enabled) = v["enabledPlugins"].as_object() {
+                for p in key_plugins {
+                    let on = enabled
+                        .iter()
+                        .any(|(k, val)| k.starts_with(p) && val.as_bool().unwrap_or(false));
+                    out.push_str(&format!(
+                        "plugin {}: {}\n",
+                        p.trim_end_matches('@'),
+                        ok(on)
+                    ));
+                }
+            }
+        }
+    }
+
+    out.push_str("\nReinicia Claude Code para aplicar statusline + theme.\n");
     out
 }
 

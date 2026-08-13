@@ -1,6 +1,6 @@
-iter = 12
+iter = 14
 max_iter = 20
-work_unit = "ciclo 7 iteracion 12/20: GENERALIDAD EN MARCHA — HumanEval (164) descargado + spec integracion (docs/humaneval-spec.md, commit 88999e6). Dashboard web listo (8 secciones, referencia publicada + advertencia comparabilidad + 5 principios). Siguiente: implementar alx bench-humaneval (Rust, requiere contexto fresco), luego CodeContests/Terminal-Bench, held-out, metrica agregada"
+work_unit = "ciclo 7 iteracion 14/20: alx bench-humaneval IMPLEMENTADO (commit e4a774a): run_humaneval + render (plan-then-code campeon), smoke 5/5. Corriendo N=164 completo para el test de GENERALIDAD (familia 2). Siguiente: analizar resultado (¿harness >= directa en 2a familia?), CodeContests, held-out, metrica agregada"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

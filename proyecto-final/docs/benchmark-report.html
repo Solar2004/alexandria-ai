@@ -85,6 +85,7 @@
 <tr><td>N=60 (feedback simple)</td><td>9/60 (15%)</td><td class="good">34/60 (57%)</td><td>3.8x</td></tr>
 <tr><td>N=60 (plan-then-code)</td><td>9/60 (15%)</td><td class="good">43/60 (72%)</td><td><b>4.78x</b></td></tr>
 <tr><td>N=30 HELD-OUT (plan-then-code, problemas nunca usados)</td><td>2/30 (7%)</td><td class="good">22/30 (73%)</td><td><b>11x</b></td></tr>
+<tr><td>N=186 POOL COMPLETO (plan-then-code)</td><td>21/186 (11%)</td><td class="good">117/186 (63%)</td><td><b>5.57x</b></td></tr>
 </table>
 <p class="legend">Held-out = problemas del pool que NUNCA participaron en calibrar el prompt. Harness da 11x en el set disjunto (más difícil: directa 7%). El 4.78x es robusto, no suerte del subset.</p>
 </div>
@@ -167,16 +168,15 @@
 <p class="legend">La ventaja del harness ESCALA con la dificultad: 4.78x en BigCodeBench (hard), +6% en HumanEval (fácil, techo cerca de 100%). El mecanismo es universal: describir → codificar → ejecutar → corregir.</p>
 </div>
 
-<h2>9 · Métrica agregada (multi-benchmark, 3 sets reales)</h2>
+<h2>9 · Métrica agregada (multi-benchmark, 3 FAMILIAS, 5 runs)</h2>
 <div class="card">
-<p class="small">Agregación de TODOS los runs reales (sample 60 + held-out 30 + HumanEval 164 = 254 problemas, 2 familias de benchmark).</p>
+<p class="small">Agregación de TODOS los runs reales: BigCodeBench N=186 (completo) + HumanEval N=164 + CodeContests N=30 = 380 problemas, 3 familias.</p>
 <table>
 <tr><th>Métrica</th><th>Directa</th><th>Harness</th><th>Δ</th></tr>
-<tr><td>Aciertos totales</td><td>158/254 (62.2%)</td><td class="good">221/254 (87.0%)</td><td>+63</td></tr>
-<tr><td>Problemas recuperados</td><td>—</td><td class="good">63</td><td>directa ✗ → harness ✓</td></tr>
-<tr><td>Fallos conjuntos</td><td colspan="3">33 (25 BigCodeBench + 8 HumanEval) — techo del modelo</td></tr>
+<tr><td>Aciertos totales</td><td>180/380 (47.4%)</td><td class="good">285/380 (75.0%)</td><td>+105</td></tr>
+<tr><td>Problemas recuperados</td><td>—</td><td class="good">105</td><td>directa ✗ → harness ✓</td></tr>
 </table>
-<p class="legend">El harness convierte 63 fallos de la directa en aciertos (25% de todos los problemas). La recuperación es la métrica honesta de valor: universal, escala con dificultad.</p>
+<p class="legend">El harness convierte 105 fallos de la directa en aciertos (28% de todos los problemas). La recuperación es la métrica honesta de valor — PERO tiene límites: funciona en completar-función (BigCodeBench 5.57x, HumanEval +6%) y NO en I/O competitivo (CodeContests 1.0x).</p>
 </div>
 
 <h2>10 · Comando y reproducibilidad</h2>

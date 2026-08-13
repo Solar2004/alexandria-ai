@@ -1,6 +1,9 @@
-iter = 20
+iter = 0
 max_iter = 20
-work_unit = "ciclo 3 iteracion 20/20: cierre formal — ciclo 3 completo (20/20)"
+work_unit = "CICLO 3 COMPLETADO (20/20). Proximo: ciclo 4 — pon iter=1 y nuevo work_unit."
+max_auto = 20
+target_iter = 20
+awaiting_user = false
 max_auto = 20
 target_iter = 20
 awaiting_user = false

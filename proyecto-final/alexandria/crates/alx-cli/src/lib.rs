@@ -1269,6 +1269,78 @@ pub fn render_bench_all() -> String {
     out
 }
 
+/// `alx setup` — configura e verifica TODA la integración con Claude Code:
+/// binario, statusline powerline, MCP server, hooks. Merge no destructivo.
+pub fn run_setup() -> String {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut out = String::from("# alx setup — integración con Claude Code\n");
+    let ok = |b: bool| if b { "✓".to_string() } else { "✗".to_string() };
+
+    // 1. Binario alx
+    let alx = format!("{home}/.local/bin/alx");
+    let alx_ok = std::path::Path::new(&alx).exists();
+    out.push_str(&format!("binario alx: {} ({})\n", ok(alx_ok), alx));
+
+    // 2. Statusline powerline
+    let sl = format!("{home}/.local/bin/alx-statusline");
+    let sl_ok = std::path::Path::new(&sl).exists();
+    out.push_str(&format!("statusline powerline: {} ({})\n", ok(sl_ok), sl));
+
+    // 3. settings.json: statusLine -> alx-statusline (merge no destructivo)
+    let settings_path = format!("{home}/.claude/settings.json");
+    let mut settings_written = false;
+    if let Ok(text) = std::fs::read_to_string(&settings_path) {
+        if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&text) {
+            v["statusLine"] = serde_json::json!({
+                "type": "command",
+                "command": sl.clone(),
+                "refreshInterval": 10
+            });
+            if let Ok(new_text) = serde_json::to_string_pretty(&v) {
+                if std::fs::write(&settings_path, new_text).is_ok() {
+                    settings_written = true;
+                }
+            }
+        }
+    }
+    out.push_str(&format!(
+        "settings.json statusLine=alx-statusline: {}\n",
+        ok(settings_written)
+    ));
+
+    // 4. MCP server 'alexandria' en ~/.claude.json (merge)
+    let mcp_path = format!("{home}/.claude.json");
+    let mut mcp_ok = false;
+    if let Ok(text) = std::fs::read_to_string(&mcp_path) {
+        if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&text) {
+            let has = v["mcpServers"].get("alexandria").is_some();
+            if has {
+                mcp_ok = true;
+            } else {
+                v["mcpServers"]["alexandria"] = serde_json::json!({
+                    "type": "stdio",
+                    "command": alx.clone(),
+                    "args": ["mcp"]
+                });
+                if let Ok(new_text) = serde_json::to_string_pretty(&v) {
+                    if std::fs::write(&mcp_path, new_text).is_ok() {
+                        mcp_ok = true;
+                    }
+                }
+            }
+        }
+    }
+    out.push_str(&format!("MCP server 'alexandria': {}\n", ok(mcp_ok)));
+
+    // 5. Hook iterate/auto-continue del proyecto
+    let hooks_path = format!("{home}/Projectos/AlexanderTheGreat/.claude/hooks");
+    let iterate_ok = std::path::Path::new(&hooks_path).join("auto-continue.sh").exists();
+    out.push_str(&format!("hook iterate/auto-continue: {}\n", ok(iterate_ok)));
+
+    out.push_str("\nReinicia Claude Code para aplicar el statusline.\n");
+    out
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");

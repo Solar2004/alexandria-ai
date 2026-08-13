@@ -16,7 +16,7 @@ use alx_cli::{
     render_cost_report, render_doctor, render_quality,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
-    run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent, verify_build,
+    run_evolve_cycle, run_pipeline, run_pipeline_real, run_setup, serve_mcp_stdio, spawn_agent, verify_build,
     AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
@@ -115,6 +115,8 @@ enum Command {
         /// Tarea que ejecuta el agente.
         task: String,
     },
+    /// Configura e verifica toda la integración con Claude Code (statusline, MCP, hooks).
+    Setup,
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -244,6 +246,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Bench) => {
             println!("{}", render_bench_all());
+        }
+        Some(Command::Setup) => {
+            println!("{}", run_setup());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

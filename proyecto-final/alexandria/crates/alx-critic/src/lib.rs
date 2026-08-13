@@ -168,6 +168,7 @@ fn criticize_real_with_tokens(output: &str, criteria: &[&str], max_tokens: u32) 
     let body = serde_json::json!({
         "model": "deepseek-v4-flash",
         "max_tokens": max_tokens,
+        "thinking": { "type": "disabled" },
         "messages": [{ "role": "user", "content": prompt }]
     })
     .to_string();

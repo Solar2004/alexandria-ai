@@ -944,11 +944,12 @@ pub fn render_metrics() -> String {
 /// Para night-run.sh e informes.
 pub fn render_report() -> String {
     format!(
-        "{}\n\n{}\n\n{}\n\n{}",
+        "{}\n\n{}\n\n{}\n\n{}\n\n{}",
         render_tui(),
         render_cost_report(),
         render_doctor(),
-        render_agents()
+        render_agents(),
+        render_metrics()
     )
 }
 
@@ -988,6 +989,7 @@ pub fn spawn_agent(name: &str, task: &str) -> String {
     let body = serde_json::json!({
         "model": "deepseek-v4-flash",
         "max_tokens": 800,
+        "thinking": { "type": "disabled" },
         "messages": [{ "role": "user", "content": prompt }]
     })
     .to_string();

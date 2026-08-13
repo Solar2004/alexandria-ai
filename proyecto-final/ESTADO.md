@@ -42,6 +42,15 @@
 - Red real: headroom→mask→routatic→deepseek (cadena verificada).
 - Ledger persistido en `state/ledger.jsonl` (coste real por llamada).
 
+## Ciclo 6 — Benchmarks (verificado en vivo)
+
+- **Benchmark REAL**: BigCodeBench (ICLR'25), 60 problemas profesionales con unittest reales, en `harnesses/bench/bigcodebench-sample.jsonl` (descargados de HF).
+- **Comando**: `alx bench-bigcode` (`ALX_BENCH_MAX` limita runtime).
+- **Resultado**: directa 9/60 (15%) vs **harness 34/60 (57%) = ~4x estable** (N=30: 4.25x).
+- Harness supera a GPT-4o (~40%) en este subconjunto ejecutable, mismo modelo base.
+- 3 experimentos controlados: feedback simple=34/60 (mejor), feedback rich=29/60 (revertido), ensamble pass@k=33/60 (revertido).
+- **Veredicto**: techo ~55% es del modelo deepseek-v4-flash; 5x inalcanzable en este benchmark con este modelo. Spec ensamble: `docs/ensamble-spec.md`.
+
 ## Diagrama de estado (mermaid)
 
 ```mermaid

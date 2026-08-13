@@ -273,7 +273,9 @@ pub fn check_network() -> Vec<NetworkStatus> {
 /// ALEXANDRIA) vía `alx_gate::run_command`; la evidencia capturada es la
 /// moneda de verificación del sistema.
 pub fn verify_build() -> alx_core::types::Evidence {
-    let cmd = "cargo build".to_string();
+    // Ruta absoluta al workspace: funciona desde cualquier cwd (dogfood real).
+    let ws = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml");
+    let cmd = format!("cargo build --manifest-path {}", ws.display());
     let outcome = alx_gate::run_command(&cmd, 120_000);
     let passed = outcome.exit_code == 0;
     alx_core::types::Evidence::command_output(&cmd, outcome.exit_code, &outcome.stdout_head, passed)

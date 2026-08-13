@@ -1,9 +1,6 @@
-iter = 0
+iter = 12
 max_iter = 20
-work_unit = "CICLO 3 COMPLETADO (10/10, gaps cerrados). Proximo: ciclo 4 — tras /compact, pon iter=1 y nuevo work_unit."
-max_auto = 20
-target_iter = 20
-awaiting_user = false
+work_unit = "ciclo 3 iteracion 11/20: verificacion integral — todos los subcomandos funcionan, docs coherentes, pulir detalles"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

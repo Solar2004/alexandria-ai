@@ -1,6 +1,6 @@
-iter = 16
+iter = 1
 max_iter = 20
-work_unit = "CICLO 6 CERRADO (16/20 reales, max_auto alcanzado). Benchmark REAL BigCodeBench integrado y verificado: harness ~4x (34/60 vs 9/60), 3 experimentos (2 revertidos con datos), gate final 0 fallos/clippy 0, memoria en MISSION.md/ESTADO.md. PENDIENTES (tras /compact): plan-then-code experimento final, redefinir 5x sobre task-set con margen, pulido."
+work_unit = "ciclo 7 iteracion 1/20: reporte VISUAL del benchmark (docs/benchmark-report.html, SVG inline): directa 9/60 vs harness 34/60 (~4x), 3 mecanismos, consistencia, recuperacion por problema. Siguiente: grafico/medicion contra fable 5 si el usuario da acceso; o plan-then-code; o redefinir metrica 5x"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -11,7 +11,8 @@ use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
     agents_run_parallel, agents_show, check_network, feature_run, iterate_next, log_command,
-    load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_benchmark, render_build,
+    load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_benchmark,
+    render_bench_bigcode, render_build,
     render_cost_report, render_doctor, render_quality,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
@@ -99,6 +100,8 @@ enum Command {
     Quality,
     /// Benchmark de tareas complicadas de IA (5x mejor que directa).
     Benchmark,
+    /// Benchmark REAL: problemas BigCodeBench (unittest) — directa vs harness.
+    BenchBigcode,
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -223,6 +226,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Benchmark) => {
             println!("{}", render_benchmark());
+        }
+        Some(Command::BenchBigcode) => {
+            println!("{}", render_bench_bigcode());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

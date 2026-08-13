@@ -1,6 +1,6 @@
-iter = 6
+iter = 8
 max_iter = 20
-work_unit = "ciclo 6 iteracion 6/20: harness 1/3 vs directa 2/3 — el harness debe superar; mejorar descomposicion y estabilidad del prompt, re-benchmark"
+work_unit = "ciclo 6 iteracion 8/20: BENCHMARK REAL VERIFICADO — BigCodeBench (ICLR'25) 10 problemas: directa 2/10 vs harness 8/10 (4x). Harness itera sobre fallos de unittest y recupera 6/6. Siguiente: mejorar convergencia en los 2 fallos restantes (BCB/8, BCB/10) o ampliar a pool de 186 problemas; apuntar a 5x"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

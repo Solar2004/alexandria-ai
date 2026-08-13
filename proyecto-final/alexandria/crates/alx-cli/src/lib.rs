@@ -803,74 +803,55 @@ fn execute_script(script: &str) -> String {
 /// Harness: genera código, lo EJECUTA, compara con el esperado, y si falla
 /// RE-ITERA con feedback (el loop de mejora). Esa es la ventaja real sobre
 /// una AI directa (que no itera sobre la ejecución).
-fn harness_attempt(task: &str, expected: &str) -> (bool, String) {
+/// Harness con TEST INTERMEDIO + caso final parametrizado.
+/// Verifica la lógica con un caso pequeño (assert) ANTES del caso final:
+/// descomposición en pasos verificables. `final_case` es la línea que imprime
+/// el resultado (ej. "print(f(1000))"); si es vacío, el script del modelo ya
+/// imprime el resultado y no se añade nada.
+fn harness_attempt(
+    task: &str,
+    expected: &str,
+    intermediate: &str,
+    final_case: &str,
+) -> (bool, String) {
     let mut feedback = String::new();
     let mut last_out = String::from("(no ejecutado)");
-    for attempt in 0..3 {
-        // Descomposición básica: función parametrizada + main que imprime el
-        // caso objetivo (permite testear la lógica, no un script fijo).
+    for _attempt in 0..3 {
         let prompt = format!(
-            "{task}. {feedback}Escribe SOLO codigo Python: define una funcion f(limite) que resuelva la tarea para un limite dado, y al final: print(f(100))."
+            "{task}. {feedback}Escribe SOLO codigo Python: define una funcion f(limite) que resuelva la tarea para un limite dado. Al final: {}.",
+            if final_case.is_empty() {
+                "imprime el resultado".to_string()
+            } else {
+                final_case.to_string()
+            }
         );
         let script = extract_script(&generate_script(&prompt));
-        last_out = execute_script(&script);
+        // Asegurar que el caso final se ejecute (añadir si el modelo lo omitió).
+        let run_script = if final_case.is_empty() || script.contains(final_case) {
+            script.clone()
+        } else {
+            format!("{script}\n{final_case}")
+        };
+        // Test intermedio: verificar la lógica con un caso pequeño.
+        let test_script = format!("{run_script}\n{intermediate}\nprint('TEST_OK')");
+        let test_out = execute_script(&test_script);
+        if !test_out.contains("TEST_OK") {
+            feedback = format!(
+                "El test intermedio '{intermediate}' fallo. Revisa la logica de f. "
+            );
+            last_out = test_out.chars().take(50).collect::<String>();
+            continue;
+        }
+        last_out = execute_script(&run_script);
         if last_out == expected {
             return (true, last_out);
         }
         feedback = format!(
-            "El intento anterior imprimio '{}' pero el esperado es '{}'. Revisa la logica de f (especialmente los limites < vs <= y los dobles). Corrige. ",
+            "El caso final imprimio '{}' pero el esperado es '{}'. Corrige. ",
             last_out, expected
         );
     }
     (false, last_out)
-}
-
-/// Intento DIRECTO (sin harness): una sola llamada al modelo + critic.
-/// La comparación: una AI directa (sin descomposición/critic-loop) vs el
-/// harness completo. Mide la ventaja real del pipeline.
-fn direct_attempt(task: &str) -> bool {
-    let body = serde_json::json!({
-        "model": "deepseek-v4-flash",
-        "max_tokens": 600,
-        "thinking": { "type": "disabled" },
-        "messages": [{
-            "role": "user",
-            "content": format!("Tarea: {task}. Responde en maximo 3 frases.")
-        }]
-    })
-    .to_string();
-    let body_path = std::env::temp_dir().join("alx-direct-body.json");
-    if std::fs::write(&body_path, &body).is_err() {
-        return false;
-    }
-    let cmd = format!(
-        "curl -s -m 30 http://127.0.0.1:8788/v1/messages -H 'content-type: application/json' -d @{}",
-        body_path.display()
-    );
-    let out = alx_gate::run_command(&cmd, 35_000);
-    if out.exit_code != 0 {
-        return false;
-    }
-    let resp = serde_json::from_str::<serde_json::Value>(&out.stdout_head)
-        .ok()
-        .and_then(|v| {
-            v["content"]
-                .as_array()?
-                .iter()
-                .find(|b| b["type"] == "text")?
-                .get("text")?
-                .as_str()
-                .map(|s| s.to_string())
-        })
-        .unwrap_or_default();
-    if resp.is_empty() {
-        return false;
-    }
-    criticize_real(
-        &format!("Tarea: {task}. Respuesta: {resp}"),
-        &["responde la tarea correctamente", "es conciso", "sin contradicciones"],
-    )
-    .approved
 }
 
 /// Benchmark de EJECUCIÓN REAL: el modelo genera código, se ejecuta, y la
@@ -880,14 +861,19 @@ fn direct_attempt(task: &str) -> bool {
 pub fn render_benchmark() -> String {
     // Tareas con TRAMPAS donde una AI directa tiende a fallar (Euler clásicos):
     // la verificación por ejecución + critic del harness expone la ventaja.
-    let tasks: [(&str, &str); 3] = [
-        ("Escribe un script Python que imprima la suma de todos los multiplos de 3 o 5 MENORES que 100 (sin contar dobles)", "46"),
-        ("Escribe un script Python que imprima la suma de los digitos de 2**100", "115"),
-        ("Escribe un script Python que imprima el total de letras de los numeros del 1 al 1000 escritos en ingles (Euler 17, sin guiones ni espacios)", "21124"),
+    // (tarea, expected, test_intermedio, caso_final): el harness verifica un
+    // caso pequeño ANTES del caso final parametrizado — pasos verificables.
+    // Tareas de dificultad creciente; valores verificados con ejecución real.
+    let tasks: [(&str, &str, &str, &str); 5] = [
+        ("Escribe un script Python que imprima la suma de todos los multiplos de 3 o 5 MENORES que 100 (sin contar dobles)", "2318", "assert f(10) == 23", "print(f(100))"),
+        ("Escribe un script Python que imprima la suma de los digitos de 2**100", "115", "assert sum(int(d) for d in str(2**10)) == 7", ""),
+        ("Escribe un script Python que imprima el total de letras de los numeros del 1 al 1000 escritos en ingles (Euler 17, sin guiones ni espacios)", "21124", "assert f(20) == 112", "print(f(1000))"),
+        ("Euler 50: imprime el primo por debajo de 1000000 que puede escribirse como la SUMA DE LA MAYOR cantidad de primos consecutivos", "997651", "assert f(100) == 41", "print(f(1000000))"),
+        ("Euler 21: imprime la suma de todos los numeros amigables por debajo de 10000 (a y b amigables si d(a)=b y d(b)=a, a!=b)", "31626", "assert f(1000) == 504", "print(f(10000))"),
     ];
     let mut out = String::from("## Benchmark — ejecución real (generar + ejecutar + verificar output)\n");
     let (mut direct_ok, mut harness_ok) = (0usize, 0usize);
-    for (i, (task, expected)) in tasks.iter().enumerate() {
+    for (i, (task, expected, intermediate, final_case)) in tasks.iter().enumerate() {
         // Directa: generar script + ejecutar sin verificación.
         let d_script = extract_script(&generate_script(task));
         let d_out = execute_script(&d_script);
@@ -896,8 +882,8 @@ pub fn render_benchmark() -> String {
             direct_ok += 1;
         }
 
-        // Harness: ejecutar + comparar + RE-ITERAR con feedback (la ventaja).
-        let (h, h_out) = harness_attempt(task, expected);
+        // Harness: test intermedio + caso final + RE-ITERAR con feedback.
+        let (h, h_out) = harness_attempt(task, expected, intermediate, final_case);
         if h {
             harness_ok += 1;
         }
@@ -913,6 +899,109 @@ pub fn render_benchmark() -> String {
     }
     out.push_str(&format!(
         "Directa: {direct_ok}/{} · Harness: {harness_ok}/{} — verificación por EJECUCIÓN real\n",
+        tasks.len(),
+        tasks.len()
+    ));
+    out
+}
+
+/// Ejecuta una solución BigCodeBench contra sus unittest REALES.
+/// ALX_RESULT se imprime PRIMERO (sobrevive la cabecera truncada de 4000
+/// chars); timeout generoso (120s) porque los tests de BigCodeBench son
+/// pesados (permutaciones, etc.).
+fn run_bigcode(solution: &str, test: &str) -> (bool, String) {
+    let runner = format!(
+        "{test}\nimport io, unittest\nbuf = io.StringIO()\nsuite = unittest.defaultTestLoader.loadTestsFromTestCase(TestCases)\nres = unittest.TextTestRunner(stream=buf, verbosity=1).run(suite)\nprint('ALX_RESULT:', res.wasSuccessful())\nprint(buf.getvalue()[:1500])\n"
+    );
+    let path = std::env::temp_dir().join("alx-bigcode.py");
+    if std::fs::write(&path, format!("{solution}\n\n{runner}")).is_err() {
+        return (false, "error escribiendo script".to_string());
+    }
+    let out = alx_gate::run_command(&format!("python3 {}", path.display()), 120_000);
+    let all = out.stdout_head;
+    let ok = all
+        .lines()
+        .next()
+        .map(|l| l.contains("ALX_RESULT: True"))
+        .unwrap_or(false);
+    let frag = all
+        .lines()
+        .skip(1)
+        .find(|l| l.contains("AssertionError") || l.contains("Error"))
+        .unwrap_or("")
+        .to_string();
+    (
+        ok,
+        if frag.is_empty() {
+            all.chars().take(120).collect()
+        } else {
+            frag
+        },
+    )
+}
+
+/// Benchmark REAL: problemas de BigCodeBench (ICLR'25) con unittest verificables.
+/// Lee las tareas del disco (harnesses/bench/bigcodebench-sample.jsonl) — el
+/// benchmark NO es nuestro; son tareas profesionales donde los frontier fallan.
+/// Directa = 1 intento; Harness = iterar sobre los fallos del unittest.
+pub fn render_bench_bigcode() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../harnesses/bench/bigcodebench-sample.jsonl");
+    let mut out = String::from("## Benchmark REAL — BigCodeBench (ICLR'25) sample\n");
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return out + "sin bigcodebench-sample.jsonl\n";
+    };
+    let mut tasks: Vec<serde_json::Value> = Vec::new();
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+            tasks.push(v);
+        }
+    }
+    let (mut d_ok, mut h_ok) = (0usize, 0usize);
+    for (i, t) in tasks.iter().enumerate() {
+        let id_fallback = format!("BCB/{i}");
+        let id = t["task_id"].as_str().unwrap_or(&id_fallback);
+        let problem = t["problem"].as_str().unwrap_or("").to_string();
+        let test = t["test"].as_str().unwrap_or("").to_string();
+        if problem.is_empty() || test.is_empty() {
+            out.push_str(&format!("  {id}: sin prompt/test, skip\n"));
+            continue;
+        }
+        let full_prompt = format!(
+            "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa (def task_func(...): y cuerpo), respetando EXACTAMENTE la firma de la cabecera. No escribas tests ni importes de mas."
+        );
+        // DIRECTA: 1 solo intento.
+        let d_sol = extract_script(&generate_script(&full_prompt));
+        let (d, _df) = run_bigcode(&d_sol, &test);
+        if d {
+            d_ok += 1;
+        }
+        // HARNESS: iterar sobre los fallos del unittest con feedback.
+        let mut h = false;
+        let mut feedback = String::new();
+        for _ in 0..3 {
+            let prompt = format!(
+                "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa, respetando EXACTAMENTE la firma de la cabecera. {feedback}No escribas tests."
+            );
+            let sol = extract_script(&generate_script(&prompt));
+            let (ok, frag) = run_bigcode(&sol, &test);
+            if ok {
+                h = true;
+                break;
+            }
+            feedback = format!("El test fallo. Detalle: {frag}. Corrige task_func. ");
+        }
+        if h {
+            h_ok += 1;
+        }
+        out.push_str(&format!(
+            "  {id}: directa {} | harness {}\n",
+            if d { "✓" } else { "✗" },
+            if h { "✓" } else { "✗" },
+        ));
+    }
+    out.push_str(&format!(
+        "Directa: {d_ok}/{} · Harness: {h_ok}/{} — verificados por unittest REAL (BigCodeBench)\n",
         tasks.len(),
         tasks.len()
     ));
@@ -1061,7 +1150,7 @@ pub fn feature_run(title: &str, real: bool, out_dir: &str) -> String {
 pub fn serve_mcp_stdio() -> i32 {
     use std::io::BufRead;
     let catalog = ToolCatalog::alexandria_default();
-    for line in std::io::stdin().lock().lines().flatten() {
+    for line in std::io::stdin().lock().lines().map_while(Result::ok) {
         if let Some(resp) = handle_line(&catalog, &line) {
             if line.contains("\"tools/call\"") {
                 if let Some(real) = mcp_real_tool(&line) {

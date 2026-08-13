@@ -816,6 +816,39 @@ pub fn render_agents() -> String {
     out
 }
 
+/// TUI dashboard: estado del motor en terminal con paneles (ANSI, sin deps).
+pub fn render_tui() -> String {
+    let mut out = String::from("\x1b[1;33m╔═ ALEXANDRIA — Motor de desarrollo IA autónomo ═════════════════╗\x1b[0m\n");
+
+    out.push_str("\x1b[1;36m│ Motor:\x1b[0m 16 crates · 205 tests · `alx` en PATH\n");
+
+    out.push_str("\x1b[1;36m│ Red:\x1b[0m ");
+    for s in check_network() {
+        let mark = if s.ready { "\x1b[32m✓\x1b[0m" } else { "\x1b[31m✗\x1b[0m" };
+        let name = s.name.split(' ').next().unwrap_or("");
+        out.push_str(&format!("{mark} {name} "));
+    }
+    out.push('\n');
+
+    let cost_line: String = render_cost_report()
+        .lines()
+        .find(|l| l.contains("Coste"))
+        .unwrap_or("Coste: n/a")
+        .to_string();
+    out.push_str(&format!("\x1b[1;36m│ Coste:\x1b[0m {cost_line}\n"));
+
+    let items_line: String = render_doctor()
+        .lines()
+        .find(|l| l.contains("Total items"))
+        .unwrap_or("Doctor: n/a")
+        .to_string();
+    out.push_str(&format!("\x1b[1;36m│ Doctor:\x1b[0m {items_line}\n"));
+
+    out.push_str("\x1b[1;36m│ Comandos:\x1b[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui\n");
+    out.push_str("\x1b[1;33m╚══════════════════════════════════════════════════════════════════╝\x1b[0m\n");
+    out
+}
+
 /// Spawn REAL de un agente: construye el envelope (alx-agents), comprime con
 /// caveman y ejecuta la tarea contra la cadena real (headroom). Devuelve la
 /// respuesta del modelo como resultado del agente.

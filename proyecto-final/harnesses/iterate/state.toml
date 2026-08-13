@@ -1,6 +1,6 @@
-iter = 0
+iter = 1
 max_iter = 20
-work_unit = "CICLO 1 COMPLETADO (20/20). Proximo trabajo: pon iter=1 y nuevo work_unit para arrancar el ciclo 2."
+work_unit = "CICLO 2 (pulido): iteracion 1/20 — TUI de estado del motor (alx tui), documentacion de uso actualizada"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

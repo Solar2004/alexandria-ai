@@ -36,6 +36,10 @@
     <h2>Problemas recuperados por set</h2>
     <canvas id="c4"></canvas>
   </div>
+  <div class="card">
+    <h2>Líneas comparativas · Directa vs Harness</h2>
+    <canvas id="c5"></canvas>
+  </div>
 </div>
 
 <script>
@@ -85,6 +89,19 @@ new Chart(document.getElementById('c4'), {
     datasets: [{ label: 'Recuperados', data: [34, 20, 9], backgroundColor: '#e67e22' }]
   },
   options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, title: { display: true, text: 'problemas' } } } }
+});
+
+// 5 · Líneas comparativas directa vs harness
+new Chart(document.getElementById('c5'), {
+  type: 'line',
+  data: {
+    labels: ['BigCodeBench (60)', 'Held-out (30)', 'HumanEval (164)'],
+    datasets: [
+      { label: 'Directa', data: [15, 7, 89.6], borderColor: '#e05252', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5 },
+      { label: 'Harness', data: [72, 73, 95.1], borderColor: '#2ecc71', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5, borderWidth: 3 }
+    ]
+  },
+  options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% acierto' } } }, plugins: { legend: { position: 'bottom' } } }
 });
 </script>
 </body>

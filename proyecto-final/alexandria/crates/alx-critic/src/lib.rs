@@ -72,6 +72,193 @@ pub fn iteration_prompt(state: &IterationState) -> String {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Critic real: evalúa la salida de una fase contra criterios usando la cadena
+// LLM (headroom→mask→routatic→deepseek). Fail-closed: cualquier fallo en la
+// llamada o en el parseo del JSON → approved=false con finding Block.
+// ---------------------------------------------------------------------------
+
+/// Gravedad de un hallazgo del crítico. `Block`/`Major` bloquean la fase;
+/// `Minor`/`Suggestion` son mejoras opcionales.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Severity {
+    Block,
+    Major,
+    Minor,
+    Suggestion,
+}
+
+/// Un hallazgo del crítico: qué falló (o qué mejorar) y con qué gravedad.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Finding {
+    pub severity: Severity,
+    pub message: String,
+}
+
+/// Veredicto del crítico sobre la salida de una fase.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CriticVerdict {
+    pub approved: bool,
+    pub findings: Vec<Finding>,
+}
+
+/// Endpoint de la cadena LLM real (headroom → mask → routatic → deepseek).
+const LLM_URL: &str = "http://127.0.0.1:8788/v1/messages";
+
+/// Construye el prompt que pide al modelo evaluar `output` contra `criteria`.
+/// El modelo debe responder SOLO JSON, sin texto adicional.
+pub fn critic_prompt(output: &str, criteria: &[&str]) -> String {
+    let mut s = String::from("Eres el crítico de calidad. Evalúa la salida contra estos criterios:\n");
+    for c in criteria {
+        s.push_str(&format!("- {c}\n"));
+    }
+    s.push_str("\n<output>\n");
+    s.push_str(output);
+    s.push_str("\n</output>\n\n");
+    s.push_str(
+        "Responde SOLO con JSON, sin texto adicional, en este formato exacto:\n\
+         {\"approved\":true/false,\"findings\":[{\"severity\":\"Block|Major|Minor|Suggestion\",\"message\":\"...\"}]}\n",
+    );
+    s
+}
+
+/// Parse del JSON del crítico. Severities case-insensitive; desconocida →
+/// `Suggestion`. Un finding `Block` siempre fuerza `approved=false`. Si el
+/// texto no parsea → fail-closed (`approved=false` con finding Block).
+pub fn parse_verdict(json: &str) -> CriticVerdict {
+    let slice = extract_json(json);
+    let raw: RawVerdict = match serde_json::from_str(slice) {
+        Ok(v) => v,
+        Err(_) => return fail_closed(),
+    };
+    let findings: Vec<Finding> = raw
+        .findings
+        .into_iter()
+        .map(|f| Finding {
+            severity: severity_from_str(&f.severity),
+            message: f.message,
+        })
+        .collect();
+    let blocked = findings.iter().any(|f| f.severity == Severity::Block);
+    CriticVerdict {
+        approved: raw.approved && !blocked,
+        findings,
+    }
+}
+
+/// Critica contra la cadena real: construye el prompt, lo envía por curl a
+/// headroom y extrae `content[0].text` de la respuesta Anthropic. Fail-closed.
+pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
+    let prompt = critic_prompt(output, criteria);
+    let body = serde_json::json!({
+        "model": "deepseek-v4-flash",
+        "max_tokens": 200,
+        "messages": [{ "role": "user", "content": prompt }]
+    })
+    .to_string();
+    let cmd = format!(
+        "curl -s -m 30 {LLM_URL} -H 'content-type: application/json' -d {}",
+        shell_single_quote(&body)
+    );
+    let out = alx_gate::run_command(&cmd, 35_000);
+    if out.exit_code != 0 {
+        return fail_closed();
+    }
+    let value: serde_json::Value = match serde_json::from_str(&out.stdout_head) {
+        Ok(v) => v,
+        Err(_) => return fail_closed(),
+    };
+    let text = value
+        .get("content")
+        .and_then(|c| c.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|b| b.get("text"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("");
+    if text.is_empty() {
+        return fail_closed();
+    }
+    parse_verdict(text)
+}
+
+/// Convierte un hallazgo en un `must_check` aprendido: `"no <message>"` para
+/// Block/Major (prohibición), `"considera: <message>"` para Minor/Suggestion.
+pub fn learn_from_failure(finding: &Finding) -> String {
+    match finding.severity {
+        Severity::Block | Severity::Major => format!("no {}", finding.message),
+        Severity::Minor | Severity::Suggestion => format!("considera: {}", finding.message),
+    }
+}
+
+/// Deriva los `must_check` de una lista de hallazgos: uno por finding,
+/// deduplicado (HashSet, orden estable de aparición) y máximo 10.
+pub fn derive_must_checks(findings: &[Finding]) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut checks = Vec::new();
+    for f in findings {
+        let c = learn_from_failure(f);
+        if seen.insert(c.clone()) {
+            checks.push(c);
+        }
+        if checks.len() >= 10 {
+            break;
+        }
+    }
+    checks
+}
+
+fn fail_closed() -> CriticVerdict {
+    CriticVerdict {
+        approved: false,
+        findings: vec![Finding {
+            severity: Severity::Block,
+            message: "respuesta del critico inválida".to_string(),
+        }],
+    }
+}
+
+fn severity_from_str(s: &str) -> Severity {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "block" => Severity::Block,
+        "major" => Severity::Major,
+        "minor" => Severity::Minor,
+        "suggestion" => Severity::Suggestion,
+        _ => Severity::Suggestion,
+    }
+}
+
+/// Extrae el primer `{...}` balanceado por posición (tolerante a fences
+/// markdown o prosa alrededor). Si no hay par de llaves, devuelve el texto
+/// entero para que serde falle → fail-closed.
+fn extract_json(s: &str) -> &str {
+    match (s.find('{'), s.rfind('}')) {
+        (Some(start), Some(end)) if end >= start => &s[start..end + 1],
+        _ => s,
+    }
+}
+
+/// Envuelve un string en comillas simples de shell, escapando las `'` internas
+/// con `'\''` para poder incrustarlo en `-d '...'` sin romper el comando.
+fn shell_single_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
+#[derive(Deserialize)]
+struct RawVerdict {
+    #[serde(default)]
+    approved: bool,
+    #[serde(default)]
+    findings: Vec<RawFinding>,
+}
+
+#[derive(Deserialize)]
+struct RawFinding {
+    #[serde(default)]
+    severity: String,
+    #[serde(default)]
+    message: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,5 +325,106 @@ mod tests {
         let p = iteration_prompt(&s);
         assert!(p.contains("Iteración 1 de 3"));
         assert!(p.contains("verifica y mejora"));
+    }
+
+    #[test]
+    fn critic_prompt_includes_criteria_and_asks_json() {
+        let criteria = ["build sin warnings", "sin secrets hardcodeados"];
+        let p = critic_prompt("salida de la fase", &criteria);
+        assert!(p.contains("build sin warnings"));
+        assert!(p.contains("sin secrets hardcodeados"));
+        assert!(p.contains("JSON"));
+        assert!(p.contains("approved"));
+        assert!(p.contains("severity"));
+    }
+
+    #[test]
+    fn parse_verdict_approved_with_no_findings() {
+        let v = parse_verdict(r#"{"approved":true,"findings":[]}"#);
+        assert!(v.approved);
+        assert!(v.findings.is_empty());
+    }
+
+    #[test]
+    fn parse_verdict_block_finding_forces_reject() {
+        let json = r#"{"approved":true,"findings":[{"severity":"Block","message":"criterio no cumplido"}]}"#;
+        let v = parse_verdict(json);
+        assert!(!v.approved);
+        assert_eq!(v.findings.len(), 1);
+        assert_eq!(v.findings[0].severity, Severity::Block);
+        assert_eq!(v.findings[0].message, "criterio no cumplido");
+    }
+
+    #[test]
+    fn parse_verdict_severity_case_insensitive() {
+        let json = r#"{"approved":false,"findings":[{"severity":"major","message":"fix mayor"}]}"#;
+        let v = parse_verdict(json);
+        assert_eq!(v.findings[0].severity, Severity::Major);
+    }
+
+    #[test]
+    fn parse_verdict_unknown_severity_falls_to_suggestion() {
+        let json = r#"{"approved":false,"findings":[{"severity":"catastrofico","message":"?"}]}"#;
+        let v = parse_verdict(json);
+        assert_eq!(v.findings[0].severity, Severity::Suggestion);
+    }
+
+    #[test]
+    fn parse_verdict_garbage_is_fail_closed() {
+        let v = parse_verdict("esto no es json en absoluto");
+        assert!(!v.approved);
+        assert_eq!(v.findings.len(), 1);
+        assert_eq!(v.findings[0].severity, Severity::Block);
+        assert_eq!(v.findings[0].message, "respuesta del critico inválida");
+    }
+
+    #[test]
+    fn parse_verdict_tolerates_markdown_fences() {
+        let json = "```json\n{\"approved\":true,\"findings\":[]}\n```";
+        let v = parse_verdict(json);
+        assert!(v.approved);
+    }
+
+    #[test]
+    fn learn_from_failure_block_major_are_prohibitions() {
+        let block = Finding { severity: Severity::Block, message: "hardcodees secrets".into() };
+        let major = Finding { severity: Severity::Major, message: "dejes el build roto".into() };
+        assert_eq!(learn_from_failure(&block), "no hardcodees secrets");
+        assert_eq!(learn_from_failure(&major), "no dejes el build roto");
+    }
+
+    #[test]
+    fn learn_from_failure_minor_suggestion_are_considerations() {
+        let minor = Finding { severity: Severity::Minor, message: "documentes la funcion".into() };
+        let sugg = Finding { severity: Severity::Suggestion, message: "renombrar la variable".into() };
+        assert_eq!(learn_from_failure(&minor), "considera: documentes la funcion");
+        assert_eq!(learn_from_failure(&sugg), "considera: renombrar la variable");
+    }
+
+    #[test]
+    fn derive_must_checks_dedup_and_caps_at_10() {
+        let mut findings = Vec::new();
+        for i in 0..15 {
+            findings.push(Finding {
+                severity: if i % 2 == 0 { Severity::Block } else { Severity::Major },
+                message: format!("fallo numero {i}"),
+            });
+        }
+        // Duplicados exactos (misma severidad + mensaje) → deben deduplicarse.
+        findings.push(Finding { severity: Severity::Block, message: "fallo numero 0".into() });
+        let checks = derive_must_checks(&findings);
+        assert!(checks.len() <= 10, "cap a 10, llego a {}", checks.len());
+        let mut uniq = std::collections::HashSet::new();
+        for c in &checks {
+            assert!(uniq.insert(c.clone()), "check duplicado: {c}");
+        }
+        // Los primeros se conservan (orden estable), son los primeros 10 únicos.
+        assert!(checks.contains(&"no fallo numero 0".to_string()));
+        assert_eq!(checks[0], "no fallo numero 0");
+    }
+
+    #[test]
+    fn derive_must_checks_empty_input() {
+        assert!(derive_must_checks(&[]).is_empty());
     }
 }

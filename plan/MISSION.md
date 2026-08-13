@@ -80,9 +80,9 @@
 - [~] Fase 13: alx network (red real headroom→mask→routatic, fallback omniroute) + install.sh (~/.local/bin/alx) + hook SessionStart alx status + dogfood alx build (cargo build gate real) — 174 tests
 - [ ] Fase 14: Dogfood — usar ALEXANDER para construir una feature real
 - [ ] Fase 15: Docs + packaging + instalador
-- [ ] Fase 16: Auto-crítica alx-critic (spec: `plan/15-critic.md`)
+- [~] Fase 16: alx-critic — critic REAL (criticize_real vía cadena, fail-closed), parse_verdict, learn_from_failure, derive_must_checks — 18 tests
 - [ ] Fase 17: Auditoría/dedup alx-audit (spec: `plan/14-auditoria.md`)
-- [ ] Fase 18: Harness evolutivo alx-evolve (spec: `plan/16-evolve.md`) — crate skeleton + 6 tests
+- [~] Fase 18: alx-evolve — detect_candidates (hex/repetido/regla/bloque), add_candidate con doc-min — 14 tests
 
 ## 5. Progreso de este intento (bitácora)
 

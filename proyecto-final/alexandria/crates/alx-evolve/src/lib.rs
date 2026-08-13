@@ -6,6 +6,7 @@
 //! sin doc-min. Spec: plan/16-evolve.md.
 
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 /// Vida de un harness: temporal (muere al cumplir objetivo) o permanente.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,6 +31,18 @@ pub enum Trigger {
     Event(String),   // "PostToolUse", "PhasePassed", ...
     Phase(String),   // "Build", "Review", ...
     Manual,
+}
+
+/// Candidato a harness detectado sobre trabajo real (heurística determinista).
+/// El `kind` es la recomendación del detector (qué merece formalizarse); el
+/// harness materializado empieza siempre Temporal y se promueve con evidencia.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HarnessCandidate {
+    pub suggested_name: String,
+    pub kind: HarnessKind,
+    pub trigger: Trigger,
+    pub objective: String,
+    pub doc: String,
 }
 
 /// Un harness del sistema evolutivo.
@@ -121,6 +134,32 @@ impl HarnessRegistry {
         self.harnesses.push(h);
     }
 
+    /// Materializa un candidato como harness (id `hx-<suggested_name>`).
+    /// Doc-min es compuerta: doc < 20 chars → None. También None si el id ya
+    /// existe. El harness empieza Temporal por defecto (plan §11: "todo harness
+    /// nuevo empieza temporal; solo se promueve con evidencia de utilidad").
+    pub fn add_candidate(&mut self, c: HarnessCandidate, now: u64) -> Option<String> {
+        let id = format!("hx-{}", c.suggested_name);
+        if self.by_id(&id).is_some() {
+            return None;
+        }
+        if c.doc.trim().chars().count() < 20 {
+            return None;
+        }
+        let h = Harness::new(
+            id.clone(),
+            c.suggested_name,
+            HarnessKind::Temporal,
+            c.trigger,
+            c.objective,
+            c.doc,
+            "alx-evolve",
+            now,
+        );
+        self.add(h);
+        Some(id)
+    }
+
     pub fn all(&self) -> &[Harness] {
         &self.harnesses
     }
@@ -172,6 +211,122 @@ pub fn validate_doc_min(h: &Harness) -> Result<(), String> {
         return Err(format!("harness {} doc-min demasiado corta (<20 chars)", h.id));
     }
     Ok(())
+}
+
+/// Detección heurística determinista de candidatos a harness a partir de
+/// trabajo real (hook `evolve.detect`, PostToolUse). Solo señala patrones
+/// verificables; el orden de salida es estable.
+pub fn detect_candidates(work_text: &str) -> Vec<HarnessCandidate> {
+    let mut out = Vec::new();
+
+    // Colores hardcodeados → design-tokens (permanente, corre en Build).
+    if contains_hex_color(work_text) {
+        out.push(HarnessCandidate {
+            suggested_name: "design-tokens".into(),
+            kind: HarnessKind::Permanent,
+            trigger: Trigger::Phase("Build".into()),
+            objective: "consistencia visual".into(),
+            doc: "Usa tokens de diseño, sin hex literales hardcodeados".into(),
+        });
+    }
+
+    // Mención de regla/convención → regla-formalizada.
+    if work_text.contains("siempre") || work_text.contains("regla") || work_text.contains("nunca")
+    {
+        out.push(HarnessCandidate {
+            suggested_name: "regla-formalizada".into(),
+            kind: HarnessKind::Permanent,
+            trigger: Trigger::Manual,
+            objective: "formalizar regla como check".into(),
+            doc: "Convierte una convencion repetida en harness verificable".into(),
+        });
+    }
+
+    // Repetición de término técnico (≥5 chars, ≥4 veces) → abstraer-<palabra>.
+    for word in repeated_terms(work_text) {
+        out.push(HarnessCandidate {
+            suggested_name: format!("abstraer-{word}"),
+            kind: HarnessKind::Temporal,
+            trigger: Trigger::Manual,
+            objective: format!("extraer {word} a util reutilizable"),
+            doc: "Detecta termino repetido: extraer a abstraccion".into(),
+        });
+    }
+
+    // Bloque repetido (≥50 chars, ≥2 veces) → extraer-util.
+    if has_repeated_block(work_text) {
+        out.push(HarnessCandidate {
+            suggested_name: "extraer-util".into(),
+            kind: HarnessKind::Temporal,
+            trigger: Trigger::Manual,
+            objective: "extraer fragmento duplicado a util compartido".into(),
+            doc: "Detecta un bloque de codigo repetido para extraer a util".into(),
+        });
+    }
+
+    // Dedup por suggested_name (Set), preservando el orden de detección.
+    let mut seen: HashSet<String> = HashSet::new();
+    out.retain(|c| seen.insert(c.suggested_name.clone()));
+    out
+}
+
+/// `#RRGGBB`: '#' + 6 hex digits, no seguido de otro hex digit (excluye RGBA de 8).
+fn contains_hex_color(text: &str) -> bool {
+    let b = text.as_bytes();
+    for i in 0..b.len() {
+        if b[i] == b'#' {
+            let end = i + 7;
+            if end <= b.len()
+                && b[i + 1..end].iter().all(|c| c.is_ascii_hexdigit())
+                && (end == b.len() || !b[end].is_ascii_hexdigit())
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Palabras alfanuméricas (≥5 chars) que aparecen ≥4 veces, ordenadas.
+fn repeated_terms(text: &str) -> Vec<String> {
+    let mut counts: HashMap<String, u32> = HashMap::new();
+    let mut cur = String::new();
+    for c in text.chars() {
+        if c.is_alphanumeric() {
+            cur.push(c);
+        } else {
+            if cur.chars().count() >= 5 {
+                *counts.entry(cur.clone()).or_insert(0) += 1;
+            }
+            cur.clear();
+        }
+    }
+    if cur.chars().count() >= 5 {
+        *counts.entry(cur.clone()).or_insert(0) += 1;
+    }
+    let mut terms: Vec<String> = counts
+        .iter()
+        .filter(|(_, &n)| n >= 4)
+        .map(|(w, _)| w.clone())
+        .collect();
+    terms.sort();
+    terms
+}
+
+/// Un fragmento de ≥50 chars aparece ≥2 veces (ventana fija de 50 bytes).
+fn has_repeated_block(text: &str) -> bool {
+    const WIN: usize = 50;
+    let b = text.as_bytes();
+    if b.len() <= WIN {
+        return false;
+    }
+    let mut seen: HashSet<&[u8]> = HashSet::with_capacity(b.len() - WIN);
+    for i in 0..=(b.len() - WIN) {
+        if !seen.insert(&b[i..i + WIN]) {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -246,5 +401,105 @@ mod tests {
         assert!(validate_doc_min(&h).is_err());
         h.doc = "Verifica que la salida de la fase cumple las reglas establecidas.".into();
         assert!(validate_doc_min(&h).is_ok());
+    }
+
+    fn candidate(name: &str, kind: HarnessKind, doc: &str) -> HarnessCandidate {
+        HarnessCandidate {
+            suggested_name: name.into(),
+            kind,
+            trigger: Trigger::Manual,
+            objective: "objetivo".into(),
+            doc: doc.into(),
+        }
+    }
+
+    #[test]
+    fn detect_hex_color_creates_design_tokens() {
+        let cands = detect_candidates("usa #FF0000 para el boton y #00FF00 para el fondo");
+        let dt = cands
+            .iter()
+            .find(|c| c.suggested_name == "design-tokens")
+            .expect("design-tokens");
+        assert_eq!(dt.kind, HarnessKind::Permanent);
+        assert_eq!(dt.trigger, Trigger::Phase("Build".into()));
+        // 8-digit RGBA no cuenta como #RRGGBB → sin candidato design-tokens
+        assert!(detect_candidates("color #FF0000ff con alpha").is_empty());
+    }
+
+    #[test]
+    fn detect_repeated_term_creates_abstraer() {
+        let cands = detect_candidates("cache cache cache cache al final");
+        let a = cands
+            .iter()
+            .find(|c| c.suggested_name == "abstraer-cache")
+            .expect("abstraer-cache");
+        assert_eq!(a.kind, HarnessKind::Temporal);
+        assert!(a.objective.contains("cache"));
+    }
+
+    #[test]
+    fn detect_rule_word_creates_regla_formalizada() {
+        let cands = detect_candidates("regla de negocio");
+        let r = cands
+            .iter()
+            .find(|c| c.suggested_name == "regla-formalizada")
+            .expect("regla-formalizada");
+        assert_eq!(r.kind, HarnessKind::Permanent);
+    }
+
+    #[test]
+    fn detect_repeated_block_creates_extraer_util() {
+        let block = "let resultado = calcularValorComplejo(inputA, inputB, contexto); ";
+        let text = format!("{block} luego {block}");
+        let cands = detect_candidates(&text);
+        assert!(
+            cands.iter().any(|c| c.suggested_name == "extraer-util"),
+            "bloque repetido deberia dar extraer-util: {cands:?}"
+        );
+    }
+
+    #[test]
+    fn detect_candidates_dedupe_by_name() {
+        // #FF0000, "regla"+"siempre", y "cache"×4: tres candidatos distintos.
+        let cands = detect_candidates("#FF0000 #FF0000 regla siempre cache cache cache cache");
+        let names: Vec<&str> = cands.iter().map(|c| c.suggested_name.as_str()).collect();
+        let unique: HashSet<&str> = names.iter().copied().collect();
+        assert_eq!(names.len(), unique.len(), "sin duplicados: {names:?}");
+        assert!(names.contains(&"design-tokens"));
+        assert!(names.contains(&"regla-formalizada"));
+        assert!(names.contains(&"abstraer-cache"));
+    }
+
+    #[test]
+    fn add_candidate_registers_and_rejects_duplicate() {
+        let mut reg = HarnessRegistry::new();
+        let doc = "Usa tokens de diseno, sin hex literales hardcodeados en el codigo";
+        let id = reg.add_candidate(candidate("design-tokens", HarnessKind::Permanent, doc), 100);
+        assert_eq!(id.as_deref(), Some("hx-design-tokens"));
+        assert!(reg.by_id("hx-design-tokens").is_some());
+
+        let dup = candidate("design-tokens", HarnessKind::Permanent, doc);
+        assert_eq!(reg.add_candidate(dup, 100), None);
+        assert_eq!(reg.live_count(), 1);
+    }
+
+    #[test]
+    fn add_candidate_starts_temporal_by_default() {
+        // Plan §11: todo harness nuevo empieza temporal aunque el detector
+        // recomiende permanente; se promueve solo con evidencia de utilidad.
+        let mut reg = HarnessRegistry::new();
+        let doc = "Usa tokens de diseno, sin hex literales hardcodeados en el codigo";
+        reg.add_candidate(candidate("design-tokens", HarnessKind::Permanent, doc), 1);
+        let h = reg.by_id("hx-design-tokens").unwrap();
+        assert_eq!(h.kind, HarnessKind::Temporal);
+        assert_eq!(h.state, HarnessState::WaitingObjective);
+        assert_eq!(h.created_by, "alx-evolve");
+    }
+
+    #[test]
+    fn add_candidate_rejects_short_doc() {
+        let mut reg = HarnessRegistry::new();
+        assert_eq!(reg.add_candidate(candidate("corto", HarnessKind::Temporal, "corta"), 1), None);
+        assert!(reg.by_id("hx-corto").is_none());
     }
 }

@@ -255,6 +255,35 @@ pub fn check_network() -> Vec<NetworkStatus> {
         .collect()
 }
 
+/// Dogfood: verifica el build del workspace actual con un gate real.
+///
+/// Corre `cargo build` en el cwd del proceso `alx` (desde el workspace de
+/// ALEXANDRIA) vía `alx_gate::run_command`; la evidencia capturada es la
+/// moneda de verificación del sistema.
+pub fn verify_build() -> alx_core::types::Evidence {
+    let cmd = "cargo build".to_string();
+    let outcome = alx_gate::run_command(&cmd, 120_000);
+    let passed = outcome.exit_code == 0;
+    alx_core::types::Evidence::command_output(&cmd, outcome.exit_code, &outcome.stdout_head, passed)
+}
+
+/// Informe legible del resultado del dogfood build.
+pub fn render_build(evidence: &alx_core::types::Evidence) -> String {
+    if evidence.passed {
+        format!(
+            "✓ build OK (exit {})\n{}",
+            evidence.exit_code,
+            evidence.stdout_head.trim()
+        )
+    } else {
+        format!(
+            "✗ build FALLÓ (exit {})\n{}",
+            evidence.exit_code,
+            evidence.stdout_head.trim()
+        )
+    }
+}
+
 /// Informe legible del estado de red.
 pub fn render_network(statuses: &[NetworkStatus]) -> String {
     let mut out = String::from(

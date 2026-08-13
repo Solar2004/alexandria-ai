@@ -9,7 +9,9 @@ use std::process::ExitCode;
 
 use clap::{CommandFactory, Parser, Subcommand};
 
-use alx_cli::{check_network, render_network, render_run, run_pipeline, AppState};
+use alx_cli::{
+    check_network, render_build, render_network, render_run, run_pipeline, verify_build, AppState,
+};
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
 
@@ -36,6 +38,8 @@ enum Command {
     Status,
     /// Comprueba la red real del governor (headroom→mask→routatic, fallback omniroute).
     Network,
+    /// Dogfood: verifica el build del workspace con un gate real (cargo build).
+    Build,
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -77,6 +81,13 @@ fn run(cli: Cli) -> ExitCode {
         Some(Command::Network) => {
             let statuses = check_network();
             println!("{}", render_network(&statuses));
+        }
+        Some(Command::Build) => {
+            let evidence = verify_build();
+            println!("{}", render_build(&evidence));
+            if !evidence.passed {
+                return ExitCode::from(1);
+            }
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

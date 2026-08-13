@@ -1,6 +1,6 @@
-iter = 17
+iter = 20
 max_iter = 20
-work_unit = "ciclo 8 iteracion 17/20: dashboard visual descubrible desde ESTADO.md (a72297f). Deliverable completo: viz verificado + reporte detallado + metrica agregada + suite ejecutable. Siguiente: feedback usuario sobre graficas, run N=186 (coste API), CodeContests"
+work_unit = "ciclo 8 iteracion 20/20: bench-codecontests IMPLEMENTADO (d877fb0) — familia 3 I/O. Runs en background: N=186 BigCodeBench + N=30 CodeContests (results/). Siguiente bloque (tras /compact): analizar ambos resultados, actualizar metrica agregada a 3 familias, dashboard viz con familia 3"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

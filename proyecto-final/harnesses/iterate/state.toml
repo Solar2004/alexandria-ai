@@ -1,6 +1,6 @@
-iter = 11
+iter = 13
 max_iter = 20
-work_unit = "ciclo 8 iteracion 11/20: DASHBOARD VISUAL PURO LISTO (docs/benchmark-viz.html, Chart.js SRI): 4 graficas solo, tema oscuro, sin texto. Usuario pidio ver graficos. Siguiente: run N=186 (coste API, requiere OK usuario) o CodeContests"
+work_unit = "ciclo 8 iteracion 13/20: viz con 5 graficas (linea comparativa incluida, commit b6d6a9b). Listo para revision del usuario. Siguiente: feedback usuario sobre graficas, o run N=186 (coste API), o CodeContests"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

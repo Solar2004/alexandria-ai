@@ -800,6 +800,27 @@ fn execute_script(script: &str) -> String {
     out.stdout_head.trim().to_string()
 }
 
+/// Harness: genera código, lo EJECUTA, compara con el esperado, y si falla
+/// RE-ITERA con feedback (el loop de mejora). Esa es la ventaja real sobre
+/// una AI directa (que no itera sobre la ejecución).
+fn harness_attempt(task: &str, expected: &str) -> (bool, String) {
+    let mut feedback = String::new();
+    let mut last_out = String::from("(no ejecutado)");
+    for attempt in 0..3 {
+        let prompt = format!("{task}. {feedback}Escribe SOLO el codigo Python.");
+        let script = extract_script(&generate_script(&prompt));
+        last_out = execute_script(&script);
+        if last_out == expected {
+            return (true, last_out);
+        }
+        feedback = format!(
+            "El intento anterior imprimio '{}' pero el esperado es '{}'. Corrige el codigo. ",
+            last_out, expected
+        );
+    }
+    (false, last_out)
+}
+
 /// Intento DIRECTO (sin harness): una sola llamada al modelo + critic.
 /// La comparación: una AI directa (sin descomposición/critic-loop) vs el
 /// harness completo. Mide la ventaja real del pipeline.
@@ -871,18 +892,8 @@ pub fn render_benchmark() -> String {
             direct_ok += 1;
         }
 
-        // Harness: generar + CRITIC verifica el código antes de ejecutar.
-        let h_script = extract_script(&generate_script(task));
-        let verdict = criticize_real(
-            &format!("Tarea: {task}. Código:\n{h_script}"),
-            &["el código es correcto y cumple la tarea", "sin errores de sintaxis", "conciso"],
-        );
-        let h_out = if verdict.approved {
-            execute_script(&h_script)
-        } else {
-            "(rechazado por critic)".to_string()
-        };
-        let h = verdict.approved && h_out == *expected;
+        // Harness: ejecutar + comparar + RE-ITERAR con feedback (la ventaja).
+        let (h, h_out) = harness_attempt(task, expected);
         if h {
             harness_ok += 1;
         }

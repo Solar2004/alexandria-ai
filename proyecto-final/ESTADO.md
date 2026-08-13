@@ -5,7 +5,8 @@
 ## Motor
 
 - **16/16 crates** con lógica (alx-core ... alx-evolve).
-- **205 tests verdes, 0 fallos** (`cargo test`).
+- **207 tests verdes, 0 fallos** (`cargo test`) · clippy 0 warnings.
+- **20 subcomandos** (status, network, build, run [--real], night, mcp, phalanx, feature, evolve, doctor, cost, agents, spawn, agents-run, agents-show, tui, report, metrics, weekly, iterate).
 - Binario `alx` instalado en `~/.local/bin/alx` (PATH), vía `proyecto-final/install.sh`.
 
 ## Comandos (verificados en vivo)

@@ -1,6 +1,6 @@
-iter = 8
+iter = 9
 max_iter = 20
-work_unit = "CICLO 2 (pulido): iteracion 8/20 — revisar ideas nuevas (telemetria avanzada, agentes en paralelo headless), pulir run --real (retry de critic con max_tokens mayor), verificar TUI en color real"
+work_unit = "CICLO 2 (pulido): iteracion 9/20 — agentes headless en paralelo (spawn multiple), telemetria avanzada (metricas por crate), verificar tui color, docs de arquitectura actualizadas"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

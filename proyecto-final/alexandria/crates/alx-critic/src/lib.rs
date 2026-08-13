@@ -149,10 +149,25 @@ pub fn parse_verdict(json: &str) -> CriticVerdict {
 /// Critica contra la cadena real: construye el prompt, lo envía por curl a
 /// headroom y extrae `content[0].text` de la respuesta Anthropic. Fail-closed.
 pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
+    let first = criticize_real_with_tokens(output, criteria, 200);
+    // Retry: si el critic falló por "respuesta inválida" (el thinking agotó
+    // los tokens sin emitir text block), reintenta una vez con más tokens.
+    let invalid = first
+        .findings
+        .iter()
+        .any(|f| f.message.contains("inválida"));
+    if first.approved || !invalid {
+        return first;
+    }
+    criticize_real_with_tokens(output, criteria, 500)
+}
+
+/// Llamada al critic con `max_tokens` configurable.
+fn criticize_real_with_tokens(output: &str, criteria: &[&str], max_tokens: u32) -> CriticVerdict {
     let prompt = critic_prompt(output, criteria);
     let body = serde_json::json!({
         "model": "deepseek-v4-flash",
-        "max_tokens": 200,
+        "max_tokens": max_tokens,
         "messages": [{ "role": "user", "content": prompt }]
     })
     .to_string();

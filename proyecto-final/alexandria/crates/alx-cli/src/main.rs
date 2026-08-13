@@ -10,10 +10,11 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    check_network, feature_run, render_agents, render_build, render_cost_report, render_doctor,
-    render_network, render_night_report, render_phalanx_status, render_real_run, render_report,
-    render_run, render_tui, run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio,
-    spawn_agent, verify_build, AppState,
+    agents_run_parallel, check_network, feature_run, render_agents, render_build,
+    render_cost_report, render_doctor, render_metrics, render_network, render_night_report,
+    render_phalanx_status, render_real_run, render_report, render_run, render_tui,
+    run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent, verify_build,
+    AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -72,6 +73,13 @@ enum Command {
     Tui,
     /// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
     Report,
+    /// Spawn de agentes headless en paralelo sobre una tarea.
+    AgentsRun {
+        /// Tarea que ejecutan los agentes en paralelo.
+        task: String,
+    },
+    /// Métricas por crate (líneas de código).
+    Metrics,
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -165,6 +173,12 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Report) => {
             println!("{}", render_report());
+        }
+        Some(Command::AgentsRun { task }) => {
+            println!("{}", agents_run_parallel(&task));
+        }
+        Some(Command::Metrics) => {
+            println!("{}", render_metrics());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

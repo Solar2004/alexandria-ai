@@ -891,6 +891,55 @@ pub fn render_tui() -> String {
     out
 }
 
+/// Spawn de N agentes headless EN PARALELO sobre una tarea (threads).
+/// Un agente summona a otros con su envelope; cada uno responde a la cadena.
+pub fn agents_run_parallel(task: &str) -> String {
+    let names = ["general-purpose", "code-reviewer", "test-engineer"];
+    let handles: Vec<_> = names
+        .iter()
+        .map(|name| {
+            let name = name.to_string();
+            let task = task.to_string();
+            std::thread::spawn(move || spawn_agent(&name, &task))
+        })
+        .collect();
+    let mut out = format!("## Agentes en paralelo — tarea: {task}\n");
+    for (i, h) in handles.into_iter().enumerate() {
+        if let Ok(result) = h.join() {
+            out.push_str(&format!("\n[{}] {result}\n", names[i]));
+        }
+    }
+    out
+}
+
+/// Métricas por crate: líneas de código de cada crate del workspace.
+pub fn render_metrics() -> String {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let crates_dir = base.join("crates");
+    let mut out = String::from("## Métricas por crate\n");
+    let mut total = 0usize;
+    if let Ok(rd) = std::fs::read_dir(&crates_dir) {
+        let mut crates: Vec<_> = rd.flatten().filter(|e| e.path().join("src").exists()).collect();
+        crates.sort_by_key(|e| e.file_name());
+        for e in crates {
+            let name = e.file_name().to_string_lossy().to_string();
+            let src = e.path().join("src");
+            let lines: usize = std::fs::read_dir(&src)
+                .map(|rd| {
+                    rd.flatten()
+                        .filter_map(|f| std::fs::read_to_string(f.path()).ok())
+                        .map(|t| t.lines().count())
+                        .sum()
+                })
+                .unwrap_or(0);
+            total += lines;
+            out.push_str(&format!("  {name}: {lines} líneas\n"));
+        }
+    }
+    out.push_str(&format!("Total: {total} líneas\n"));
+    out
+}
+
 /// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
 /// Para night-run.sh e informes.
 pub fn render_report() -> String {

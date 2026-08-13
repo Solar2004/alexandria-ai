@@ -1,6 +1,6 @@
-iter = 4
+iter = 5
 max_iter = 20
-work_unit = "ciclo 4 iteracion 4/20: verificar perfil test .claude-alexandria, docs finales, telemetria avanzada"
+work_unit = "ciclo 4 iteracion 5/20: docs finales coherentes, telemetria avanzada, verificar cierre parcial"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

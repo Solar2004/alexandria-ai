@@ -1043,6 +1043,107 @@ pub fn render_bench_bigcode() -> String {
     out
 }
 
+/// Ejecuta una solución HumanEval: el test define check(candidate) y se llama
+/// con entry_point. Éxito = llega a ALX_OK sin AssertionError. (spec humaneval)
+fn run_humaneval(solution: &str, test: &str, entry_point: &str) -> (bool, String) {
+    let script = format!(
+        "{solution}\n{test}\ncheck({entry_point})\nprint('ALX_OK')\n"
+    );
+    let path = std::env::temp_dir().join("alx-humaneval.py");
+    if std::fs::write(&path, &script).is_err() {
+        return (false, "error escribiendo script".to_string());
+    }
+    let out = alx_gate::run_command(&format!("python3 {}", path.display()), 60_000);
+    let all = out.stdout_head;
+    let ok = all.contains("ALX_OK");
+    let frag = all
+        .lines()
+        .filter(|l| l.contains("AssertionError") || l.contains("Error"))
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" | ");
+    (
+        ok,
+        if frag.is_empty() {
+            all.chars().take(100).collect()
+        } else {
+            frag
+        },
+    )
+}
+
+/// Benchmark HumanEval (164 problemas, familia 2 para GENERALIDAD).
+/// Misma mecánica campeona que BigCodeBench: plan-then-code + feedback.
+pub fn render_bench_humaneval() -> String {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../harnesses/bench/humaneval.jsonl");
+    let mut out = String::from("## Benchmark HumanEval (164) — generalidad\n");
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return out + "sin humaneval.jsonl\n";
+    };
+    let mut tasks: Vec<serde_json::Value> = Vec::new();
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+            tasks.push(v);
+        }
+    }
+    if let Ok(cap) = std::env::var("ALX_BENCH_MAX") {
+        if let Ok(n) = cap.trim().parse::<usize>() {
+            tasks.truncate(n);
+        }
+    }
+    let (mut d_ok, mut h_ok) = (0usize, 0usize);
+    for (i, t) in tasks.iter().enumerate() {
+        let id_fallback = format!("HE/{i}");
+        let id = t["task_id"].as_str().unwrap_or(&id_fallback);
+        let prompt = t["prompt"].as_str().unwrap_or("").to_string();
+        let test = t["test"].as_str().unwrap_or("").to_string();
+        let entry = t["entry_point"].as_str().unwrap_or("").to_string();
+        if prompt.is_empty() || test.is_empty() || entry.is_empty() {
+            continue;
+        }
+        let full_prompt = format!(
+            "{prompt}\n\nCompleta {entry}: PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. No escribas tests."
+        );
+        // Directa: 1 intento.
+        let d_sol = extract_script(&generate_script(&full_prompt));
+        let (d, _df) = run_humaneval(&d_sol, &test, &entry);
+        if d {
+            d_ok += 1;
+        }
+        // Harness: plan-then-code + feedback, 4 intentos.
+        let mut h = false;
+        let mut feedback = String::new();
+        for _ in 0..4 {
+            let prompt = format!(
+                "{prompt}\n\nCompleta {entry}: PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. {feedback}No escribas tests."
+            );
+            let sol = extract_script(&generate_script(&prompt));
+            let (ok, frag) = run_humaneval(&sol, &test, &entry);
+            if ok {
+                h = true;
+                break;
+            }
+            feedback = format!("El test fallo. Detalle: {frag}. Corrige {entry}. ");
+        }
+        if h {
+            h_ok += 1;
+        }
+        eprintln!("  {id}: directa {} | harness {}", if d { "✓" } else { "✗" }, if h { "✓" } else { "✗" });
+        out.push_str(&format!(
+            "  {id}: directa {} | harness {}\n",
+            if d { "✓" } else { "✗" },
+            if h { "✓" } else { "✗" },
+        ));
+    }
+    out.push_str(&format!(
+        "Directa: {d_ok}/{} · Harness: {h_ok}/{} — HumanEval\n",
+        tasks.len(),
+        tasks.len()
+    ));
+    out
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");

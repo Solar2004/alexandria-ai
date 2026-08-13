@@ -1,6 +1,6 @@
-iter = 8
+iter = 9
 max_iter = 20
-work_unit = "ciclo 9 iteracion 8/20: INPUT-DEBUG IMPLEMENTADO (feedback con input del test fallido). Corriendo N=30 para veredicto (results/codecontests30-inputdebug.out). Si mejora el 12/30, el mecanismo I/O existe; si no, confirmar limite y pasar a pulido"
+work_unit = "ciclo 9 iteracion 9/20: VEREDICTO INPUT-DEBUG — 13/30 vs 12/30 (+1, marginal). Techo I/O CONFIRMADO: feedback con input no converge en competitivo duro. El limite es del modelo, no del feedback. Siguiente: revertir input-debug (marginal) o mantener, y pulido / /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

@@ -48,14 +48,14 @@ Chart.defaults.color = DARK;
 Chart.defaults.borderColor = '#333';
 Chart.defaults.font.size = 12;
 
-// 1 · Directa vs Harness por set (porcentajes)
+// 1 · Directa vs Harness por set (porcentajes, 3 familias)
 new Chart(document.getElementById('c1'), {
   type: 'bar',
   data: {
-    labels: ['BigCodeBench (60)', 'Held-out (30)', 'HumanEval (164)'],
+    labels: ['BigCodeBench (186)', 'Held-out (30)', 'HumanEval (164)', 'CodeContests (30)'],
     datasets: [
-      { label: 'Directa (sin harness)', data: [15, 7, 89.6], backgroundColor: '#e05252' },
-      { label: 'Harness ALEXANDRIA', data: [72, 73, 95.1], backgroundColor: '#2ecc71' }
+      { label: 'Directa (sin harness)', data: [11, 7, 89.6, 40], backgroundColor: '#e05252' },
+      { label: 'Harness ALEXANDRIA', data: [63, 73, 95.1, 40], backgroundColor: '#2ecc71' }
     ]
   },
   options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% acierto' } } }, plugins: { legend: { position: 'bottom' } } }
@@ -65,8 +65,8 @@ new Chart(document.getElementById('c1'), {
 new Chart(document.getElementById('c2'), {
   type: 'bar',
   data: {
-    labels: ['Held-out (30)', 'BigCodeBench (60)', 'HumanEval (164)'],
-    datasets: [{ label: 'Ratio', data: [11.0, 4.78, 1.06], backgroundColor: ['#f39c12', '#2ecc71', '#3498db'] }]
+    labels: ['Held-out (30)', 'BigCodeBench (186)', 'HumanEval (164)', 'CodeContests (30)'],
+    datasets: [{ label: 'Ratio', data: [11.0, 5.57, 1.06, 1.0], backgroundColor: ['#f39c12', '#2ecc71', '#3498db', '#e05252'] }]
   },
   options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.parsed.y}x` } } }, scales: { y: { title: { display: true, text: 'x veces' } } } }
 });
@@ -85,20 +85,20 @@ new Chart(document.getElementById('c3'), {
 new Chart(document.getElementById('c4'), {
   type: 'bar',
   data: {
-    labels: ['BigCodeBench (60)', 'Held-out (30)', 'HumanEval (164)'],
-    datasets: [{ label: 'Recuperados', data: [34, 20, 9], backgroundColor: '#e67e22' }]
+    labels: ['BigCodeBench (186)', 'Held-out (30)', 'HumanEval (164)', 'CodeContests (30)'],
+    datasets: [{ label: 'Recuperados', data: [96, 20, 9, 0], backgroundColor: '#e67e22' }]
   },
   options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, title: { display: true, text: 'problemas' } } } }
 });
 
-// 5 · Líneas comparativas directa vs harness
+// 5 · Líneas comparativas directa vs harness (3 familias)
 new Chart(document.getElementById('c5'), {
   type: 'line',
   data: {
-    labels: ['BigCodeBench (60)', 'Held-out (30)', 'HumanEval (164)'],
+    labels: ['BigCodeBench (186)', 'Held-out (30)', 'HumanEval (164)', 'CodeContests (30)'],
     datasets: [
-      { label: 'Directa', data: [15, 7, 89.6], borderColor: '#e05252', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5 },
-      { label: 'Harness', data: [72, 73, 95.1], borderColor: '#2ecc71', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5, borderWidth: 3 }
+      { label: 'Directa', data: [11, 7, 89.6, 40], borderColor: '#e05252', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5 },
+      { label: 'Harness', data: [63, 73, 95.1, 40], borderColor: '#2ecc71', backgroundColor: 'transparent', tension: 0.3, pointRadius: 5, borderWidth: 3 }
     ]
   },
   options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% acierto' } } }, plugins: { legend: { position: 'bottom' } } }

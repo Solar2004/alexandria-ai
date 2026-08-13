@@ -1,6 +1,6 @@
-iter = 14
+iter = 16
 max_iter = 20
-work_unit = "ciclo 7 iteracion 14/20: alx bench-humaneval IMPLEMENTADO (commit e4a774a): run_humaneval + render (plan-then-code campeon), smoke 5/5. Corriendo N=164 completo para el test de GENERALIDAD (familia 2). Siguiente: analizar resultado (¿harness >= directa en 2a familia?), CodeContests, held-out, metrica agregada"
+work_unit = "ciclo 7 iteracion 16/20: ✅ GENERALIDAD CONFIRMADA — HumanEval N=164: directa 147 (89.6%) vs harness 156 (95.1%), recupera 9. Harness mejora en 2 familias (BigCodeBench 4.78x + HumanEval +6%) = NO sobreajuste. Dashboard seccion 8. Siguiente: CodeContests (familia 3), held-out, metrica agregada; /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

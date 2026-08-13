@@ -960,6 +960,23 @@ pub fn render_metrics() -> String {
     out
 }
 
+/// Resumen semanal del sistema: coste + telemetría + harnesses + métricas.
+pub fn render_weekly() -> String {
+    let mut out = String::from("## Resumen semanal ALEXANDRIA\n");
+    out.push_str(&render_cost_report());
+    out.push('\n');
+    let hdir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../harnesses");
+    let reg = HarnessRegistry::load_from(&hdir);
+    let live = reg.all().iter().filter(|h| h.state != alx_evolve::HarnessState::Retired).count();
+    let retired = reg.all().iter().filter(|h| h.state == alx_evolve::HarnessState::Retired).count();
+    out.push_str(&format!("## Harnesses evolutivos\nVivos: {live} · Retirados: {retired}\n"));
+    out.push_str("## Agentes\n3 especializados (general-purpose, code-reviewer, test-engineer)\n");
+    if let Some(total) = render_metrics().lines().last() {
+        out.push_str(&format!("## Métricas\n{total}\n"));
+    }
+    out
+}
+
 /// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
 /// Para night-run.sh e informes.
 pub fn render_report() -> String {

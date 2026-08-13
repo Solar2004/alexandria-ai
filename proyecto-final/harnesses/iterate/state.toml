@@ -1,6 +1,6 @@
-iter = 3
+iter = 4
 max_iter = 20
-work_unit = "ciclo 10 iteracion 3/20: PERFIL .claude-alexandria CORREGIDO — theme era custom:test, ahora custom:sol (sol.json existe). Uso: CLAUDE_CONFIG_DIR=~/.claude-alexandria claude. Falta: alx setup deberia configurar tambien el perfil (pendiente). LISTO PARA /COMPACT"
+work_unit = "ciclo 10 iteracion 4/20: THEME SOL DEL PERFIL ARREGLADO — el sol.json del perfil era un stub vacio (57B); copiado el correcto del global (747B, 'Sol (día)', 22 overrides). Identicos ✓. Pendiente: alx setup debe sincronizar el theme al perfil (evitar regresion). LISTO PARA /COMPACT"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

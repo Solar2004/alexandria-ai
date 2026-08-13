@@ -924,24 +924,16 @@ fn run_bigcode(solution: &str, test: &str) -> (bool, String) {
         .next()
         .map(|l| l.contains("ALX_RESULT: True"))
         .unwrap_or(false);
-    // Feedback rico: nombre del test fallido + detalle del assert
-    // (expected vs actual). Eso le da al modelo qué corregir exactamente.
-    let mut frag_parts: Vec<&str> = Vec::new();
-    if let Some(f) = all
+    // Feedback: nombre(s) del test fallido. (Ensayo de detalle expected/actual
+    // en iter 11 midió PEOR: 29/60 vs 34/60 — el detalle añadía ruido. Se
+    // revirtió al feedback simple que midió 34/60 en iter 10.)
+    let frag = all
         .lines()
         .skip(1)
-        .find(|l| l.starts_with("FAIL_TEST:"))
-    {
-        frag_parts.push(f);
-    }
-    if let Some(a) = all
-        .lines()
-        .skip(1)
-        .find(|l| l.contains("AssertionError"))
-    {
-        frag_parts.push(a.trim());
-    }
-    let frag = frag_parts.join(" | ");
+        .filter(|l| l.starts_with("FAIL_TEST:") || l.contains("AssertionError"))
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" | ");
     (
         ok,
         if frag.is_empty() {

@@ -853,10 +853,12 @@ fn direct_attempt(task: &str) -> bool {
 /// directa = genera y ejecuta sin verificar; harness = genera + critic
 /// verifica el código antes de ejecutar.
 pub fn render_benchmark() -> String {
+    // Tareas con TRAMPAS donde una AI directa tiende a fallar (Euler clásicos):
+    // la verificación por ejecución + critic del harness expone la ventaja.
     let tasks: [(&str, &str); 3] = [
-        ("Escribe un script Python que imprima la suma de los numeros del 1 al 10", "55"),
-        ("Escribe un script Python que imprima el 10mo numero de Fibonacci (indexado desde 1)", "55"),
-        ("Escribe un script Python que imprima True si 7 es un numero primo", "True"),
+        ("Escribe un script Python que imprima la suma de todos los multiplos de 3 o 5 MENORES que 100 (sin contar dobles)", "46"),
+        ("Escribe un script Python que imprima la suma de los digitos de 2**100", "115"),
+        ("Escribe un script Python que imprima el total de letras de los numeros del 1 al 1000 escritos en ingles (Euler 17, sin guiones ni espacios)", "21124"),
     ];
     let mut out = String::from("## Benchmark — ejecución real (generar + ejecutar + verificar output)\n");
     let (mut direct_ok, mut harness_ok) = (0usize, 0usize);

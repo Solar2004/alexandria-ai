@@ -1,6 +1,6 @@
-iter = 3
+iter = 4
 max_iter = 20
-work_unit = "ciclo 6 iteracion 3/20: benchmark ejecucion funcional (3/3); ahora tareas MAS dificiles donde directa falle, o mas tareas, re-benchmark"
+work_unit = "ciclo 6 iteracion 4/20: HARNESS con verificacion por EJECUCION + RE-ITERACION (si output != esperado, regenerar con feedback) — la ventaja real"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

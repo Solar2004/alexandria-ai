@@ -966,8 +966,12 @@ fn run_bigcode(solution: &str, test: &str) -> (bool, String) {
 /// benchmark NO es nuestro; son tareas profesionales donde los frontier fallan.
 /// Directa = 1 intento; Harness = iterar sobre los fallos del unittest.
 pub fn render_bench_bigcode() -> String {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    // ALX_BENCH_FILE permite validar en sets disjuntos (held-out).
+    let path_default = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../harnesses/bench/bigcodebench-sample.jsonl");
+    let path = std::path::PathBuf::from(
+        std::env::var("ALX_BENCH_FILE").unwrap_or_else(|_| path_default.to_string_lossy().to_string()),
+    );
     let mut out = String::from("## Benchmark REAL — BigCodeBench (ICLR'25) sample\n");
     let Ok(text) = std::fs::read_to_string(&path) else {
         return out + "sin bigcodebench-sample.jsonl\n";

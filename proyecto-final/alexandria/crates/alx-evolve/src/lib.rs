@@ -64,6 +64,7 @@ pub struct Harness {
 
 impl Harness {
     /// Crea un harness nuevo. `doc` vacía = inválido (regla doc-min).
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: impl Into<String>,
         name: impl Into<String>,

@@ -44,6 +44,12 @@ pub struct Alexandria {
     pub agents: AgentRegistry,
 }
 
+impl Default for Alexandria {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Alexandria {
     /// Monta las piezas del sistema con sus estados iniciales.
     pub fn new() -> Self {

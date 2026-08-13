@@ -1,6 +1,6 @@
-iter = 20
+iter = 2
 max_iter = 20
-work_unit = "CICLO 7 COMPLETADO (20/20, objetivo alcanzado). Benchmarks reales verificados: plan-then-code 4.78x (sample 60), 11x (held-out 30, set disjunto), HumanEval +6% (familia 2). Generalidad + robustez confirmadas. 21 commits. Siguiente bloque (tras /compact): CodeContests familia 3, metrica agregada multi-benchmark, pulido."
+work_unit = "ciclo 8 iteracion 2/20: METRICA AGREGADA LISTA (dashboard seccion 9): 254 problemas, harness 221/254 (87%) vs directa 158/254 (62.2%), recupera 63. Siguiente: CodeContests familia 3 (datos+spec+impl), integracion alx bench --all, pulido. REQUIERE /compact: contexto en limite"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

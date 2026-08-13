@@ -54,3 +54,11 @@ cargo test
 
 Instalar: `./proyecto-final/install.sh` → `~/.local/bin/alx`.
 Autónomo nocturno: `proyecto-final/scripts/night-run.sh` (cron/systemd 02:00).
+
+## Perfil de test ALEXANDRIA
+
+Probar el motor desde cero con statusline powerline + caveman + routatic:
+```bash
+CLAUDE_CONFIG_DIR=~/.claude-alexandria claude
+```
+Detalles: `proyecto-final/docs/perfil-test.md`.

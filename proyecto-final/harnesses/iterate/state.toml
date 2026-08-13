@@ -1,6 +1,6 @@
-iter = 1
+iter = 4
 max_iter = 20
-work_unit = "ciclo 7 iteracion 1/20: reporte VISUAL del benchmark (docs/benchmark-report.html, SVG inline): directa 9/60 vs harness 34/60 (~4x), 3 mecanismos, consistencia, recuperacion por problema. Siguiente: grafico/medicion contra fable 5 si el usuario da acceso; o plan-then-code; o redefinir metrica 5x"
+work_unit = "ciclo 7 iteracion 4/20: VERIFICADO — claude-opus-4-6[1m] listado pero ROTO (content vacio, probado). No hay modelo Claude funcional en la cadena; solo deepseek-v4-flash. fable 5 no existe en routatic. Grafico 'con Claude' o 'vs fable' NO construible con acceso actual. Disponible: reporte visual deepseek ~4x (docs/benchmark-report.html). Siguiente: arreglar acceso claude (revisar routatic config/headroom auth) o plan-then-code"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

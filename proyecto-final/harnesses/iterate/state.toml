@@ -1,6 +1,6 @@
-iter = 17
+iter = 19
 max_iter = 20
-work_unit = "ciclo 9 iteracion 17/20: STATUSLINE FUSIONADO + SOL (alx-statusline reescrito): ALEXANDRIA + modelo/ctx/git de Claude + tasks/net/cost/iter, powerline con colores SOL. Verificado con/sin stdin. setup de alx pendiente de completar. LISTO PARA /COMPACT"
+work_unit = "ciclo 9 iteracion 19/20: alx setup COMPLETO (8423bd5) — configura/verifica toda la integracion: binario, statusline, settings, MCP, hooks. Statusline fusionado ALEXANDRIA+Claude con colores SOL. Binario reinstalado. LISTO PARA /COMPACT"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

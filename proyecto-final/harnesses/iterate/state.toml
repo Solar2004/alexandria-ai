@@ -1,6 +1,6 @@
-iter = 13
+iter = 15
 max_iter = 20
-work_unit = "ciclo 8 iteracion 13/20: viz con 5 graficas (linea comparativa incluida, commit b6d6a9b). Listo para revision del usuario. Siguiente: feedback usuario sobre graficas, o run N=186 (coste API), o CodeContests"
+work_unit = "ciclo 8 iteracion 15/20: VIZ VERIFICADO — playwright confirma 5 canvases + 5 chart.js renderizados (screenshot docs/viz-check.png). Deliverable visual completo y probado. Siguiente: feedback usuario, run N=186 (coste), CodeContests"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

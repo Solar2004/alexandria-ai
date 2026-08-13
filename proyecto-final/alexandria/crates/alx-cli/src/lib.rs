@@ -14,7 +14,10 @@ use alx_critic::{criticize_real, derive_must_checks, iteration_prompt, CriticVer
 use alx_evolve::{detect_candidates, HarnessRegistry};
 use alx_governor::{Ledger, LedgerEntry};
 use alx_harness::{Phases, Pipeline};
+use alx_mcp::catalog::ToolCatalog;
+use alx_mcp::server::handle_line;
 use alx_memory::RecallStore;
+use alx_night::{build_report, render as render_night};
 use alx_task::decompose::decompose;
 use alx_task::graph::TaskGraph;
 use std::time::Instant;
@@ -500,6 +503,81 @@ pub fn render_real_run(result: &RealRunResult) -> String {
         }
     }
     out
+}
+
+/// Informe nocturno real desde el DAG (alx-night).
+pub fn render_night_report() -> String {
+    let now = now_ms();
+    let mut graph = TaskGraph::new();
+    graph.add(Task::new("t-n-1".into(), "preparar contexto".into(), PhaseId::Plan, 15_000, now));
+    graph.add(Task::new("t-n-2".into(), "ejecutar paso".into(), PhaseId::Build, 15_000, now));
+    let _ = graph.transition("t-n-1", TaskStatus::Done, now);
+    let report = build_report(&graph, "2026-08-13");
+    render_night(&report)
+}
+
+/// Estado del plugin PHALANX: config.toml (secciones) + hooks .toml.
+/// Resuelve la ruta desde el manifest del crate (funciona desde cualquier cwd).
+pub fn render_phalanx_status() -> String {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../phalanx");
+    let config_path = base.join("config.toml");
+    let hooks_dir = base.join("hooks");
+    let config_ok = config_path.exists();
+    let hooks = std::fs::read_dir(&hooks_dir)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| e.path().extension().map(|x| x == "toml").unwrap_or(false))
+                .count()
+        })
+        .unwrap_or(0);
+    let mut sections = Vec::new();
+    if config_ok {
+        if let Ok(text) = std::fs::read_to_string(&config_path) {
+            for line in text.lines() {
+                let l = line.trim();
+                if l.starts_with('[') && l.ends_with(']') {
+                    sections.push(l.to_string());
+                }
+            }
+        }
+    }
+    format!(
+        "## PHALANX\nconfig.toml: {}\nSecciones: {}\nHooks: {} .toml\n",
+        if config_ok { "✓" } else { "✗ falta" },
+        sections.join(" "),
+        hooks
+    )
+}
+
+/// Dogfood: ejecuta el pipeline y escribe el informe como artefacto real del
+/// repo (`out_dir/<slug>.md`). `real` usa la cadena LLM con critic + ledger.
+pub fn feature_run(title: &str, real: bool, out_dir: &str) -> String {
+    let report = if real {
+        render_real_run(&run_pipeline_real(title))
+    } else {
+        render_run(&run_pipeline(title))
+    };
+    let slug = title.to_lowercase().replace(' ', "-");
+    let dir = std::path::Path::new(out_dir);
+    let _ = std::fs::create_dir_all(dir);
+    let path = dir.join(format!("{slug}.md"));
+    match std::fs::write(&path, &report) {
+        Ok(()) => format!("✓ artefacto escrito: {}\n\n{report}", path.display()),
+        Err(e) => format!("✗ no se pudo escribir: {e}\n\n{report}"),
+    }
+}
+
+/// Sirve el protocolo MCP JSON-RPC por stdio (demo real): lee líneas de
+/// stdin, responde `initialize` / `tools/list` / `tools/call`.
+pub fn serve_mcp_stdio() -> i32 {
+    use std::io::BufRead;
+    let catalog = ToolCatalog::alexandria_default();
+    for line in std::io::stdin().lock().lines().flatten() {
+        if let Some(resp) = handle_line(&catalog, &line) {
+            println!("{resp}");
+        }
+    }
+    0
 }
 
 /// Informe legible del estado de red.

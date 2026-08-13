@@ -248,12 +248,6 @@ fn extract_json(s: &str) -> &str {
     }
 }
 
-/// Envuelve un string en comillas simples de shell, escapando las `'` internas
-/// con `'\''` para poder incrustarlo en `-d '...'` sin romper el comando.
-fn shell_single_quote(s: &str) -> String {
-    format!("'{}'", s.replace('\'', "'\\''"))
-}
-
 #[derive(Deserialize)]
 struct RawVerdict {
     #[serde(default)]

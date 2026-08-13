@@ -10,8 +10,9 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    check_network, render_build, render_network, render_real_run, render_run, run_pipeline,
-    run_pipeline_real, verify_build, AppState,
+    check_network, feature_run, render_build, render_network, render_night_report,
+    render_phalanx_status, render_real_run, render_run, run_pipeline, run_pipeline_real,
+    serve_mcp_stdio, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -44,6 +45,20 @@ enum Command {
     Network,
     /// Dogfood: verifica el build del workspace con un gate real (cargo build).
     Build,
+    /// Informe nocturno desde el DAG.
+    Night,
+    /// Sirve el protocolo MCP JSON-RPC por stdio.
+    Mcp,
+    /// Estado del plugin PHALANX (config + hooks).
+    Phalanx,
+    /// Dogfood: ejecuta el pipeline y escribe el artefacto real en docs/features/.
+    Feature {
+        /// Título de la feature.
+        titulo: String,
+        /// Usa la cadena real (critic + ledger + must-checks).
+        #[arg(long)]
+        real: bool,
+    },
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -97,6 +112,18 @@ fn run(cli: Cli) -> ExitCode {
             if !evidence.passed {
                 return ExitCode::from(1);
             }
+        }
+        Some(Command::Night) => {
+            println!("{}", render_night_report());
+        }
+        Some(Command::Mcp) => {
+            return ExitCode::from(serve_mcp_stdio() as u8);
+        }
+        Some(Command::Phalanx) => {
+            println!("{}", render_phalanx_status());
+        }
+        Some(Command::Feature { titulo, real }) => {
+            println!("{}", feature_run(&titulo, real, "docs/features"));
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

@@ -72,8 +72,8 @@
 - [~] Fase 8: alx-gate (run_command real con timeout, verify build/test/lint, LSP discovery) — 13 tests
 - [~] Fase 9: alx-bench (Thresholds from_toml, Metrics, check, regression) — 12 tests
 - [~] alx-agents (registry frontmatter, router por fase, envelope con budget) — 16 tests
-- [~] Fase 10: alx-mcp (ToolCatalog 9 tools, server JSON-RPC stdio, client 5) — 15 tests
-- [~] Fase 11: alx-night (NightSchedule, NightReport, run_cycle) — 6 tests
+- [~] Fase 10: alx-mcp (ToolCatalog 9 tools, server JSON-RPC stdio real vía alx mcp, client 5) — 15 tests
+- [~] Fase 11: alx-night (NightSchedule, NightReport, run_cycle) + alx night (informe desde DAG) — 6 tests
 - [~] alx-audit (AuditIndex dedup, Doctor, ejemplo ecosistema) — 9 tests
 - [~] alx-lib (fachada Alexandria + re-exports) — 8 tests
 - [~] Fase 12: PHALANX plugin (config.toml completo + 10 hooks TOML + README) — TOML validado

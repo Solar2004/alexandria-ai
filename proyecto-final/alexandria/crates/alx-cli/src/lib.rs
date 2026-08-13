@@ -958,6 +958,11 @@ pub fn render_bench_bigcode() -> String {
             tasks.push(v);
         }
     }
+    if let Ok(cap) = std::env::var("ALX_BENCH_MAX") {
+        if let Ok(n) = cap.trim().parse::<usize>() {
+            tasks.truncate(n);
+        }
+    }
     let (mut d_ok, mut h_ok) = (0usize, 0usize);
     for (i, t) in tasks.iter().enumerate() {
         let id_fallback = format!("BCB/{i}");

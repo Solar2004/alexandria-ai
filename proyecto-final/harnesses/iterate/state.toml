@@ -1,6 +1,6 @@
-iter = 5
+iter = 7
 max_iter = 20
-work_unit = "ciclo 8 iteracion 5/20: reproducibilidad documentada (seccion 10, comando para todas las familias). Metrica agregada + gate verde listos. Siguiente: CodeContests (familia 3) o expandir pool a 186 — REQUIERE /compact"
+work_unit = "ciclo 8 iteracion 7/20: dataset completo pool listo (bigcodebench-full.jsonl, 186 ejecutables). Reproducibilidad + metrica agregada + gate verde. Siguiente: run comprehensivo N=186 (2-3h) o CodeContests (familia 3) — REQUIERE /compact"
 max_auto = 20
 target_iter = 20
 awaiting_user = false

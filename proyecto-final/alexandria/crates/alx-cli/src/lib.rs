@@ -161,7 +161,10 @@ fn run_once(title: &str, gate_cmd: &dyn Fn(&str) -> String) -> RunResult {
     let mut evidence_count = 0usize;
     let mut gate_failures = 0u32;
     for child in &children {
-        let task = graph.by_id_mut(&child.id).expect("micro-tarea en el grafo");
+        let Some(task) = graph.by_id_mut(&child.id) else {
+            gate_failures += 1;
+            continue;
+        };
         // Gate real: la salida capturada (`stdout_head`) es la evidencia.
         let cmd = gate_cmd(&child.title);
         let outcome = alx_gate::run_command(&cmd, 5000);
@@ -504,7 +507,10 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         }
         responses.push(outcome.stdout_head.chars().take(150).collect::<String>());
 
-        let task = graph.by_id_mut(&child.id).expect("micro-tarea en el grafo");
+        let Some(task) = graph.by_id_mut(&child.id) else {
+            run.gate_failures += 1;
+            continue;
+        };
         let head: String = outcome.stdout_head.chars().take(400).collect();
         task.evidence.push(Evidence::command_output(&cmd, outcome.exit_code, &head, gate_pass));
         run.evidence_count += 1;

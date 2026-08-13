@@ -1002,13 +1002,14 @@ pub fn render_bench_bigcode() -> String {
         if d {
             d_ok += 1;
         }
-        // HARNESS: loop de feedback simple (config iter 10, midio 34/60).
-        // Ensayo ensamble (iter 13) midio 33/60 = plano; revertido por spec.
+        // HARNESS (plan-then-code): el modelo describe el algoritmo ANTES de
+        // escribir codigo, luego itera con feedback. La directa queda como
+        // baseline puro (sin plan). Experiment: ciclo 7, iter 8.
         let mut h = false;
         let mut feedback = String::new();
         for _ in 0..4 {
             let prompt = format!(
-                "{problem}\n\nCompleta task_func: escribe SOLO el codigo python de la funcion completa, respetando EXACTAMENTE la firma de la cabecera. {feedback}No escribas tests."
+                "{problem}\n\nCompleta task_func. PRIMERO describe tu algoritmo en UNA frase (fuera del codigo), LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. {feedback}No escribas tests."
             );
             let sol = extract_script(&generate_script(&prompt));
             let (ok, frag) = run_bigcode(&sol, &test);

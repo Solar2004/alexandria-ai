@@ -11,8 +11,8 @@ use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
     agents_run_parallel, agents_show, check_network, feature_run, iterate_next, log_command,
-    load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_build, render_cost_report,
-    render_doctor, render_quality,
+    load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_benchmark, render_build,
+    render_cost_report, render_doctor, render_quality,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
     run_evolve_cycle, run_pipeline, run_pipeline_real, serve_mcp_stdio, spawn_agent, verify_build,
@@ -97,6 +97,8 @@ enum Command {
     },
     /// Benchmark de desempeño del sistema contra expectativas.
     Quality,
+    /// Benchmark de tareas complicadas de IA (5x mejor que directa).
+    Benchmark,
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -218,6 +220,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Quality) => {
             println!("{}", render_quality());
+        }
+        Some(Command::Benchmark) => {
+            println!("{}", render_benchmark());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

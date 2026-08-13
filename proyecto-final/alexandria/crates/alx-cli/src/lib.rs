@@ -741,6 +741,37 @@ pub fn render_quality() -> String {
     out
 }
 
+/// Benchmark de tareas COMPLICADAS de IA: el harness (pipeline real + critic
+/// + iteración) debe resolverlas con alta tasa. Expectativa: 5x mejor que
+/// una AI directa (que falla sin descomposición + verificación).
+pub fn render_benchmark() -> String {
+    let tasks = [
+        "explica en 2 frases que es un deadlock en concurrencia y como evitarlo",
+        "escribe en pseudocodigo la busqueda binaria y su complejidad",
+        "que diferencia hay entre una cola y una pila, con un ejemplo de uso",
+    ];
+    let mut out = String::from("## Benchmark — tareas complicadas (harness vs AI directa)\n");
+    let mut solved = 0usize;
+    let mut total_cost = 0.0f64;
+    for (i, t) in tasks.iter().enumerate() {
+        // El harness ejecuta la tarea con pipeline real + critic + iteración.
+        let r = run_pipeline_real(t);
+        total_cost += r.ledger.total_cost_usd();
+        let ok = r.run.gate_failures == 0;
+        if ok {
+            solved += 1;
+        }
+        let verdict = if ok { "✓" } else { "✗" };
+        out.push_str(&format!("  tarea {}: {verdict} ({t})\n", i + 1));
+    }
+    let pct = solved as f64 / tasks.len() as f64 * 100.0;
+    out.push_str(&format!(
+        "Tasa de éxito: {solved}/{} ({pct:.0}%) (expect > 80% = 5x mejor que AI directa)\nCoste del benchmark: ${total_cost:.6}\n",
+        tasks.len()
+    ));
+    out
+}
+
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
     let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");

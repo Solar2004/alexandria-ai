@@ -1,7 +1,7 @@
-iter = 9
+iter = 10
 max_iter = 20
-work_unit = "chore: CLAUDE.md mejorado (misión+estructura real) + README raíz fuera"
+work_unit = "security: untrack .claude, target, state — repo limpio para público"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "94d5172"
+last_commit = "0f92565"

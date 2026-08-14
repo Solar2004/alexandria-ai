@@ -31,7 +31,7 @@ KEY_VAR="OC_GO_CC_API_KEY_$INDEX"
 API_KEY=$(grep "^$KEY_VAR=" "$KEYS_FILE" | head -1 | cut -d= -f2-)
 
 export OC_GO_CC_API_KEY="$API_KEY"
-export ***REMOVED***="$API_KEY"
+export ROUTATIC_PROXY_API_KEY="$API_KEY"
 echo "OC_GO_CC_API_KEY=$API_KEY" > "$ENV_FILE"
 
 exec "$HOME/.local/bin/routatic-proxy" serve

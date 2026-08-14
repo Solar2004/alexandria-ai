@@ -1426,6 +1426,22 @@ pub fn run_setup() -> String {
         "skills sincronizados (integration → ~/.claude/skills): {skills_synced}\n"
     ));
 
+    // 9. Auto-generar .claude/settings.json del proyecto desde la plantilla
+    //    (proyecto-final/config/claude-settings.json) — reproducible.
+    let project_dir = format!("{home}/Projectos/AlexanderTheGreat");
+    let template = format!("{project_dir}/proyecto-final/config/claude-settings.json");
+    let dst_claude = format!("{project_dir}/.claude/settings.json");
+    let mut claude_ok = false;
+    if let Ok(text) = std::fs::read_to_string(&template) {
+        if std::fs::write(&dst_claude, &text).is_ok() {
+            claude_ok = true;
+        }
+    }
+    out.push_str(&format!(
+        ".claude/settings.json auto-generado (plantilla proyecto-final): {}\n",
+        ok(claude_ok)
+    ));
+
     out.push_str("\nReinicia Claude Code para aplicar statusline + theme.\n");
     out
 }

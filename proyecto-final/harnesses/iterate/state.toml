@@ -1,7 +1,7 @@
-iter = 7
+iter = 8
 max_iter = 20
-work_unit = "refactor(consolidacion): raíz mínima — proyecto-final + solo infra de Claude"
+work_unit = "chore: CLAUDE.md mejorado (misión+estructura real) + README raíz fuera"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "a8acaa6"
+last_commit = "ba5b2a3"

@@ -1,0 +1,92 @@
+{
+  "theme": "custom:sol",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/skill-activation-prompt.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/proyecto-final/harnesses/iterate/iterate.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/skill-verification-guard.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/post-tool-use-tracker.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/skill-activation-tracker.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/session-doc-updater.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/.local/bin/alx doctor",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/proyecto-final/harnesses/iterate/auto-iterate.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/proyecto-final/harnesses/iterate/session-reset.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/.local/bin/alx status",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

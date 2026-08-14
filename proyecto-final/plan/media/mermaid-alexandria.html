@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ALEXANDRIA — Mermaid MEGA</title>
+<script src="./vendor/mermaid.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { background:#0d1117; color:#c9d1d9; font-family: ui-monospace, 'SF Mono', monospace; padding: 24px; margin:0; }
+  header { max-width:1200px; margin:0 auto 8px; }
+  h1 { color:#ffb020; font-size: 20px; margin: 0 0 4px; }
+  .sub { color:#8b949e; font-size: 13px; margin-bottom: 24px; }
+  section { max-width:1200px; margin:0 auto 48px; }
+  h2 { color:#58a6ff; font-size: 15px; border-bottom:1px solid #30363d; padding-bottom:8px; }
+  .mermaid { background:#161b22; border:1px solid #30363d; border-radius:8px; padding:16px; margin:12px 0; overflow-x:auto; }
+  .note { color:#8b949e; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚔ ALEXANDRIA — Mermaid MEGA</h1>
+  <div class="sub">Sistema completo · iteración 40/40 · source: <code>plan/02-architecture.md</code> · render: mermaid.js v11 (local, offline)</div>
+</header>
+
+<section>
+<h2>1. Sistema completo — ALEXANDER / ALEXANDRIA / PHALANX</h2>
+<div class="mermaid">
+flowchart TB
+    subgraph U["USUARIO"]
+        U1["alx (CLI)"]
+        U2["atg (legacy)"]
+        U3["hooks Claude Code"]
+    end
+
+    subgraph P["PHALANX · EL UNICO PLUGIN"]
+        direction TB
+        P1["config.toml"]
+        P2["skills/ (24 agent-skills + night-ops + fable + emil, dedup)"]
+        P3["hooks/ (20 .toml)"]
+        P4["agents/ (registry 842, dedup)"]
+        P5["plans/ (planning-with-files)"]
+        P6["critics.toml (auto-critica)"]
+        P7["bench.toml (umbrales)"]
+        P8["security.toml (allowlists)"]
+    end
+
+    subgraph A["ALEXANDRIA · Motor Rust (workspace 15 crates)"]
+        direction TB
+        C1["alx-core<br/>tipos · estado · event bus · reloj"]
+        C2["alx-hooks<br/>eventos → cadena Pre/Async/Post · timeout · lock"]
+        C3["alx-memory<br/>auto-recalls · compresion caveman · inyeccion"]
+        C4["alx-governor<br/>routing dificultad→tier · budget · ledger"]
+        C5["alx-task<br/>DAG tareas · decomposition engine (micro-tareas)"]
+        C6["alx-harness<br/>pipeline 8 fases · contratos · compuertas"]
+        C7["alx-gate<br/>verificacion · LSP auto · lint · evidencia"]
+        C8["alx-bench<br/>metricas perf · umbrales · diff check"]
+        C9["alx-critic<br/>auto-critica · feedback loop · escalada T3"]
+        C10["alx-audit<br/>registry dedup · doctor · valida ecosistema"]
+        C11["alx-night<br/>cron autonomo · informe · commit atomico"]
+        C12["alx-mcp<br/>server stdio/SSE · client"]
+        C13["alx-agents<br/>registry · router · spawn · headless sessions"]
+    end
+
+    subgraph M["BUS MCP"]
+        M1["alx-mcp-server (stdio + SSE)"]
+        M2["alx-mcp-client"]
+    end
+
+    subgraph S["SERVIDORES MCP (10)"]
+        S1["codebase-memory"]
+        S2["code-graph-rag"]
+        S3["horario"]
+        S4["media"]
+        S5["notebooklm"]
+        S6["perplexity"]
+        S7["playwright"]
+        S8["figma (HTTP)"]
+        S9["mcp-search (claude-mem)"]
+        S10["chrome-devtools"]
+    end
+
+    subgraph NET["RED REAL (verificada)"]
+        direction LR
+        N1["headroom :8788 compresion"]
+        N2["cc-model-mask :3460"]
+        N3["routatic :3456"]
+        N4["deepseek-v4-flash"]
+        N5["omniroute :20128 fallback"]
+        N6["cc-openai-bridge :3461"]
+    end
+
+    subgraph HOST["HOSTS"]
+        H1["Claude Code"]
+        H2["Codex (futuro)"]
+    end
+
+    U1 --> A
+    U2 --> A
+    U3 --> A
+    P --> A
+    A --> M
+    M --> S
+    M --> H
+    C4 --> N1
+    N1 --> N2 --> N3 --> N4
+    N5 -.-> N3
+    N6 -.-> N3
+    C6 --> C1
+    C6 --> C7
+    C6 --> C9
+    C5 --> C1
+    C9 --> C3
+    C10 --> C13
+    C13 --> C12
+</div>
+</section>
+
+<section>
+<h2>2. Pipeline con decisiones — el "cuándo pasa, ifs"</h2>
+<div class="mermaid">
+flowchart LR
+    START[Objetivo] --> ING[Ingest]
+    ING --> SP[Spec]
+    SP --> PL[Plan]
+    PL --> DQ{Descomponer?}
+    DQ -->|grande| MICRO[Micro-tareas con assert]
+    DQ -->|pequeña| BL[Build]
+    MICRO --> BL
+    BL --> GT{Gate verde?}
+    GT -->|no| RT{Retry < 2?}
+    RT -->|si| BL
+    RT -->|no| FAIL[Failed + diagnostico]
+    GT -->|si| CR{Critic aprueba?}
+    CR -->|rechaza| IT{Iter < 3?}
+    IT -->|si| BL
+    IT -->|no| ESC[Escalar T3]
+    ESC --> BL
+    CR -->|si| TS[Test]
+    TS --> RV[Review + Security]
+    RV --> DOC[Docs]
+    DOC --> SH[Ship: commit + PR]
+    SH --> EVD[Evidence + informe]
+</div>
+</section>
+
+<section>
+<h2>3. Red canónica</h2>
+<div class="mermaid">
+flowchart LR
+    CC[Claude Code] --> H[headroom :8788 compresion]
+    H --> MASK[cc-model-mask :3460]
+    MASK --> R[routatic :3456]
+    R --> DS[deepseek-v4-flash]
+    OMNI[omniroute :20128 fallback] -.-> R
+    BR[cc-openai-bridge :3461 OpenAI↔Anthropic] -.-> R
+    CC2[Codex futuro] --> H
+</div>
+<p class="note">Cadena verificada 2026-08-12: CC → headroom (compresión) → cc-model-mask (enmascara modelo) → routatic (router) → deepseek-v4-flash.</p>
+</section>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+</script>
+</body>
+</html>

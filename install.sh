@@ -1,27 +1,39 @@
 #!/bin/bash
-# install.sh — instala el binario `alx` (ALEXANDRIA) en ~/.local/bin.
-# Idempotente: re-run recompila y reemplaza.
-
+# ⚡ ALEXANDRIA — instalador de 1 comando.
+#   curl -fsSL https://raw.githubusercontent.com/Solar2004/alexandria-ai/main/install.sh | bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN="${HOME}/.local/bin"
-TARGET="${BIN}/alx"
+REPO="https://github.com/Solar2004/alexandria-ai"
+DEST="${ALX_DEST:-$HOME/alexandria-ai}"
+BIN="${ALX_BIN:-$HOME/.local/bin}"
 
-echo "→ Compilando ALEXANDRIA (release)..."
-(cd "${ROOT}/alexandria" && cargo build --release -p alx-cli)
+echo "⚡ Instalando ALEXANDRIA → $DEST"
+mkdir -p "$BIN"
 
-mkdir -p "${BIN}"
-cp "${ROOT}/alexandria/target/release/alx" "${TARGET}"
-echo "→ Instalado: ${TARGET}"
-"${TARGET}" --version
-
-# Verificar el plugin PHALANX (config + hooks)
-if [ -f "${ROOT}/phalanx/config.toml" ]; then
-    HOOKS=$(ls "${ROOT}/phalanx/hooks/"*.toml 2>/dev/null | wc -l)
-    echo "→ PHALANX plugin: config ✓ · ${HOOKS} hooks"
+# 1. Clonar (o actualizar si existe)
+if [ -d "$DEST/.git" ]; then
+  echo "→ actualizando repo..."
+  git -C "$DEST" pull --rebase
 else
-    echo "→ PHALANX plugin: (sin config en ${ROOT}/phalanx)"
+  git clone -q "$REPO" "$DEST"
 fi
+cd "$DEST"
 
-echo "→ Listo. Probar: alx status · alx network · alx run \"objetivo\" · alx doctor"
+# 2. Binario: descargar release O compilar
+if [ -f /tmp/alx-release ]; then
+  cp /tmp/alx-release "$BIN/alx"
+elif command -v cargo >/dev/null 2>&1; then
+  echo "→ compilando (cargo build --release)..."
+  cargo build --release --manifest-path alexandria/Cargo.toml
+  cp alexandria/target/release/alx "$BIN/alx"
+else
+  echo "→ descargando release binario..."
+  curl -fsSL -o "$BIN/alx" "$REPO/releases/latest/download/alx"
+fi
+chmod +x "$BIN/alx"
+echo "✓ binario: $BIN/alx"
+
+# 3. Setup (interactivo: core + categorías)
+"$BIN/alx" setup
+
+echo "✅ ALEXANDRIA instalado. Ejecuta 'alx setup' cuando quieras re-configurar."

@@ -1288,6 +1288,41 @@ fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()>
 
 /// `alx setup` — configura e verifica TODA la integración con Claude Code:
 /// binario, statusline powerline, MCP server, hooks. Merge no destructivo.
+/// `alx update` — sistema de auto-actualización: pull + rebuild + reinstall.
+pub fn run_update() -> String {
+    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut out = String::from("# alx update\n");
+    let pull = alx_gate::run_command(
+        &format!("git -C {} pull --rebase", repo.display()),
+        60_000,
+    );
+    out.push_str(&format!(
+        "git pull: {}\n",
+        if pull.exit_code == 0 { "✓" } else { "✗ (no cambios o error)" }
+    ));
+    let build = alx_gate::run_command(
+        &format!(
+            "cargo build --release --manifest-path {}/alexandria/Cargo.toml",
+            repo.display()
+        ),
+        300_000,
+    );
+    out.push_str(&format!(
+        "build release: {}\n",
+        if build.exit_code == 0 { "✓" } else { "✗" }
+    ));
+    if build.exit_code == 0 {
+        let src = format!("{}/alexandria/target/release/alx", repo.display());
+        let dst = format!("{home}/.local/bin/alx");
+        if std::fs::copy(&src, &dst).is_ok() {
+            out.push_str("✓ binario actualizado → ~/.local/bin/alx\n");
+        }
+    }
+    out
+}
+
+/// `alx setup` — configura e verifica TODA la integración con Claude Code:
 pub fn run_setup() -> String {
     let home = std::env::var("HOME").unwrap_or_default();
     let mut out = String::from("# alx setup — integración con Claude Code\n");

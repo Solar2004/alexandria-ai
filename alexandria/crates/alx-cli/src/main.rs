@@ -16,7 +16,7 @@ use alx_cli::{
     render_cost_report, render_doctor, render_quality,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
-    run_evolve_cycle, run_pipeline, run_pipeline_real, run_setup, serve_mcp_stdio, spawn_agent, verify_build,
+    run_evolve_cycle, run_pipeline, run_pipeline_real, run_setup, run_update, serve_mcp_stdio, spawn_agent, verify_build,
     AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
@@ -108,6 +108,8 @@ enum Command {
     BenchCodecontests,
     /// Ejecuta TODAS las familias de benchmark (BigCodeBench + HumanEval + CodeContests).
     Bench,
+    /// Auto-actualización: git pull + rebuild + reinstall.
+    Update,
     /// Spawn REAL de un agente contra la cadena (headless).
     Spawn {
         /// Nombre del agente (general-purpose, code-reviewer, test-engineer).
@@ -249,6 +251,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Setup) => {
             println!("{}", run_setup());
+        }
+        Some(Command::Update) => {
+            println!("{}", run_update());
         }
         Some(Command::Task { command }) => match command {
             TaskCommand::Add { title, phase } => {

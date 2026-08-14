@@ -1,7 +1,7 @@
-iter = 5
+iter = 6
 max_iter = 20
-work_unit = "fix(atg): warning Remote Control suprimido"
+work_unit = "refactor(consolidacion): TODO dentro de proyecto-final — raíz solo proyecto-final+skills"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "ed8b58b"
+last_commit = "6113bdd"

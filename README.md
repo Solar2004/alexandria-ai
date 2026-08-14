@@ -32,15 +32,23 @@
 
 ## 📦 Quick start
 
-Requires **Rust** (stable) + any Anthropic-compatible LLM endpoint.
+**⚡ 1-command install (curl):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Solar2004/alexandria-ai/main/install.sh | bash
+```
+Installs the binary, clones the repo, and runs `alx setup` interactively (asks which categories you want: design, 3D, web...).
 
+**Keep it updated:**
+```bash
+alx update   # git pull + rebuild + reinstall (automatic)
+```
+
+**Manual (if you prefer):**
 ```bash
 git clone https://github.com/Solar2004/alexandria-ai.git
 cd alexandria-ai
-
 cargo build --release --manifest-path alexandria/Cargo.toml
 cp alexandria/target/release/alx ~/.local/bin/alx
-
 alx setup          # wires everything into Claude Code (hooks, statusline, MCP, themes, skills)
 claude             # the harness runs automatically
 alx bench          # re-run the benchmarks yourself

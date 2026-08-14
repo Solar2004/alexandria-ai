@@ -87,15 +87,15 @@ ensure_patched() {
   local VDIR=/home/artorias/.local/share/claude/versions
   local BIN=$(ls -1t "$VDIR"/2.* 2>/dev/null | head -1)
   [ -n "$BIN" ] || return 0
+  # LOGO (☀) — independiente del branding: funciona en la versión actual.
+  bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-logo.sh "$BIN" >/dev/null 2>&1 || true
+  # BRANDING (patch-cc) — falla en 2.1.231 (entrypoint movido); log silencioso.
   if grep -aq "AlexanderTheGreat" "$BIN" 2>/dev/null; then
     return 0  # ya parchado
   fi
-  if HOME=/home/artorias /home/artorias/.local/bin/uvx patch-cc apply --brand "AlexanderTheGreat" --org-label --suffix "atg-build" >/dev/null 2>&1 \
-     && bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-logo.sh "$BIN" >/dev/null 2>&1; then
-    echo "atg: parche aplicado ✓"
+  if HOME=/home/artorias /home/artorias/.local/bin/uvx patch-cc apply --brand "AlexanderTheGreat" --org-label --suffix "atg-build" >/dev/null 2>&1; then
+    echo "atg: branding aplicado ✓"
   else
-    # patch-cc (0.2.4, última) aún no soporta esta versión del binario — branding
-    # omitido, pero Claude Code funciona normal. Log, no error en pantalla.
     mkdir -p /home/artorias/.local/logs
     echo "$(date +%Y-%m-%d\ %H:%M) patch-cc no soporta $(basename "$BIN") — branding omitido" >> /home/artorias/.local/logs/atg-patch.log 2>/dev/null || true
   fi

@@ -1,7 +1,7 @@
-iter = 18
+iter = 20
 max_iter = 20
-work_unit = "docs: inventario de instalación (MCP + plugins + skills) para seleccionar qué guardar"
+work_unit = "feat(setup): categorías opcionales exhaustivas (9 categorías, 47 skills)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "3e1c71b"
+last_commit = "909d6af"

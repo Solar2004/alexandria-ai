@@ -3,48 +3,48 @@
 > Marca con [x] lo que quieres mantener en la reinstalación.
 
 ## MCP Servers (7)
-- [ ] perplexity — búsqueda web grounded
-- [ ] playwright — automatización navegador
+- [x] perplexity — búsqueda web grounded
+- [x] playwright — automatización navegador
 - [ ] horario — sistema de horarios/castigos personal
-- [ ] media — análisis de videos (transcripción, frames)
-- [ ] notebooklm — Google NotebookLM
-- [ ] code-graph-rag — RAG del codebase
-- [ ] alexandria — MCP del motor ALEXANDRIA (SIEMPRE)
+- [x] media — análisis de videos (transcripción, frames)
+- [x] notebooklm — Google NotebookLM
+- [x] code-graph-rag — RAG del codebase
+- [x] alexandria — MCP del motor ALEXANDRIA (SIEMPRE)
 
 ## Plugins (26)
-- [ ] caveman — lenguaje comprimido interno
-- [ ] ecc — engineering skills
-- [ ] remember — memoria de sesiones
-- [ ] claude-mem — memoria
-- [ ] agent-skills — workflow skills
-- [ ] superpowers — brainstorming/debugging
-- [ ] code-review — revisión de código
-- [ ] code-simplifier — simplificar código
-- [ ] feature-dev — desarrollo de features
-- [ ] frontend-design — diseño UI
+- [x] caveman — lenguaje comprimido interno
+- [x] ecc — engineering skills
+- [x] remember — memoria de sesiones
+- [x] claude-mem — memoria
+- [x] agent-skills — workflow skills
+- [x] superpowers — brainstorming/debugging
+- [x] code-review — revisión de código
+- [x] code-simplifier — simplificar código
+- [x] feature-dev — desarrollo de features
+- [x] frontend-design — diseño UI
 - [ ] figma — integración Figma
-- [ ] security-guidance — seguridad
-- [ ] skill-creator — crear skills
-- [ ] planning-with-files — planificación
-- [ ] claude-md-management — gestión CLAUDE.md
-- [ ] claude-code-setup — setup
-- [ ] clangd-lsp — LSP C/C++
-- [ ] pyright-lsp — LSP Python
-- [ ] rust-analyzer-lsp — LSP Rust
-- [ ] typescript-lsp — LSP TypeScript
-- [ ] mcp-server-dev — desarrollo MCP
-- [ ] commit-commands — commits
+- [x] security-guidance — seguridad
+- [x] skill-creator — crear skills
+- [x] planning-with-files — planificación
+- [x] claude-md-management — gestión CLAUDE.md
+- [x] claude-code-setup — setup
+- [x] clangd-lsp — LSP C/C++
+- [x] pyright-lsp — LSP Python
+- [x] rust-analyzer-lsp — LSP Rust
+- [x] typescript-lsp — LSP TypeScript
+- [x] mcp-server-dev — desarrollo MCP
+- [x] commit-commands — commits
 - [ ] ralph-loop — loops
 - [ ] alexander-harness — harness ALEXANDRIA (SIEMPRE)
 - [ ] ponyTail — (disabled)
 - [ ] (otros)
 
 ## Skills globales (88)
-- [ ] fable (mode) — disciplina por etapas
-- [ ] emil — diseño UI
-- [ ] night-ops — agente nocturno
-- [ ] caveman-compress — compresión de memoria
-- [ ] codebase-memory — knowledge graph
+- [x] fable (mode) — disciplina por etapas
+- [x] emil — diseño UI
+- [x] night-ops — agente nocturno
+- [x] caveman-compress — compresión de memoria
+- [x] codebase-memory — knowledge graph
 - ... (lista completa en ~/.claude/skills/)
 ## Skills completas (~/.claude/skills/)
 ```

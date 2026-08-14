@@ -25,6 +25,7 @@ use alx_memory::{compress as caveman_compress, RecallStore};
 use alx_night::{build_report, render as render_night};
 use alx_task::decompose::decompose;
 use alx_task::graph::TaskGraph;
+use std::io::IsTerminal;
 use std::time::Instant;
 
 /// Estado en memoria de la sesión del CLI.
@@ -1473,7 +1474,46 @@ pub fn run_setup() -> String {
         "hooks instalados (harnesses/hooks → .claude/hooks): {hooks_installed}\n"
     ));
 
+    // 11. Categorías opcionales (interactivo — solo si hay terminal).
+    if std::io::stdin().is_terminal() {
+        out.push_str(&setup_ask_categories(home.as_str(), deps_path.as_str()));
+    }
+
     out.push_str("\nReinicia Claude Code para aplicar statusline + theme.\n");
+    out
+}
+
+/// Pregunta al usuario qué categorías opcionales quiere (diseño, 3D, etc.)
+/// y verifica que las skills correspondientes estén disponibles.
+fn setup_ask_categories(home: &str, deps_path: &str) -> String {
+    let ok = |b: bool| if b { "✓".to_string() } else { "✗ falta".to_string() };
+    let mut out = String::from("\n--- Categorías opcionales (selecciona) ---\n");
+    if let Ok(deps_text) = std::fs::read_to_string(deps_path) {
+        if let Ok(deps) = serde_json::from_str::<serde_json::Value>(&deps_text) {
+            if let Some(optional) = deps["optional"].as_object() {
+                for (cat, skills) in optional {
+                    let skill_count = skills.as_object().map_or(0, |m| m.len());
+                    let names: Vec<String> = skills
+                        .as_object()
+                        .map(|m| m.keys().cloned().collect())
+                        .unwrap_or_default();
+                    eprint!("¿Haces {cat}? ({skill_count} skills: {}) [y/N]: ", names.join(", "));
+                    let _ = std::io::Write::flush(&mut std::io::stdout());
+                    let mut ans = String::new();
+                    let _ = std::io::stdin().read_line(&mut ans);
+                    if ans.trim().eq_ignore_ascii_case("y") {
+                        out.push_str(&format!("  {cat}:\n"));
+                        for (skill, desc) in skills.as_object().unwrap_or(&serde_json::Map::new()) {
+                            let exists = std::path::Path::new(&format!("{home}/.claude/skills/{skill}"))
+                                .exists();
+                            out.push_str(&format!("    {} — {desc}: {}\n", skill, ok(exists)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    out.push_str("  (las '✗ falta' → /plugin install o marketplace)\n");
     out
 }
 

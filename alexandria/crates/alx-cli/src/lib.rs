@@ -1475,6 +1475,7 @@ pub fn run_setup() -> String {
 
     // 9. Auto-generar .claude/settings.json del proyecto desde la plantilla
     //    (config/claude-settings.json) — reproducible. Crea .claude/ si falta.
+    //    Inyecta SIEMPRE el env que desactiva la atribución de Claude en git.
     let project_dir = format!("{home}/Projectos/AlexanderTheGreat");
     let template = format!("{project_dir}/config/claude-settings.json");
     let dst_claude = format!("{project_dir}/.claude/settings.json");
@@ -1483,7 +1484,15 @@ pub fn run_setup() -> String {
         if let Some(parent) = std::path::Path::new(&dst_claude).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        if std::fs::write(&dst_claude, &text).is_ok() {
+        // Inyectar env anti-atribución (garantizado, no depende de la plantilla).
+        let injected = if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&text) {
+            v["env"]["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] =
+                serde_json::Value::String("1".to_string());
+            serde_json::to_string_pretty(&v).unwrap_or(text.clone())
+        } else {
+            text.clone()
+        };
+        if std::fs::write(&dst_claude, &injected).is_ok() {
             claude_ok = true;
         }
     }

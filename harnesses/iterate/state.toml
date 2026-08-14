@@ -1,7 +1,7 @@
-iter = 22
+iter = 23
 max_iter = 20
-work_unit = "docs+install: README curl 1-command en inglés + install.sh en inglés"
+work_unit = "fix(clippy): map_or → is_some_and (CI pasa)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "efd7da0"
+last_commit = "477a665"

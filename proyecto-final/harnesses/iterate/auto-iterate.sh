@@ -4,6 +4,7 @@
 # El agente YA NO edita state.toml a mano: el sistema lo deriva del trabajo.
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE="$DIR/state.toml"
+[ -n "$ALX_SESSION_ID" ] && STATE="$DIR/state-$ALX_SESSION_ID.toml"
 REPO="/home/artorias/Projectos/AlexanderTheGreat"
 [ -f "$STATE" ] || exit 0
 

@@ -1405,11 +1405,21 @@ pub fn count_real_agents() -> usize {
     real
 }
 
+/// Ruta del state del harness iterate, con scope de sesión (multi-sesión).
+/// Si ALX_SESSION_ID está definido, usa state-<id>.toml; si no, state.toml.
+fn iterate_state_path() -> std::path::PathBuf {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../harnesses/iterate");
+    match std::env::var("ALX_SESSION_ID") {
+        Ok(id) if !id.trim().is_empty() => base.join(format!("state-{id}.toml")),
+        _ => base.join("state.toml"),
+    }
+}
+
 /// Estado del loop de iteración gestionado por el MOTOR (no bash).
 /// Lee state.toml del harness iterate y decide si debe continuar.
 pub fn render_iterate_state() -> String {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../harnesses/iterate/state.toml");
+    let path = iterate_state_path();
     let mut out = String::from("## Iteración (motor nativo)\n");
     if let Ok(text) = std::fs::read_to_string(&path) {
         let v: toml::Value = toml::from_str(&text).unwrap_or(toml::Value::Table(Default::default()));
@@ -1438,8 +1448,7 @@ pub fn render_iterate_state() -> String {
 
 /// Avanza una iteración: el MOTOR incrementa iter en state.toml (sin bash).
 pub fn iterate_next() -> String {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../harnesses/iterate/state.toml");
+    let path = iterate_state_path();
     if let Ok(text) = std::fs::read_to_string(&path) {
         let v: toml::Value = toml::from_str(&text).unwrap_or(toml::Value::Table(Default::default()));
         let iter = v.get("iter").and_then(|i| i.as_integer()).unwrap_or(0);

@@ -25,8 +25,10 @@ for old, new in pairs:
     if n:
         data = data.replace(old, new)
         total += n
+mode = os.stat(p).st_mode
 tmp = p + ".new"
 open(tmp, "wb").write(data)
+os.chmod(tmp, mode)  # preservar permisos (ej. +x)
 os.replace(tmp, p)
 print(f"✓ branding ALEXANDRIA aplicado ({total} reemplazos)")
 PYEOF

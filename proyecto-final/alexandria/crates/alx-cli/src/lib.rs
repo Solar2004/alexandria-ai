@@ -1269,6 +1269,22 @@ pub fn render_bench_all() -> String {
     out
 }
 
+/// Copia recursiva src → dst (para sync de skills).
+fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if from.is_dir() {
+            copy_dir(&from, &to)?;
+        } else {
+            std::fs::copy(&from, &to)?;
+        }
+    }
+    Ok(())
+}
+
 /// `alx setup` — configura e verifica TODA la integración con Claude Code:
 /// binario, statusline powerline, MCP server, hooks. Merge no destructivo.
 pub fn run_setup() -> String {
@@ -1384,6 +1400,30 @@ pub fn run_setup() -> String {
     out.push_str(&format!(
         "themes sincronizados (integration → global+perfil): {} archivos\n",
         themes_synced / 2
+    ));
+
+    // 8. Sync skills desde integration/skills → ~/.claude/skills (aditivo).
+    let integration_skills = format!(
+        "{home}/Projectos/AlexanderTheGreat/proyecto-final/integration/skills"
+    );
+    let mut skills_synced = 0usize;
+    if let Ok(rd) = std::fs::read_dir(&integration_skills) {
+        for e in rd.flatten() {
+            if !e.path().is_dir() {
+                continue;
+            }
+            let name = e.file_name().to_string_lossy().to_string();
+            let dst = format!("{home}/.claude/skills/{name}");
+            if let Err(_) = std::fs::remove_dir_all(&dst) {
+                // no existe, ok
+            }
+            if copy_dir(&e.path(), std::path::Path::new(&dst)).is_ok() {
+                skills_synced += 1;
+            }
+        }
+    }
+    out.push_str(&format!(
+        "skills sincronizados (integration → ~/.claude/skills): {skills_synced}\n"
     ));
 
     out.push_str("\nReinicia Claude Code para aplicar statusline + theme.\n");

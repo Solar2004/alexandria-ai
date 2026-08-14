@@ -1262,9 +1262,9 @@ pub fn render_bench_codecontests() -> String {
 pub fn render_bench_all() -> String {
     let mut out = String::from("# ALEXANDRIA — benchmark suite (3 familias)\n\n");
     out.push_str(&render_bench_bigcode());
-    out.push_str("\n");
+    out.push('\n');
     out.push_str(&render_bench_humaneval());
-    out.push_str("\n");
+    out.push('\n');
     out.push_str(&render_bench_codecontests());
     out
 }
@@ -1414,7 +1414,7 @@ pub fn run_setup() -> String {
             }
             let name = e.file_name().to_string_lossy().to_string();
             let dst = format!("{home}/.claude/skills/{name}");
-            if let Err(_) = std::fs::remove_dir_all(&dst) {
+            if std::fs::remove_dir_all(&dst).is_err() {
                 // no existe, ok
             }
             if copy_dir(&e.path(), std::path::Path::new(&dst)).is_ok() {

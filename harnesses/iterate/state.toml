@@ -1,7 +1,7 @@
-iter = 13
+iter = 15
 max_iter = 20
-work_unit = "feat(setup): setup genera TODO — .claude 100% regenerable + raíz sin proyecto-final"
+work_unit = "ci: build+test+clippy workflow (scope otorgado)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "ef7ced3"
+last_commit = "cf3ea85"

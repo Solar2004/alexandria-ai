@@ -1,0 +1,20 @@
+{
+  "core_plugins": {
+    "ecc@ecc": "engineering skills (ALEXANDRIA usa agentes/harness)",
+    "claude-mem@thedotmack": "memoria de sesiones",
+    "agent-skills@addys-agent-skills": "workflow skills (spec/plan/build/test)",
+    "remember@claude-plugins-official": "memoria",
+    "code-review@claude-plugins-official": "revisión de código",
+    "code-simplifier@claude-plugins-official": "simplificar código",
+    "superpowers@superpowers-marketplace": "brainstorming/debugging/verificación"
+  },
+  "core_skills": ["fable", "night-ops", "codebase-memory", "emil"],
+  "core_mcp": ["alexandria", "code-graph-rag"],
+  "optional": {
+    "design": ["emil", "frontend-design@claude-plugins-official", "taste-skill"],
+    "web": ["frontend-design@claude-plugins-official", "feature-dev@claude-plugins-official"],
+    "mobile": ["mobile-developer"],
+    "3d": ["3d-web-experience", "spline-3d"]
+  },
+  "skip": ["figma@claude-plugins-official", "ralph-loop@claude-plugins-official", "ponytail@ponytail"]
+}

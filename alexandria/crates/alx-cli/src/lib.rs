@@ -1353,28 +1353,39 @@ pub fn run_setup() -> String {
     let iterate_ok = std::path::Path::new(&hooks_path).join("auto-continue.sh").exists();
     out.push_str(&format!("hook iterate/auto-continue: {}\n", ok(iterate_ok)));
 
-    // 6. Plugins complementarios necesarios (caveman, ecc, etc.) — ALEXANDRIA
-    // como instalador definitivo: verifica que estén habilitados en settings.json.
-    let key_plugins: [&str; 8] = [
-        "caveman@", "ecc@", "remember@", "code-review@", "code-simplifier@",
-        "claude-mem@", "agent-skills@", "superpowers@",
-    ];
-    if let Ok(text) = std::fs::read_to_string(&settings_path) {
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
-            if let Some(enabled) = v["enabledPlugins"].as_object() {
-                for p in key_plugins {
-                    let on = enabled
-                        .iter()
-                        .any(|(k, val)| k.starts_with(p) && val.as_bool().unwrap_or(false));
-                    out.push_str(&format!(
-                        "plugin {}: {}\n",
-                        p.trim_end_matches('@'),
-                        ok(on)
-                    ));
+    // 6. Dependencias core (auto-habilitar) desde config/setup-deps.json.
+    let deps_path = format!("{home}/Projectos/AlexanderTheGreat/config/setup-deps.json");
+    let mut core_ok = 0usize;
+    let mut core_missing = 0usize;
+    if let Ok(deps_text) = std::fs::read_to_string(&deps_path) {
+        if let Ok(deps) = serde_json::from_str::<serde_json::Value>(&deps_text) {
+            if let Ok(text) = std::fs::read_to_string(&settings_path) {
+                if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(core) = deps["core_plugins"].as_object() {
+                        for (plugin, _desc) in core {
+                            let name = plugin.split('@').next().unwrap_or(plugin);
+                            let installed = v["enabledPlugins"].as_object().map_or(false, |m| {
+                                m.contains_key(plugin)
+                                    || m.keys().any(|k| k.starts_with(&format!("{name}@")))
+                            });
+                            if installed {
+                                v["enabledPlugins"][plugin] = serde_json::Value::Bool(true);
+                                core_ok += 1;
+                            } else {
+                                core_missing += 1;
+                            }
+                        }
+                    }
+                    if let Ok(new_text) = serde_json::to_string_pretty(&v) {
+                        let _ = std::fs::write(&settings_path, new_text);
+                    }
                 }
             }
         }
     }
+    out.push_str(&format!(
+        "dependencias core habilitadas: {core_ok} (faltan {core_missing} → /plugin install)\n"
+    ));
 
     // 7. Sync themes desde proyecto-final/integration/themes → global + perfil.
     let integration_themes = format!(

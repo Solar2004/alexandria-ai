@@ -1,7 +1,7 @@
-iter = 15
+iter = 18
 max_iter = 20
-work_unit = "ci: build+test+clippy workflow (scope otorgado)"
+work_unit = "docs: inventario de instalación (MCP + plugins + skills) para seleccionar qué guardar"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "cf3ea85"
+last_commit = "3e1c71b"

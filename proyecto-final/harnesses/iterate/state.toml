@@ -1,6 +1,7 @@
-iter = 8
+iter = 0
 max_iter = 20
-work_unit = "ciclo 10 iteracion 8/20: ERROR ATG ARREGLADO (9eba982) — patch-cc 0.2.4 no soporta claude 2.1.231 (entrypoint movido); atg ahora loguea el fallo a atg-patch.log en vez de gritar en pantalla. Branding omitido, CC normal. Pendiente: setup theme al perfil. LISTO PARA /COMPACT"
+work_unit = "(auto: se actualiza con cada commit)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
+last_commit = "ea9b3cb"

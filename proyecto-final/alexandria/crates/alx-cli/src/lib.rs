@@ -386,7 +386,7 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
     // Registry REAL de agentes del ecosistema (sin decision AI: por fase).
     let mut real_reg = AgentRegistry::new();
     {
-        let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+        let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../");
         let mut files = Vec::new();
         for dir in ["agents-volt", "agents"] {
             if let Ok(rd) = std::fs::read_dir(repo_root.join(dir)) {
@@ -1432,7 +1432,7 @@ pub fn run_setup() -> String {
 
 /// Cuenta los agentes reales del ecosistema (agents/ + agents-volt/).
 pub fn count_real_agents() -> usize {
-    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../");
     let mut real = 0usize;
     for dir in ["agents", "agents-volt"] {
         if let Ok(rd) = std::fs::read_dir(repo_root.join(dir)) {
@@ -1836,7 +1836,7 @@ pub fn render_agents() -> String {
 
     // Agentes reales del ecosistema (repo: agents/ + agents-volt/).
     let mut real = 0usize;
-    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../");
     for dir in ["agents", "agents-volt"] {
         let p = repo_root.join(dir);
         if let Ok(rd) = std::fs::read_dir(&p) {
@@ -1911,7 +1911,7 @@ pub fn render_tui() -> String {
 /// envelope de spawn. Carga agentes reales (agents-volt/ + agents/) con
 /// frontmatter vía register_from_markdowns.
 pub fn agents_show(name: &str) -> String {
-    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../");
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../");
     let mut files = Vec::new();
     for dir in ["agents-volt", "agents"] {
         let p = repo_root.join(dir);

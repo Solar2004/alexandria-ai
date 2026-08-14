@@ -1360,6 +1360,32 @@ pub fn run_setup() -> String {
         }
     }
 
+    // 7. Sync themes desde proyecto-final/integration/themes → global + perfil.
+    let integration_themes = format!(
+        "{home}/Projectos/AlexanderTheGreat/proyecto-final/integration/themes"
+    );
+    let mut themes_synced = 0usize;
+    if let Ok(rd) = std::fs::read_dir(&integration_themes) {
+        for e in rd.flatten() {
+            let name = e.file_name().to_string_lossy().to_string();
+            if !name.ends_with(".json") {
+                continue;
+            }
+            for dst in [
+                format!("{home}/.claude/themes/{name}"),
+                format!("{home}/.claude-alexandria/themes/{name}"),
+            ] {
+                if std::fs::copy(e.path(), &dst).is_ok() {
+                    themes_synced += 1;
+                }
+            }
+        }
+    }
+    out.push_str(&format!(
+        "themes sincronizados (integration → global+perfil): {} archivos\n",
+        themes_synced / 2
+    ));
+
     out.push_str("\nReinicia Claude Code para aplicar statusline + theme.\n");
     out
 }

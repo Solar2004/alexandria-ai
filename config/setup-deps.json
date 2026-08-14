@@ -1,6 +1,6 @@
 {
   "core_plugins": {
-    "ecc@ecc": "engineering skills (ALEXANDRIA usa agentes/harness)",
+    "ecc@ecc": "engineering skills (agentes/harness)",
     "claude-mem@thedotmack": "memoria de sesiones",
     "agent-skills@addys-agent-skills": "workflow skills (spec/plan/build/test)",
     "remember@claude-plugins-official": "memoria",
@@ -11,10 +11,74 @@
   "core_skills": ["fable", "night-ops", "codebase-memory", "emil"],
   "core_mcp": ["alexandria", "code-graph-rag"],
   "optional": {
-    "design": ["emil", "frontend-design@claude-plugins-official", "taste-skill"],
-    "web": ["frontend-design@claude-plugins-official", "feature-dev@claude-plugins-official"],
-    "mobile": ["mobile-developer"],
-    "3d": ["3d-web-experience", "spline-3d"]
+    "design": {
+      "emil-design-eng": "filosofía de diseño Emil Kowalski",
+      "frontend-design": "guía de diseño UI",
+      "premium-web-design": "diseño premium (Awwwards)",
+      "taste-skill": "anti-slop frontend",
+      "elevated-design": "diseño Apple-style",
+      "apple-design": "diseño Apple",
+      "apple-design-tokens": "tokens de diseño",
+      "design-system": "auditar sistema de diseño",
+      "design-critique": "crítica de diseño",
+      "design-handoff": "handoff a dev",
+      "canvas-design": "arte/visuales",
+      "ui-ux-pro-max": "diseño UI/UX",
+      "ux-copy": "microcopy UX",
+      "lenis-scroll": "scroll suave",
+      "smooth-scroll": "scroll"
+    },
+    "animation": {
+      "animate": "build animation",
+      "gsap-framer-scroll-animation": "scroll animaciones GSAP/Framer",
+      "framer-motion-animations": "Framer Motion",
+      "anime-js": "Anime.js",
+      "animejs-animation": "animejs",
+      "threejs-animation": "Three.js animación",
+      "lottie-animations": "Lottie",
+      "improve-animations": "mejorar animaciones",
+      "find-animation-opportunities": "encontrar oportunidades"
+    },
+    "3d": {
+      "3d-web-experience": "experiencias 3D web",
+      "spline-3d": "Spline 3D",
+      "spline-3d-integration": "Spline integración"
+    },
+    "web": {
+      "feature-dev": "desarrollo de features",
+      "web-artifacts-builder": "artefactos web",
+      "responsive-design": "diseño responsive",
+      "magic-ui-components": "150+ componentes animados",
+      "aceternity-ui": "100+ componentes React",
+      "elite-startup-web": "startup premium web"
+    },
+    "mobile": {
+      "mobile-developer": "desarrollo móvil",
+      "mobile-app-developer": "apps iOS/Android"
+    },
+    "backend": {
+      "backend-development": "APIs/BD/microservicios",
+      "domain-modeling": "modelo de dominio",
+      "api-and-interface-design": "diseño de APIs"
+    },
+    "data": {
+      "research-synthesis": "síntesis de investigación",
+      "user-research": "investigación de usuarios",
+      "data-analyst": "análisis de datos"
+    },
+    "tools": {
+      "graphify": "knowledge graph",
+      "codebase-memory": "graph del codebase",
+      "figma-design": "extraer diseño de Figma"
+    },
+    "life-ops": {
+      "grilling": "sesiones de trabajo",
+      "orca-cli": "ORCA CLI",
+      "linear": "Linear"
+    }
   },
-  "skip": ["figma@claude-plugins-official", "ralph-loop@claude-plugins-official", "ponytail@ponytail"]
+  "skip": [
+    "figma@claude-plugins-official", "ralph-loop@claude-plugins-official",
+    "ponytail@ponytail", "typescript-lsp@claude-plugins-official"
+  ]
 }

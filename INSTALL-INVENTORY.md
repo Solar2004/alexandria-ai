@@ -1,0 +1,139 @@
+# 📋 Inventario de instalación — selecciona qué guardar
+
+> Marca con [x] lo que quieres mantener en la reinstalación.
+
+## MCP Servers (7)
+- [ ] perplexity — búsqueda web grounded
+- [ ] playwright — automatización navegador
+- [ ] horario — sistema de horarios/castigos personal
+- [ ] media — análisis de videos (transcripción, frames)
+- [ ] notebooklm — Google NotebookLM
+- [ ] code-graph-rag — RAG del codebase
+- [ ] alexandria — MCP del motor ALEXANDRIA (SIEMPRE)
+
+## Plugins (26)
+- [ ] caveman — lenguaje comprimido interno
+- [ ] ecc — engineering skills
+- [ ] remember — memoria de sesiones
+- [ ] claude-mem — memoria
+- [ ] agent-skills — workflow skills
+- [ ] superpowers — brainstorming/debugging
+- [ ] code-review — revisión de código
+- [ ] code-simplifier — simplificar código
+- [ ] feature-dev — desarrollo de features
+- [ ] frontend-design — diseño UI
+- [ ] figma — integración Figma
+- [ ] security-guidance — seguridad
+- [ ] skill-creator — crear skills
+- [ ] planning-with-files — planificación
+- [ ] claude-md-management — gestión CLAUDE.md
+- [ ] claude-code-setup — setup
+- [ ] clangd-lsp — LSP C/C++
+- [ ] pyright-lsp — LSP Python
+- [ ] rust-analyzer-lsp — LSP Rust
+- [ ] typescript-lsp — LSP TypeScript
+- [ ] mcp-server-dev — desarrollo MCP
+- [ ] commit-commands — commits
+- [ ] ralph-loop — loops
+- [ ] alexander-harness — harness ALEXANDRIA (SIEMPRE)
+- [ ] ponyTail — (disabled)
+- [ ] (otros)
+
+## Skills globales (88)
+- [ ] fable (mode) — disciplina por etapas
+- [ ] emil — diseño UI
+- [ ] night-ops — agente nocturno
+- [ ] caveman-compress — compresión de memoria
+- [ ] codebase-memory — knowledge graph
+- ... (lista completa en ~/.claude/skills/)
+## Skills completas (~/.claude/skills/)
+```
+- 3d-logo-animation
+- 3d-web-experience
+- accessibility-review
+- aceternity-ui
+- animate
+- animation-vocabulary
+- anime-js
+- animejs-animation
+- app-brand-identity
+- apple-design
+- apple-design-tokens
+- ask-sonner
+- auto-skill-finder
+- backend-development
+- brand-guidelines
+- canvas-design
+- cavecrew
+- caveman-compress
+- caveman-stats
+- centaury-agent-messaging
+- codebase-memory
+- design-context-extract
+- design-critique
+- design-handoff
+- design-system
+- design-system-tokens
+- diagram-design
+- differential-review
+- domain-modeling
+- elevated-design
+- elite-startup-web
+- emil
+- emil-design-eng
+- execution-guardrails
+- fable
+- fable-haiku
+- fable-mode
+- fable-opus
+- fable-sonnet
+- figma-create-design-system-rules
+- figma-design
+- figma-design-brief
+- figma-design-critique-pm
+- figma-elite-design
+- figma-prototyping
+- find-animation-opportunities
+- find-skills
+- framer-motion-animations
+- frontend-design
+- gh-fix-ci
+- graphify
+- grilling
+- grill-with-docs
+- gsap-framer-scroll-animation
+- improve-animations
+- learned
+- lenis-scroll
+- linear
+- lottie-animations
+- magic-ui-components
+- modern-css-layout
+- night-ops
+- notion-spec-to-implementation
+- opensrc
+- orca-cli
+- pick-ui-library
+- premium-web-design
+- prompt-improver
+- prototype
+- repo-steal
+- research-synthesis
+- responsive-design
+- resume-tailoring
+- reverse-skill
+- review-animations
+- sdd-orchestrator
+- security-best-practices
+- smooth-scroll
+- spline-3d
+- spline-3d-integration
+- taste-skill
+- theme-factory
+- threejs-animation
+- tui-design
+- ui-ux-pro-max
+- user-research
+- ux-copy
+- web-artifacts-builder
+```

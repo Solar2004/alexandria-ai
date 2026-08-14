@@ -15,8 +15,9 @@ use alx_cli::{
     render_bench_bigcode, render_bench_codecontests, render_bench_humaneval, render_build,
     render_cost_report, render_doctor, render_quality,
     render_iterate_state, render_metrics, render_network, render_night_report,
-    render_phalanx_status, render_real_run, render_report, render_run, render_tui, render_weekly,
-    run_evolve_cycle, run_pipeline, run_pipeline_real, run_setup, run_update, serve_mcp_stdio, spawn_agent, verify_build,
+    render_phalanx_status, render_real_run, render_report, render_run,
+    render_tui, render_weekly, run_evolve_cycle, run_pipeline, run_pipeline_real, run_setup,
+    run_update, serve_mcp_stdio, spawn_agent, verify_build,
     AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
@@ -167,6 +168,7 @@ fn run(cli: Cli) -> ExitCode {
         Some(Command::Status) => {
             let alex = Alexandria::new();
             println!("{}", alex.status());
+            println!("{}", alx_cli::render_status_persisted());
         }
         Some(Command::Network) => {
             let statuses = check_network();

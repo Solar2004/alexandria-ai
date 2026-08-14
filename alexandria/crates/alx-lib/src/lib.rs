@@ -83,7 +83,7 @@ impl Alexandria {
 
 /// Versión de la fachada pública.
 pub fn version() -> &'static str {
-    "0.1.0"
+    env!("CARGO_PKG_VERSION")
 }
 
 #[cfg(test)]
@@ -164,8 +164,8 @@ mod tests {
     }
 
     #[test]
-    fn version_is_0_1_0() {
-        assert_eq!(version(), "0.1.0");
+    fn version_is_0_2_0() {
+        assert_eq!(version(), "0.2.0");
     }
 
     #[test]

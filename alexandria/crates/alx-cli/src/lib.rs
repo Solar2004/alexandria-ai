@@ -74,6 +74,41 @@ pub fn render_status(app: &AppState) -> String {
     out
 }
 
+/// Estado real persistido en disco (no en memoria): tareas de
+/// `state/tasks.jsonl`, hooks de `phalanx/hooks/*.toml`, recalls contados
+/// como eventos de `state/events.log` y agentes registrados en `agents/`.
+///
+/// `alx status` usa esta fuente para que el resumen refleje el sistema real.
+pub fn render_status_persisted() -> String {
+    // state/ vive en alexandria/state; phalanx/ y agents/ en la raíz del repo
+    // (alexandria/.. = raíz, desde crates/alx-cli son ../../).
+    let ws = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../");
+    let root = ws.join("../");
+
+    let tasks = load_tasks_from_jsonl().len();
+
+    let hooks_dir = root.join("phalanx/hooks");
+    let hooks = std::fs::read_dir(&hooks_dir)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| e.path().extension().map(|x| x == "toml").unwrap_or(false))
+                .count()
+        })
+        .unwrap_or(0);
+
+    let events_path = ws.join("state/events.log");
+    let recalls = std::fs::read_to_string(&events_path)
+        .map(|t| t.lines().filter(|l| !l.trim().is_empty()).count())
+        .unwrap_or(0);
+
+    let agents_dir = root.join("agents");
+    let agents = std::fs::read_dir(&agents_dir)
+        .map(|rd| rd.flatten().filter(|e| e.path().extension().map(|x| x == "md").unwrap_or(false)).count())
+        .unwrap_or(0);
+
+    format!("ALEXANDRIA — {tasks} tareas, {hooks} hooks, {recalls} recalls, {agents} agentes")
+}
+
 /// Resultado de una ejecución del pipeline de demo.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunResult {
@@ -247,8 +282,9 @@ pub struct NetworkStatus {
 }
 
 /// Comprueba la red real del governor (iter 41): headroom→mask→routatic
-/// (PROVIDER) y fallback omniroute. Cada endpoint único se sondea con
-/// `curl -s -m 2 <url>/readyz` vía `alx_gate::run_command`.
+/// (PROVIDER) y fallback omniroute. Cada endpoint único se sondea con un
+/// POST mínimo a `/v1/messages` (los proxies solo aceptan POST; un GET a
+/// `/readyz` devuelve 404/502/307 aunque el servicio esté sano).
 pub fn check_network() -> Vec<NetworkStatus> {
     // Infra real verificada (auditoría 14 §3). Orden = cadena canónica.
     let endpoints = [
@@ -257,12 +293,21 @@ pub fn check_network() -> Vec<NetworkStatus> {
         ("routatic (PROVIDER)", "http://127.0.0.1:3456"),
         ("omniroute (fallback)", "http://127.0.0.1:20128"),
     ];
+    // POST mínimo: body válido pero max_tokens=1 → barato y rápido. HTTP
+    // 200/4xx = servicio vivo; 000 = caído o sin respuesta.
+    let probe_body = r#"{"model":"claude-opus-4-6[1m]","max_tokens":1,"messages":[{"role":"user","content":"ping"}]}"#;
 
     endpoints
         .iter()
         .map(|(name, url)| {
-            let cmd = format!("curl -s -m 2 -o /dev/null -w \"%{{http_code}}\" {url}/readyz");
-            let outcome = alx_gate::run_command(&cmd, 5000);
+            let cmd = format!(
+                "curl -s -m 5 -o /dev/null -w \"%{{http_code}}\" -X POST {url}/v1/messages \
+                 -H \"content-type: application/json\" \
+                 -H \"Authorization: Bearer {}\" \
+                 -d '{probe_body}'",
+                std::env::var("ANTHROPIC_AUTH_TOKEN").unwrap_or_default(),
+            );
+            let outcome = alx_gate::run_command(&cmd, 8000);
             NetworkStatus {
                 name: name.to_string(),
                 url: url.to_string(),

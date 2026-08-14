@@ -5,7 +5,7 @@ argument-hint: [tarea opcional]
 
 # Lista de agentes (421)
 
-Lee el índice en `/home/artorias/Projectos/AlexanderTheGreat/plugins/alexander-harness/agent-index.json` y:
+Lee el índice `agent-index.json` (junto a este comando, en el directorio del plugin) y:
 
 1. Muestra las **categorías** (marketing, engineering, security, design, data, legal, health, academic, finance, general…).
 2. Si doy una tarea: busca los agentes cuyo nombre o descripción encaje y lista el **top 5** con su descripción corta, marcando el recomendado.

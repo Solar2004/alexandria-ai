@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/agent-dispatch.sh",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-dispatch.sh\"",
             "timeout": 10
           }
         ]
@@ -22,5 +22,6 @@
   "commands": [
     "./commands"
   ],
-  "skills": "./skills"
+  "skills": "./skills",
+  "mcpServers": "./.mcp.json"
 }

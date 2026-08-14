@@ -1,7 +1,7 @@
-iter = 23
+iter = 0
 max_iter = 20
-work_unit = "fix(clippy): map_or → is_some_and (CI pasa)"
+work_unit = "(sesión nueva — iteración por commit de trabajo real)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "477a665"
+last_commit = "4afc0cd"

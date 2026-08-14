@@ -9,6 +9,7 @@ pub fn default_input_schema() -> serde_json::Value {
 
 /// Una tool MCP expuesta por el servidor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Tool {
     pub name: String,
     pub description: String,

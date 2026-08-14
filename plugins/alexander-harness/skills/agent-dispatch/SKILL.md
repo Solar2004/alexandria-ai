@@ -13,7 +13,7 @@ Tienes **421 subagentes especializados** indexados en `agent-index.json`. El dis
 - Regla: si existe un agente cuyo nombre/descripción encaja con la tarea, úsalo. 421 agentes cubren casi todo: marketing-*, engineering-*, security-*, design-*, academic-*, data-*, legal-*, health-*, finance-*, mlops, devops, frontend/backend, QA, research, writing…
 
 ## Cómo elegir
-1. Lee el índice: `cat /home/artorias/Projectos/AlexanderTheGreat/plugins/alexander-harness/agent-index.json` (o busca: `grep -o '"name":"[^"]*"' <indice>`).
+1. Lee el índice: `agent-index.json` — búscalo junto a este skill o con `find ~/.claude/plugins -name agent-index.json | head -1` (o busca: `grep -o '"name":"[^"]*"' <indice>`).
 2. Cruza las palabras clave de la tarea contra nombres y descripciones.
 3. Elige 1 agente principal (nunca más de 2-3 en paralelo salvo que la tarea lo exija).
 

@@ -35,6 +35,10 @@ pub fn handle_line(catalog: &ToolCatalog, line: &str) -> Option<String> {
             json!({
                 "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": { "tools": {} },
+                "serverInfo": {
+                    "name": "alx-mcp",
+                    "version": env!("CARGO_PKG_VERSION"),
+                },
             }),
         ),
         "tools/list" => result(

@@ -15,6 +15,9 @@ state/
 .env.*
 *.key
 *sk-REPLACE_ME*
+# Config de MCPs con API keys locales (regenerar con alx setup)
+config/mcp-install.json
+plugins/alexander-harness/.mcp.json
 
 # ── Backups / caches ──
 backups/

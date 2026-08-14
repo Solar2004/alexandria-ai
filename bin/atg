@@ -138,6 +138,6 @@ case "$MODE" in
     exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude -c "$@"
     ;;
   cc)
-    exec env HOME=/home/artorias "$HEADROOM" wrap claude --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
+    exec env HOME=/home/artorias DISABLE_AUTOUPDATER=1 "$HEADROOM" wrap claude --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
     ;;
 esac

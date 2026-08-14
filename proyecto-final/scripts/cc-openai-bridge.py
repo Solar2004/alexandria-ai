@@ -5,7 +5,7 @@ Permite que herramientas que solo hablan OpenAI (p.ej. code-graph-rag Cypher gen
 import http.server, json, urllib.request, sys
 
 ROUTATIC = "http://127.0.0.1:3456"
-KEY = "***REMOVED***"
+KEY = "sk-REPLACE_ME_OPENAI"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 3461
 
 class H(http.server.BaseHTTPRequestHandler):

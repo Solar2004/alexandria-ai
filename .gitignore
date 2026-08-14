@@ -1,8 +1,34 @@
+# ── Config personal de Claude Code (se regenera con `alx setup`) ──
+.claude/
+.remember/
+CLAUDE.md
+
+# ── Build / runtime ──
+target/
+proyecto-final/alexandria/target/
+state/
+**/state/
+*.jsonl
+
+# ── Secretos ──
+.env
+.env.*
+*.key
+*sk-REPLACE_ME*
+
+# ── Backups / caches ──
 backups/
 *.bak*
 .qdrant_code_embeddings/
-.claude/hooks/node_modules/
-night-ops/report/
 .playwright-mcp/
-plan/media/
+.cgr-*
+__pycache__/
 skills.old/
+
+# ── Node ──
+node_modules/
+package-lock.json
+
+# ── Plan media ──
+plan/media/
+night-ops/report/

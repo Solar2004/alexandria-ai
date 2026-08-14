@@ -9,8 +9,8 @@ KEYS_FILE="$CONFIG_DIR/api_keys"
 if [ ! -f "$KEYS_FILE" ]; then
   cat > "$KEYS_FILE" << 'KEYS'
 # oc-go-cc API keys — one per line, cycled on restart
-OC_GO_CC_API_KEY_1=***REMOVED***
-OC_GO_CC_API_KEY_2=***REMOVED***
+OC_GO_CC_API_KEY_1=sk-REPLACE_ME_GO1
+OC_GO_CC_API_KEY_2=sk-REPLACE_ME_GO2
 KEYS
 fi
 

@@ -1,7 +1,7 @@
-iter = 21
+iter = 22
 max_iter = 20
-work_unit = "feat(setup): setup interactivo — pregunta categorías opcionales"
+work_unit = "docs+install: README curl 1-command en inglés + install.sh en inglés"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "56a5590"
+last_commit = "efd7da0"

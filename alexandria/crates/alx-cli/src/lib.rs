@@ -1400,7 +1400,7 @@ pub fn run_setup() -> String {
                     if let Some(core) = deps["core_plugins"].as_object() {
                         for (plugin, _desc) in core {
                             let name = plugin.split('@').next().unwrap_or(plugin);
-                            let installed = v["enabledPlugins"].as_object().map_or(false, |m| {
+                            let installed = v["enabledPlugins"].as_object().is_some_and(|m| {
                                 m.contains_key(plugin)
                                     || m.keys().any(|k| k.starts_with(&format!("{name}@")))
                             });

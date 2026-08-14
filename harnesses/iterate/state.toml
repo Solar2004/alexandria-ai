@@ -1,7 +1,7 @@
-iter = 11
+iter = 12
 max_iter = 20
-work_unit = "chore: state auto + key placeholder"
+work_unit = "feat(setup): setup genera TODO — .claude 100% regenerable + raíz sin proyecto-final"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "b1ac17c"
+last_commit = "fcafc31"

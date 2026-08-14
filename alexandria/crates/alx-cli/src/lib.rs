@@ -1427,12 +1427,15 @@ pub fn run_setup() -> String {
     ));
 
     // 9. Auto-generar .claude/settings.json del proyecto desde la plantilla
-    //    (proyecto-final/config/claude-settings.json) — reproducible.
+    //    (config/claude-settings.json) — reproducible. Crea .claude/ si falta.
     let project_dir = format!("{home}/Projectos/AlexanderTheGreat");
     let template = format!("{project_dir}/config/claude-settings.json");
     let dst_claude = format!("{project_dir}/.claude/settings.json");
     let mut claude_ok = false;
     if let Ok(text) = std::fs::read_to_string(&template) {
+        if let Some(parent) = std::path::Path::new(&dst_claude).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
         if std::fs::write(&dst_claude, &text).is_ok() {
             claude_ok = true;
         }

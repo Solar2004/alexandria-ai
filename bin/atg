@@ -87,9 +87,11 @@ ensure_patched() {
   local VDIR=/home/artorias/.local/share/claude/versions
   local BIN=$(ls -1t "$VDIR"/2.* 2>/dev/null | head -1)
   [ -n "$BIN" ] || return 0
-  # LOGO (☀) — independiente del branding: funciona en la versión actual.
+  # LOGO (☀) — funciona en la versión actual.
   bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-logo.sh "$BIN" >/dev/null 2>&1 || true
-  # BRANDING (patch-cc) — falla en 2.1.231 (entrypoint movido); log silencioso.
+  # BRANDING de texto (patch-brand.sh) — "Claude Code" → "ALEXANDRIA " (mismo byte-length, solo display).
+  bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-brand.sh "$BIN" >/dev/null 2>&1 || true
+  # BRANDING completo (patch-cc) — falla en 2.1.231 (entrypoint movido); log silencioso.
   if grep -aq "AlexanderTheGreat" "$BIN" 2>/dev/null; then
     return 0  # ya parchado
   fi

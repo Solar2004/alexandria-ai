@@ -1,7 +1,7 @@
-iter = 6
+iter = 7
 max_iter = 20
-work_unit = "refactor(consolidacion): TODO dentro de proyecto-final — raíz solo proyecto-final+skills"
+work_unit = "refactor(consolidacion): raíz mínima — proyecto-final + solo infra de Claude"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "6113bdd"
+last_commit = "a8acaa6"

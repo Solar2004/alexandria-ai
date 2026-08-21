@@ -1,0 +1,73 @@
+#!/bin/bash
+# alx-statusline — statusline de ALEXANDRIA (3 líneas):
+#   1-2) Las 2 líneas ORIGINALES del statusline de Claude (doradas, ccstatusline)
+#   3)   La línea ALEXANDRIA (powerline SOL: tareas, red, coste, iteración)
+# Conserva TODO lo anterior + añade lo de ALEXANDRIA.
+
+# --- stdin de Claude Code ---
+input="$(cat 2>/dev/null || true)"
+
+# --- Líneas 1-2: las ORIGINALES de Claude (doradas), pasando el stdin ---
+old="$(printf '%s' "$input" | ~/.local/bin/ccstatusline 2>/dev/null || true)"
+
+# --- Línea 3: ALEXANDRIA (powerline SOL) ---
+BG_DARK=236; BG_ORANGE=172; BG_BLUE=24; BG_GREEN=64
+FG_DARK=234; FG_LIGHT=255
+
+tasks=$(alx task list 2>/dev/null | grep -c "|"); [ -z "$tasks" ] && tasks="0"
+# `alx network` no siempre es barato, asi que NUNCA se llama en linea.
+#
+# En builds de alx anteriores a fcafc31, check_network sondeaba con un POST a
+# /v1/messages (max_tokens:1) en vez de con /readyz. cc-model-mask sube ese
+# max_tokens a 1024 (muse necesita ~256 tokens para razonar), asi que el "ping"
+# se convertia en una generacion real. Medido el 2026-08-21 con un binario del
+# 2026-08-14: ~44 s y ~308 tokens por ping. Al lanzarse en CADA refresco del
+# statusline salian 6-8/min y 4-7 generaciones concurrentes permanentes, que
+# saturaban opencode-go: las peticiones reales de Claude Code morian con
+# "all models failed" -> 502 Bad Gateway.
+#
+# check_network ya usa /readyz (barato), pero la cache se queda por dos motivos:
+# el statusline no debe bloquear nunca a la espera de la red, y un binario viejo
+# no puede volver a tumbar el proveedor. Un `alx network` cada 5 min basta.
+NET_CACHE="${TMPDIR:-/tmp}/alx-net-${UID}.cache"
+NET_LOCK="${NET_CACHE}.lock"
+NET_TTL=300
+_net_edad() {
+  local m; m=$(stat -c %Y "$NET_CACHE" 2>/dev/null) || return 1
+  echo $(( $(date +%s) - m ))
+}
+edad=$(_net_edad) || edad=999999
+if [ "$edad" -ge "$NET_TTL" ]; then
+  # flock -n: si ya hay un refresco en vuelo, no se lanza otro.
+  (
+    flock -n 9 || exit 0
+    n=$(alx network 2>/dev/null | grep -c '✓')
+    printf '%s' "$n" > "$NET_CACHE.tmp" && mv "$NET_CACHE.tmp" "$NET_CACHE"
+  ) 9>"$NET_LOCK" >/dev/null 2>&1 &
+fi
+red_ok=$(cat "$NET_CACHE" 2>/dev/null) || red_ok=""
+[ -z "$red_ok" ] && red_ok="0"
+cost=$(alx cost 2>/dev/null | grep -oP '\$[0-9.]+' | head -1); [ -z "$cost" ] && cost="\$0"
+iter=$(alx iterate 2>/dev/null | grep -oP 'iter: \K[0-9]+' | head -1); [ -z "$iter" ] && iter="0"
+max=$(alx iterate 2>/dev/null | grep -oP '/\K[0-9]+' | head -1); [ -z "$max" ] && max="20"
+
+BGS=(); FGS=(); TEXTS=()
+add() { BGS+=("$1"); FGS+=("$2"); TEXTS+=("$3"); }
+add "$BG_BLUE" "$FG_LIGHT" "  ALEXANDRIA"
+add "$BG_DARK" "$FG_LIGHT" "  tasks:$tasks"
+add "$BG_DARK" "$FG_LIGHT" "  net:$red_ok/4"
+add "$BG_GREEN" "$FG_DARK" "  cost:$cost"
+add "$BG_GREEN" "$FG_DARK" "  iter:$iter/$max"
+add "$BG_GREEN" "$FG_DARK" "  ☾ $(date +%H:%M)"
+
+alx_line=""
+for i in "${!TEXTS[@]}"; do
+  alx_line+="\e[48;5;${BGS[$i]}m\e[38;5;${FGS[$i]}m${TEXTS[$i]}"
+  if [ $((i + 1)) -lt ${#TEXTS[@]} ]; then
+    alx_line+="\e[0m\e[38;5;${BGS[$i]}m\e[48;5;${BGS[$((i + 1))]}m"
+  fi
+done
+alx_line+="\e[0m"
+
+# --- Salida: 2 líneas originales + línea ALEXANDRIA ---
+printf '%b' "${old:+$old\n}$alx_line"

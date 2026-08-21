@@ -3,14 +3,79 @@
 
 Por qué: Claude Code asume 200k de window para modelos que no conoce. Con el nombre
 'claude-opus-4-6[1m]' usa 1M (no compacta hasta ~920k). Este proxy:
-  request:  model=claude-opus-4-6[1m]  -> model=deepseek-v4-flash (upstream routatic)
+  request:  model=claude-opus-4-6[1m] (o claude-opus-4-6, forma que headroom sanea)
+            -> model=deepseek-v4-flash (upstream routatic)
   response: model=deepseek-v4-flash    -> model=claude-opus-4-6[1m] (para CC)
+El prefijo tolera el sanitize de headroom: 'claude-opus-4-6[1m]' se sanea a
+'claude-opus-4-6' (los corchetes parecen código ANSI), y ambos deben mapear a deepseek.
 """
-import http.server, json, urllib.request, sys, re
+import http.server, json, os, urllib.request, sys
 
-UPSTREAM = "http://127.0.0.1:3456"
-MASK = "claude-opus-4-6[1m]"
-REAL = "deepseek-v4-flash"
+# Configurables por entorno para que el proxy sirva en otras maquinas sin
+# tocar el codigo. Los valores por defecto son los del stack de Alexander.
+UPSTREAM = os.environ.get("CC_MASK_UPSTREAM", "http://127.0.0.1:3456")
+MASK = os.environ.get("CC_MASK_VISIBLE", "claude-opus-4-6[1m]")
+REAL = os.environ.get("CC_MASK_REAL", "muse-spark-1.2-contributor")
+MIN_MAX_TOKENS = 1024  # suelo: muse necesita ~256 tokens de razonamiento antes de emitir texto
+
+# --- Health probes: se responden aqui, nunca llegan al modelo ---------------
+#
+# `alx network` (v0.2.0) sondea cada hop con un POST a /v1/messages y este body:
+#   {"model":"...","max_tokens":1,"messages":[{"role":"user","content":"ping"}]}
+# Su comentario dice "max_tokens=1 -> barato y rapido", y lo seria si llegara
+# intacto. Pero el suelo de arriba lo sube a 1024, asi que el probe se convertia
+# en una generacion completa: ~44 s y ~308 tokens medidos el 2026-08-21. Lanzado
+# desde el statusline en cada refresco -> 6-8/min y 4-7 generaciones concurrentes
+# permanentes, opencode-go saturado, y las peticiones reales de Claude Code
+# devolvian "all models failed" -> 502.
+#
+# No basta con dejar el max_tokens=1 en paz: con presupuesto minusculo muse
+# devuelve content vacio, routatic lo trata como 400 y el probe daria ✗ con todo
+# sano. Asi que el probe se corta aqui y su veracidad se apoya en un GET
+# /v1/models a routatic, que es instantaneo y gratis.
+#
+# Limite conocido: comprueba que la cadena responde, no que el modelo genere. Es
+# lo que un indicador de statusline necesita; para verificar generacion de verdad
+# existe `alx bench`.
+PROBE_MAX_TOKENS = 8      # por encima de esto ya no es un probe
+PROBE_MAX_CHARS = 32      # "ping" y similares; un prompt real es mucho mayor
+
+
+def es_probe(data):
+    """True si el cuerpo es un health-check y no trabajo real."""
+    if not isinstance(data, dict):
+        return False
+    mt = data.get("max_tokens")
+    if not isinstance(mt, int) or mt > PROBE_MAX_TOKENS:
+        return False
+    # Nada que sugiera trabajo real: sin tools, sin system, un solo mensaje.
+    if data.get("tools") or data.get("system") or data.get("stream"):
+        return False
+    msgs = data.get("messages")
+    if not isinstance(msgs, list) or len(msgs) != 1:
+        return False
+    c = msgs[0].get("content") if isinstance(msgs[0], dict) else None
+    if isinstance(c, list):  # forma en bloques
+        c = "".join(b.get("text", "") for b in c if isinstance(b, dict))
+    return isinstance(c, str) and len(c) <= PROBE_MAX_CHARS
+
+
+def upstream_vivo():
+    """GET /v1/models a routatic: instantaneo y sin coste de modelo."""
+    try:
+        req = urllib.request.Request(UPSTREAM + "/v1/models", method="GET")
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return 200 <= r.status < 300
+    except Exception:
+        return False
+
+
+RESPUESTA_PROBE = {
+    "id": "msg_probe", "type": "message", "role": "assistant", "model": MASK,
+    "content": [{"type": "text", "text": "ok"}],
+    "stop_reason": "end_turn", "stop_sequence": None,
+    "usage": {"input_tokens": 0, "output_tokens": 0},
+}
 
 def rewrite_model(obj):
     if isinstance(obj, dict):
@@ -24,7 +89,7 @@ def rewrite_model(obj):
             rewrite_model(v)
 
 class H(http.server.BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.1"
+    protocol_version = "HTTP/1.0"  # cierra la conexión al final → delimita el body (SSE sin chunked)
 
     def _do(self):
         length = int(self.headers.get("Content-Length") or 0)
@@ -32,8 +97,36 @@ class H(http.server.BaseHTTPRequestHandler):
         if body:
             try:
                 data = json.loads(body)
-                if data.get("model") == MASK:
+                # Un health-check se contesta aqui: nunca debe costar una
+                # generacion. Se corta antes del suelo de max_tokens, que es
+                # justo lo que lo encarecia.
+                if es_probe(data):
+                    vivo = upstream_vivo()
+                    cuerpo = json.dumps(
+                        RESPUESTA_PROBE if vivo else
+                        {"error": {"type": "api_error",
+                                   "message": "upstream no responde"}}
+                    ).encode()
+                    self.send_response(200 if vivo else 502)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(cuerpo)))
+                    self.end_headers()
+                    self.wfile.write(cuerpo)
+                    self.wfile.flush()
+                    return
+                changed = False
+                m = data.get("model")
+                if isinstance(m, str) and m.startswith(MASK.split("[")[0]):
                     data["model"] = REAL
+                    changed = True
+                # Muse razona antes de emitir texto: con un presupuesto minúsculo
+                # gasta todo pensando y devuelve content vacío, que routatic
+                # interpreta como error 400. Claude Code sondea con max_tokens=1.
+                mt = data.get("max_tokens")
+                if isinstance(mt, int) and mt < MIN_MAX_TOKENS:
+                    data["max_tokens"] = MIN_MAX_TOKENS
+                    changed = True
+                if changed:
                     body = json.dumps(data).encode()
             except Exception:
                 pass

@@ -1,8 +1,9 @@
 //! Routing por disponibilidad: tier → cadena de proxies (red corregida, plan 09 §1).
 //!
-//! Cadena canónica: `headroom → mask → routatic`. Fallback global: omniroute.
-//! Los tiers no seleccionan modelos distintos todavía (el provider es uno,
-//! routatic → deepseek-v4-flash); el `mask` oculta el modelo real en la cadena.
+//! Cadena canónica (v2): `headroom → routa-gateway → routatic`. Fallback
+//! global: omniroute. El gateway (:3460) oculta el modelo real tras un nombre
+//! visible `[1m]`, aplica suelo de max_tokens y gobierna la entropía de la red
+//! (techo de concurrencia + backoff jitterizado + circuit-breaker).
 
 use alx_core::types::ModelTier;
 use serde::{Deserialize, Serialize};
@@ -26,16 +27,18 @@ pub struct Router {
 
 pub const ROUTATIC: &str = "http://127.0.0.1:3456";
 pub const HEADROOM: &str = "http://127.0.0.1:8788";
-pub const MASK: &str = "http://127.0.0.1:3460";
+/// routa-gateway (:3460) — antes `cc-model-mask`; mismo puerto, más funciones.
+pub const GATEWAY: &str = "http://127.0.0.1:3460";
 pub const OMNIROUTE: &str = "http://127.0.0.1:20128";
 
 impl Router {
     /// Las 3 rutas del plan:
     /// - T1: routatic directo (sin compresión)
-    /// - T2: headroom → mask → routatic
+    /// - T2: headroom → gateway → routatic
     /// - T3: igual que T2
     pub fn default_routes() -> Self {
-        let medium_chain = vec![HEADROOM.to_string(), MASK.to_string(), ROUTATIC.to_string()];
+        let medium_chain =
+            vec![HEADROOM.to_string(), GATEWAY.to_string(), ROUTATIC.to_string()];
         Self {
             routes: vec![
                 Route { tier: ModelTier::T1Cheap, chain: vec![ROUTATIC.to_string()] },

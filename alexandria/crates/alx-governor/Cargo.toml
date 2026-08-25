@@ -7,3 +7,4 @@ description = "Gobernador de coste: routing dificultad a tier, budget, ledger"
 [dependencies]
 alx-core = { path = "../alx-core" }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"

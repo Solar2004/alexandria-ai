@@ -1,0 +1,13 @@
+[Unit]
+Description=routa-gateway — mascara [1m] + suelo max_tokens + gobernador de entropia (Anthropic :3460, OpenAI :3461)
+After=network-online.target oc-go-cc.service
+Wants=oc-go-cc.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/bin/routa-gateway.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

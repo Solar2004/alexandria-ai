@@ -2,6 +2,29 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## Ciclo 8 — routa: cadena v2 sin muse-stack + gobernador de entropía (2026-08-25)
+
+- **Cadena nueva**: `CC → headroom :8788 → routa-gateway :3460 → routatic :3456 → opencode-go`.
+  `cc-model-mask` y `cc-openai-bridge` (muse-stack) RETIRADOS del sistema; el
+  gateway los sustituye con un solo servicio (`scripts/routa/`, `./install.sh`).
+- **Máscara [1m] viva**: CC ve `claude-opus-4-6[1m]`; el modelo REAL se lee EN
+  VIVO de `~/.config/routatic-proxy/config.json` — cambiar modelo no toca el gateway.
+- **CLI `routa`** (~/.local/bin/routa): `show|models|use|status|doctor|restart|key|logs`.
+  `routa use <model>` cambia slots+fallbacks+aliases atómicamente y reinicia routatic.
+- **Gobernador de entropía** (en gateway y en `alx-governor::entropy`):
+  techo global de concurrencia (3), cola con timeout, backoff exponencial
+  JITTERIZADO, circuit-breaker y cooldown compartido por fichero. Cura del
+  "demasiadas conexiones tumban la red" (502 al segundo mensaje).
+- **Probes GET**: `alx network` ya no gasta generaciones (era ~308 tokens/ping).
+- **Claves sticky**: `oc-go-cc-wrapper` v2 NO rota en cada restart; rotación
+  consciente con `routa key next`. Clave 2 comentada (sin créditos).
+- **Hallazgo upstream**: `muse-spark-1.2-contributor` devolvía HTTP 500 desde
+  opencode-go (verificado directo); default movido a `deepseek-v4-flash`
+  (funciona). Para volver a muse cuando Meta lo arregle: `routa use muse-spark-1.2-contributor`.
+- Verificado en vivo: multi-turno OK, streaming SSE OK, OpenAI-compat :3461 OK,
+  `routa doctor` 5/5 + generación real 200.
+- Archivo de muse-stack: `~/.local/share/atg-archive/muse-stack-removed-2026-08-25.tar.gz`.
+
 ## Motor
 
 - **16/16 crates** con lógica (alx-core ... alx-evolve).
@@ -14,7 +37,7 @@
 | Comando | Estado |
 |---|---|
 | `alx status` | ✓ estado del motor |
-| `alx network` | ✓ red real (headroom 200, mask 502, routatic/omniroute 404) |
+| `alx network` | ✓ red real con probes GET sin coste (gateway/headroom/routatic/omniroute) |
 | `alx build` | ✓ dogfood, build OK |
 | `alx run "X" --real` | ✓ pipeline real: cadena + critic real + must_checks + evolve + ledger |
 | `alx night` | ✓ informe nocturno + systemd timer 02:00 activo |
@@ -39,7 +62,7 @@
 - atg → banner ALEXANDRIA + `atg --alx <subcomando>`.
 - `alx mcp` registrado como servidor MCP del sistema.
 - systemd user `alx-night.timer` (02:00).
-- Red real: headroom→mask→routatic→deepseek (cadena verificada).
+- Red real: headroom→gateway→routatic (cadena verificada, modelo real en config de routatic).
 - Ledger persistido en `state/ledger.jsonl` (coste real por llamada).
 
 ## Ciclo 7 — Benchmark campeón + generalidad (verificado en vivo)
@@ -66,8 +89,8 @@
 
 ```mermaid
 flowchart LR
-    ALX[alx CLI 18 subcomandos] --> ENGINE[Motor Rust 16 crates · 207 tests]
-    ENGINE --> RED[headroom→mask→routatic→deepseek]
+    ALX[alx CLI 18 subcomandos] --> ENGINE[Motor Rust 16 crates · 212 tests]
+    ENGINE --> RED[headroom→gateway→routatic + entropia]
     ENGINE --> CRITIC[critic real + escalada T3]
     ENGINE --> MEM[memory + must_checks]
     ENGINE --> EVOLVE[harnesses evolutivos + watcher]

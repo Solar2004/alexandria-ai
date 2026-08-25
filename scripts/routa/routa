@@ -1,0 +1,415 @@
+#!/usr/bin/env python3
+"""routa — CLI para gobernar la cadena de modelos de ALEXANDRIA.
+
+La cadena:  Claude Code -> headroom :8788 -> routa-gateway :3460 -> routatic :3456 -> opencode-go
+
+El modelo REAL vive en ~/.config/routatic-proxy/config.json (models.default).
+Cambiarlo con `routa use` actualiza slots, fallbacks y aliases de forma atomica,
+reinicia routatic y comprueba que la cadena responde. El gateway lee ese config
+EN VIVO, asi que no hay segunda configuracion que sincronizar.
+
+Uso:
+  routa show                    modelo activo por slot + estado de servicios
+  routa models                  catalogo disponible en opencode-go
+  routa use <model>             cambia el modelo por defecto (todos los slots)
+      [--slot vision|default|background|long_context|think|complex|fast]
+      [--force]                 saltarse la validacion contra el catalogo
+  routa status                  salud de la cadena (solo GET, cero coste)
+  routa doctor                  status + prueba real del modelo activo
+  routa restart [servicio]      oc-go-cc | headroom | gateway | all
+  routa key next|show           rotar/ver la clave de opencode-go activa
+  routa logs [servicio]         journalctl -f del servicio
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+VERSION = "1.1.0"
+
+HOME = os.path.expanduser("~")
+ROUTATIC_CONFIG = os.environ.get(
+    "ROUTA_ROUTATIC_CONFIG", HOME + "/.config/routatic-proxy/config.json")
+OC_GO_DIR = os.environ.get("ROUTA_OC_GO_DIR", HOME + "/.config/oc-go-cc")
+GATEWAY = os.environ.get("ROUTA_GATEWAY", "http://127.0.0.1:3460")
+HEADROOM = os.environ.get("ROUTA_HEADROOM", "http://127.0.0.1:8788")
+ROUTATIC = os.environ.get("ROUTA_ROUTATIC", "http://127.0.0.1:3456")
+OMNIROUTE = os.environ.get("ROUTA_OMNIROUTE", "http://127.0.0.1:20128")
+UPSTREAM_MODELS = os.environ.get(
+    "ROUTA_UPSTREAM_MODELS", "https://opencode.ai/zen/go/v1/models")
+UPSTREAM_MESSAGES = os.environ.get(
+    "ROUTA_UPSTREAM_MESSAGES", "https://opencode.ai/zen/go/v1/messages")
+VISIBLE = os.environ.get("ROUTA_VISIBLE", "claude-opus-4-6[1m]")
+
+SLOTS_NORMALES = ["default", "background", "long_context", "think",
+                  "complex", "fast"]
+ALIAS_KEYS = [VISIBLE, VISIBLE.split("[")[0]]
+
+
+# ------------------------------------------------------------------ helpers
+def die(msg, code=1):
+    print(f"routa: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def http(url, method="GET", timeout=8, headers=None, data=None):
+    req = urllib.request.Request(url, method=method, data=data)
+    # User-Agent normal: Cloudflare bloquea el UA por defecto de
+    # Python-urllib con "error code: 1010" y el doctor daria 403 fantasma.
+    req.add_header("User-Agent", "routa/" + VERSION + " curl/8")
+    for k, v in (headers or {}).items():
+        req.add_header(k, v)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.status, r.read()
+
+
+def clave_activa():
+    env_file = os.path.join(OC_GO_DIR, "env")
+    try:
+        with open(env_file) as fh:
+            for linea in fh:
+                if linea.startswith("OC_GO_CC_API_KEY="):
+                    return linea.strip().split("=", 1)[1]
+    except OSError:
+        pass
+    return os.environ.get("OC_GO_CC_API_KEY") or os.environ.get(
+        "ROUTATIC_PROXY_API_KEY")
+
+
+def cargar_config():
+    try:
+        with open(ROUTATIC_CONFIG) as fh:
+            return json.load(fh)
+    except Exception as e:
+        die(f"no puedo leer {ROUTATIC_CONFIG}: {e}")
+
+
+def guardar_config(cfg):
+    tmp = ROUTATIC_CONFIG + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(cfg, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")
+    os.replace(tmp, ROUTATIC_CONFIG)
+
+
+def systemctl(*args):
+    return subprocess.run(["systemctl", "--user", *args],
+                          capture_output=True, text=True)
+
+
+def esperar_routatic(segundos=12):
+    fin = time.time() + segundos
+    while time.time() < fin:
+        try:
+            http(ROUTATIC + "/v1/models", timeout=3)
+            return True
+        except Exception:
+            time.sleep(0.5)
+    return False
+
+
+def servicio_activo(nombre):
+    r = systemctl("is-active", nombre)
+    return r.stdout.strip() == "active"
+
+
+# ---------------------------------------------------------------- comandos
+def cmd_show():
+    cfg = cargar_config()
+    modelos = cfg.get("models", {})
+    activo = modelos.get("default", {}).get("model_id", "?")
+    print(f"modelo por defecto: \033[1m{activo}\033[0m")
+    print(f"visible para CC   : {VISIBLE}")
+    print()
+    print(f"{'slot':<14} {'modelo':<32} max_tokens")
+    for slot, m in modelos.items():
+        extra = "  <- igual al default" if m.get("model_id") == activo else ""
+        print(f"{slot:<14} {m.get('model_id','?'):<32} {m.get('max_tokens','')}{extra}")
+    print()
+    filas = [
+        ("gateway  :3460", GATEWAY + "/health"),
+        ("headroom :8788", HEADROOM + "/readyz"),
+        ("routatic :3456", ROUTATIC + "/v1/models"),
+    ]
+    for nombre, url in filas:
+        try:
+            code, _ = http(url, timeout=3)
+            estado = "\033[32m✓\033[0m " + str(code)
+        except urllib.error.HTTPError as e:
+            estado = f"\033[33m! {e.code}\033[0m"
+        except Exception:
+            estado = "\033[31m✗ caido\033[0m"
+        print(f"{nombre:<16} {estado}")
+    if not servicio_activo("oc-go-cc"):
+        print("\033[31m✗ oc-go-cc.service INACTIVO\033[0m")
+
+
+def cmd_models():
+    key = clave_activa()
+    if not key:
+        die("sin clave: revisa " + OC_GO_DIR)
+    try:
+        _, raw = http(UPSTREAM_MODELS, timeout=15,
+                      headers={"x-api-key": key})
+        ids = sorted(m.get("id") for m in json.loads(raw).get("data", []) if m.get("id"))
+    except Exception as e:
+        die(f"catalogo inaccesible: {e}")
+    activo = cargar_config().get("models", {}).get("default", {}).get("model_id")
+    for i in ids:
+        marca = "  \033[32m<- actual\033[0m" if i == activo else ""
+        print(f"{i}{marca}")
+    if not ids:
+        die("catalogo vacio")
+
+
+def cmd_use(args):
+    if not args:
+        die("uso: routa use <model> [--slot vision|...] [--force]")
+    modelo = args[0][0] if args[0] else ""
+    slot = None
+    force = "--force" in args
+    argv = args[1:]
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--slot" and i + 1 < len(argv):
+            slot = argv[i + 1]
+            i += 2
+            continue
+        i += 1
+    if not modelo:
+        die("nombre de modelo vacio")
+
+    # validacion contra el catalogo salvo --force
+    key = clave_activa()
+    if not force and key:
+        try:
+            _, raw = http(UPSTREAM_MODELS, timeout=15,
+                          headers={"x-api-key": key})
+            ids = {m.get("id") for m in json.loads(raw).get("data", [])}
+            if modelo not in ids:
+                die(f"'{modelo}' no esta en el catalogo de opencode-go "
+                    f"(routa models para ver la lista); usa --force para imponerlo")
+        except Exception as e:
+            print(f"aviso: no pude validar contra el catalogo ({e}); continúo",
+                  file=sys.stderr)
+
+    cfg = cargar_config()
+    antes = cfg.get("models", {}).get("default", {}).get("model_id")
+
+    objetivos = ([slot] if slot else SLOTS_NORMALES)
+    for s in objetivos:
+        if s in cfg.get("models", {}):
+            cfg["models"][s]["model_id"] = modelo
+        for entrada in cfg.get("fallbacks", {}).get(s, []):
+            if isinstance(entrada, dict):
+                entrada["model_id"] = modelo
+
+    # aliases: lo visible y el nuevo modelo apuntan al nuevo modelo.
+    # Las demas entradas (variantes muse, mimo...) se respetan tal cual.
+    ov = cfg.setdefault("model_overrides", {})
+    plantilla = {"provider": "opencode-go", "temperature": 0.7,
+                 "max_tokens": 32768}
+    for k in ALIAS_KEYS + [modelo]:
+        entrada = dict(plantilla)
+        entrada["model_id"] = modelo
+        ov[k] = entrada
+
+    guardar_config(cfg)
+    print(f"config escrito: {antes} -> {modelo}"
+          + (f" (slot {slot})" if slot else " (todos los slots)"))
+
+    r = systemctl("restart", "oc-go-cc.service")
+    if r.returncode != 0:
+        die("restart de oc-go-cc fallo: " + r.stderr.strip())
+    if esperar_routatic():
+        print("✓ routatic reiniciado y respondiendo")
+    else:
+        print("! routatic no responde tras el restart; mira: journalctl --user -u oc-go-cc -n 30")
+    try:
+        _, raw = http(GATEWAY + "/health", timeout=5)
+        info = json.loads(raw)
+        print(f"✓ gateway ve el modelo real: {info.get('real_model')}")
+    except Exception as e:
+        print(f"! gateway sin respuesta: {e}")
+
+
+def cmd_status():
+    ok = True
+    pruebas = [
+        ("gateway :3460", GATEWAY + "/health"),
+        ("gateway-oai :3461", "http://127.0.0.1:3461/health"),
+        ("headroom :8788", HEADROOM + "/readyz"),
+        ("routatic :3456", ROUTATIC + "/v1/models"),
+        ("omniroute :20128", OMNIROUTE),
+    ]
+    for nombre, url in pruebas:
+        try:
+            code, _ = http(url, timeout=4)
+            print(f"✓ {nombre:<18} HTTP {code}")
+        except urllib.error.HTTPError as e:
+            ok = False
+            print(f"! {nombre:<18} HTTP {e.code}")
+        except Exception:
+            ok = False
+            print(f"✗ {nombre:<18} sin respuesta")
+    gov = None
+    try:
+        _, raw = http(GATEWAY + "/stats", timeout=3)
+        gov = json.loads(raw).get("governor", {})
+    except Exception:
+        pass
+    if gov:
+        print(f"\ngobernador: en_vuelo={gov.get('in_flight')} "
+              f"cola_pico={gov.get('queued_peak')} servidos={gov.get('served')} "
+              f"reintentos={gov.get('retries')} rechazados_429={gov.get('rejected_429')} "
+              f"aperturas_fusible={gov.get('breaker_opens')}")
+        if gov.get("last_error"):
+            print(f"ultimo error: {gov['last_error']}")
+    return ok
+
+
+def salir_status(ok):
+    sys.exit(0 if ok else 2)
+
+
+def cmd_doctor():
+    ok = cmd_status()
+    if not ok:
+        print("\nla cadena tiene caidos; el test real no puede salir bien")
+        sys.exit(2)
+    key = clave_activa()
+    if not key:
+        die("doctor: sin clave activa")
+    modelo = cargar_config().get("models", {}).get("default", {}).get("model_id")
+    print(f"\nprueba real del modelo activo ({modelo}) contra opencode-go...")
+    cuerpo = json.dumps({"model": modelo, "max_tokens": 64,
+                         "messages": [{"role": "user", "content": "ping"}]}).encode()
+    t0 = time.time()
+    try:
+        code, raw = http(UPSTREAM_MESSAGES, method="POST", timeout=90,
+                         headers={"content-type": "application/json",
+                                  "x-api-key": key,
+                                  "anthropic-version": "2023-06-01"}, data=cuerpo)
+        dt = int((time.time() - t0) * 1000)
+        resp = json.loads(raw)
+        texto = "".join(b.get("text", "") for b in resp.get("content", [])
+                        if isinstance(b, dict))
+        print(f"✓ HTTP {code} en {dt} ms — el modelo genera")
+        if texto:
+            print(f"  respuesta: {texto[:60]!r}")
+        elif resp.get("content"):
+            print("  (respuesta con bloques de razonamiento, sin texto final)")
+    except urllib.error.HTTPError as e:
+        detalle = e.read().decode("utf-8", "replace")[:200]
+        if "CreditsError" in detalle or e.code == 401:
+            print(f"✗ CLAVE SIN CREDITOS ({e.code}): {detalle}")
+            print("  fix: routa key next   (y recarga saldo en opencode.ai)")
+        elif e.code >= 500:
+            print(f"✗ MODELO CAIDO ARRIBA ({e.code}): {detalle}")
+            print(f"  fix: routa models && routa use <otro-modelo>")
+        else:
+            print(f"✗ HTTP {e.code}: {detalle}")
+        sys.exit(3)
+    except Exception as e:
+        print(f"✗ red: {e}")
+        sys.exit(3)
+
+
+SERVICIOS = {
+    "routatic": "oc-go-cc.service",
+    "oc-go-cc": "oc-go-cc.service",
+    "gateway": "routa-gateway.service",
+    "headroom": "headroom.service",
+}
+
+
+def cmd_restart(args):
+    objetivo = args[0] if args else "all"
+    if objetivo == "all":
+        nombres = ["oc-go-cc.service", "routa-gateway.service",
+                   "headroom.service"]
+    elif objetivo in SERVICIOS:
+        nombres = [SERVICIOS[objetivo]]
+    else:
+        nombres = [objetivo]
+    for n in nombres:
+        r = systemctl("restart", n)
+        print(("✓ " if r.returncode == 0 else "✗ ") + n)
+        if r.returncode != 0:
+            print(r.stderr.strip(), file=sys.stderr)
+
+
+def cmd_key(args):
+    accion = args[0] if args else "show"
+    idx_file = os.path.join(OC_GO_DIR, ".key_index")
+    keys_file = os.path.join(OC_GO_DIR, "api_keys")
+    claves = []
+    with open(keys_file) as fh:
+        for linea in fh:
+            linea = linea.strip()
+            if linea.startswith("OC_GO_CC_API_KEY_") and "=" in linea \
+                    and not linea.startswith("#"):
+                claves.append(linea.split("=", 1)[1])
+    if not claves:
+        die("sin claves en " + keys_file)
+    idx = 1
+    if os.path.exists(idx_file):
+        try:
+            idx = int(open(idx_file).read().strip())
+        except ValueError:
+            pass
+    if accion == "show":
+        for i, k in enumerate(claves, 1):
+            marca = " <- activa" if i == idx else ""
+            print(f"clave {i}: {k[:14]}...{k[-6:]}{marca}")
+        return
+    if accion == "next":
+        idx = idx % len(claves) + 1
+        with open(idx_file, "w") as fh:
+            fh.write(str(idx))
+        print(f"clave activa -> {idx} ({claves[idx-1][:14]}...)")
+        cmd_restart(["oc-go-cc"])
+        return
+    die("uso: routa key show|next")
+
+
+def cmd_logs(args):
+    objetivo = args[0] if args else "gateway"
+    unidad = SERVICIOS.get(objetivo, SERVICIOS["gateway"])
+    os.execvp("journalctl", ["journalctl", "--user", "-u", unidad, "-n", "50",
+                             "-f", "--no-pager"])
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help", "help"):
+        print(__doc__)
+        return
+    cmd = sys.argv[1]
+    rest = [[a] for a in sys.argv[2:]]
+    if cmd == "version" or cmd == "--version":
+        print(f"routa {VERSION}")
+    elif cmd == "show":
+        cmd_show()
+    elif cmd == "models":
+        cmd_models()
+    elif cmd == "use":
+        cmd_use(rest)
+    elif cmd == "status":
+        salir_status(cmd_status())
+    elif cmd == "doctor":
+        cmd_doctor()
+    elif cmd == "restart":
+        cmd_restart([r[0] for r in rest if r])
+    elif cmd == "key":
+        cmd_key([r[0] for r in rest if r])
+    elif cmd == "logs":
+        cmd_logs([r[0] for r in rest if r])
+    else:
+        die(f"comando desconocido: {cmd} (routa help)")
+
+
+if __name__ == "__main__":
+    main()

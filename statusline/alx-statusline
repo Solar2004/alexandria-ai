@@ -15,24 +15,13 @@ BG_DARK=236; BG_ORANGE=172; BG_BLUE=24; BG_GREEN=64
 FG_DARK=234; FG_LIGHT=255
 
 tasks=$(alx task list 2>/dev/null | grep -c "|"); [ -z "$tasks" ] && tasks="0"
-# `alx network` NO es barato, asi que NUNCA se llama en linea.
-#
-# check_network (v0.2.0) sondea con un POST a /v1/messages y este body de 92 B:
-#   {"model":"claude-opus-4-6[1m]","max_tokens":1,...,"content":"ping"}
-# El comentario del fuente dice "max_tokens=1 -> barato y rapido", y lo seria si
-# la peticion llegase intacta. Pero cc-model-mask sube cualquier max_tokens < 1024
-# a 1024 (MIN_MAX_TOKENS: muse gasta ~256 tokens razonando antes de emitir texto,
-# y con presupuesto minusculo devuelve content vacio). O sea que el "ping" llega
-# al modelo como una generacion completa.
-#
-# Medido el 2026-08-21: ~44 s y ~308 tokens por ping. Lanzandolo en CADA refresco
-# del statusline salian 6-8/min y 4-7 generaciones concurrentes permanentes, que
-# saturaban opencode-go; las peticiones reales de Claude Code volvian
-# "all models failed" -> 502 Bad Gateway al segundo mensaje de la sesion.
-#
-# Cache + refresco en segundo plano: el statusline no bloquea nunca y el modelo
-# ve un ping cada 5 min. El arreglo de fondo va en una de las dos puntas (que el
-# probe no pase por la mask, o que la mask no toque los probes), no aqui.
+# `alx network` (v0.2.1+) sondea con GET baratos (/health, /readyz,
+# /v1/models): cero generaciones. El routa-gateway además cortocircuita los
+# probes que lleguen por POST. Historial: con la máscara antigua el ping se
+# convertía en una generación completa (~44 s y ~308 tokens); lanzado en cada
+# refresco del statusline eran 6-8/min y 4-7 generaciones concurrentes que
+# saturaban opencode-go -> "all models failed" -> 502 al segundo mensaje.
+# Ahora: cache + flock + sondeos GET.
 NET_CACHE="${TMPDIR:-/tmp}/alx-net-${UID}.cache"
 NET_LOCK="${NET_CACHE}.lock"
 NET_TTL=300

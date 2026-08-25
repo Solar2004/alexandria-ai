@@ -281,31 +281,29 @@ pub struct NetworkStatus {
     pub http_code: String,
 }
 
-/// Comprueba la red real del governor (iter 41): headroom→mask→routatic
-/// (PROVIDER) y fallback omniroute. Cada endpoint único se sondea con un
-/// POST mínimo a `/v1/messages` (los proxies solo aceptan POST; un GET a
-/// `/readyz` devuelve 404/502/307 aunque el servicio esté sano).
+/// Comprueba la red real del governor (iter 41 → v2 routa): 
+/// `headroom → gateway(:3460) → routatic` (PROVIDER) y fallback omniroute.
+/// Cada endpoint se sondea con un **GET barato** (`/health`, `/readyz`,
+/// `/v1/models`): cero generaciones de pago. La v1 hacía POST con
+/// max_tokens=1 que la mask convertía en una generación completa (~308
+/// tokens y ~44 s por ping); con el statusline sondeando cada refresco eso
+/// saturaba opencode-go y Claude Code moría al segundo mensaje con
+/// "all models failed". El gateway además cortocircuita los probes, pero
+/// aquí ni siquiera llegan: GET y listo.
 pub fn check_network() -> Vec<NetworkStatus> {
-    // Infra real verificada (auditoría 14 §3). Orden = cadena canónica.
+    // Infra real verificada. Orden = cadena canónica.
     let endpoints = [
-        ("headroom (compresión)", "http://127.0.0.1:8788"),
-        ("cc-model-mask (enmascara)", "http://127.0.0.1:3460"),
-        ("routatic (PROVIDER)", "http://127.0.0.1:3456"),
-        ("omniroute (fallback)", "http://127.0.0.1:20128"),
+        ("routa-gateway (mascara+entropia)", "http://127.0.0.1:3460", "/health"),
+        ("headroom (compresion)", "http://127.0.0.1:8788", "/readyz"),
+        ("routatic (PROVIDER)", "http://127.0.0.1:3456", "/v1/models"),
+        ("omniroute (fallback)", "http://127.0.0.1:20128", "/"),
     ];
-    // POST mínimo: body válido pero max_tokens=1 → barato y rápido. HTTP
-    // 200/4xx = servicio vivo; 000 = caído o sin respuesta.
-    let probe_body = r#"{"model":"claude-opus-4-6[1m]","max_tokens":1,"messages":[{"role":"user","content":"ping"}]}"#;
 
     endpoints
         .iter()
-        .map(|(name, url)| {
+        .map(|(name, url, ruta)| {
             let cmd = format!(
-                "curl -s -m 5 -o /dev/null -w \"%{{http_code}}\" -X POST {url}/v1/messages \
-                 -H \"content-type: application/json\" \
-                 -H \"Authorization: Bearer {}\" \
-                 -d '{probe_body}'",
-                std::env::var("ANTHROPIC_AUTH_TOKEN").unwrap_or_default(),
+                "curl -s -m 5 -o /dev/null -w \"%{{http_code}}\" {url}{ruta}"
             );
             let outcome = alx_gate::run_command(&cmd, 8000);
             NetworkStatus {
@@ -790,16 +788,16 @@ pub fn render_quality() -> String {
 /// Genera un script Python con el modelo para la tarea (una llamada).
 fn generate_script(task: &str) -> String {
     // ALX_BENCH_MODEL / ALX_BENCH_URL permiten correr el benchmark con otro
-    // modelo u otro hop de la cadena. Ruta a CLAUDE real: cc-model-mask:3460
-    // (headroom:8788 da 502 para claude-opus; routatic:3456 siempre reescribe
-    // a deepseek). Verificado 2026-08-13.
+    // modelo u otro hop de la cadena. Ruta canónica: headroom:8788 →
+    // routa-gateway:3460 → routatic:3456. El gateway traduce cualquier alias
+    // claude-*/[1m] al modelo real activo en el config de routatic.
     let url = std::env::var("ALX_BENCH_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:8788".to_string());
     let model = std::env::var("ALX_BENCH_MODEL")
         .unwrap_or_else(|_| "deepseek-v4-flash".to_string());
     let claude_path = url.contains("3460") || model.contains("claude") || model.contains("opus");
     let (max_tokens, thinking) = if claude_path {
-        // Claude razona: sin forzar thinking (la mask lo añade) y con presupuesto.
+        // Los modelos razonan: sin forzar thinking y con presupuesto.
         (3000, None)
     } else {
         (400, Some(serde_json::json!({"type": "disabled"})))
@@ -2272,9 +2270,24 @@ pub fn spawn_agent(name: &str, task: &str) -> String {
 
 /// Informe legible del estado de red.
 pub fn render_network(statuses: &[NetworkStatus]) -> String {
-    let mut out = String::from(
-        "## Red real (governor)\nCadena: headroom:8788 → mask:3460 → routatic:3456 (PROVIDER) → deepseek-v4-flash\nFallback: omniroute:20128 (solo si routatic cae)\n",
-    );
+    let modelo_real = std::fs::read_to_string(format!(
+        "{}/.config/routatic-proxy/config.json",
+        std::env::var("HOME").unwrap_or_default()
+    ))
+    .ok()
+    .and_then(|raw| {
+        serde_json::from_str::<serde_json::Value>(&raw)
+            .ok()
+            .and_then(|v| {
+                v["models"]["default"]["model_id"]
+                    .as_str()
+                    .map(str::to_string)
+            })
+    })
+    .unwrap_or_else(|| "?".to_string());
+    let mut out = String::from(&format!(
+        "## Red real (governor)\nCadena: headroom:8788 → routa-gateway:3460 → routatic:3456 (PROVIDER) → {modelo_real}\nFallback: omniroute:20128 (solo si routatic cae)\n"
+    ));
     for s in statuses {
         let mark = if s.ready { "✓" } else { "✗" };
         out.push_str(&format!(

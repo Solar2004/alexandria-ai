@@ -1,4 +1,14 @@
 #!/bin/bash
+# oc-go-cc-wrapper — arranca routatic-proxy con la clave ACTIVA de opencode-go.
+#
+# v2 (routa): la clave ya NO rota en cada restart. Antes el wrapper incrementaba
+# el indice en cada arranque, asi que un simple `systemctl restart` podia caer
+# en una clave sin creditos y tumbar Claude Code con "all models failed" hasta
+# el siguiente reinicio casual. Ahora la clave es "sticky": se usa la que dice
+# ~/.config/oc-go-cc/.key_index, y la rotacion es manual y consciente con
+#   routa key next
+# (avanza el indice y reinicia este servicio).
+
 set -e
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/oc-go-cc"
@@ -8,30 +18,31 @@ KEYS_FILE="$CONFIG_DIR/api_keys"
 
 if [ ! -f "$KEYS_FILE" ]; then
   cat > "$KEYS_FILE" << 'KEYS'
-# oc-go-cc API keys — one per line, cycled on restart
-OC_GO_CC_API_KEY_1=sk-REPLACE_ME_GO1
-OC_GO_CC_API_KEY_2=sk-REPLACE_ME_GO2
+# oc-go-cc API keys — una por linea (OC_GO_CC_API_KEY_N=sk-...).
+# Lineas comentadas (#) o vacias se ignoran. Rotar: `routa key next`.
 KEYS
 fi
 
+# claves validas = lineas OC_GO_CC_API_KEY_N=... no comentadas
+mapfile -t KEYS < <(grep -E '^OC_GO_CC_API_KEY_[0-9]+=' "$KEYS_FILE" || true)
+TOTAL=${#KEYS[@]}
+[ "$TOTAL" -gt 0 ] || { echo "oc-go-cc-wrapper: sin claves en $KEYS_FILE" >&2; exit 1; }
+
 INDEX=1
 if [ -f "$STATE_FILE" ]; then
-  INDEX=$(cat "$STATE_FILE")
+  INDEX=$(cat "$STATE_FILE" 2>/dev/null || echo 1)
+fi
+# saneo: fuera de rango -> 1
+if ! [[ "$INDEX" =~ ^[0-9]+$ ]] || [ "$INDEX" -lt 1 ] || [ "$INDEX" -gt "$TOTAL" ]; then
+  INDEX=1
 fi
 
-TOTAL=$(grep -c '^OC_GO_CC_API_KEY_' "$KEYS_FILE" || echo 1)
-
-NEXT=$((INDEX + 1))
-if [ "$NEXT" -gt "$TOTAL" ]; then
-  NEXT=1
-fi
-echo "$NEXT" > "$STATE_FILE"
-
-KEY_VAR="OC_GO_CC_API_KEY_$INDEX"
-API_KEY=$(grep "^$KEY_VAR=" "$KEYS_FILE" | head -1 | cut -d= -f2-)
+KEY_VAR="${KEYS[$((INDEX-1))]%%=*}"
+API_KEY="${KEYS[$((INDEX-1))]#*=}"
 
 export OC_GO_CC_API_KEY="$API_KEY"
 export ROUTATIC_PROXY_API_KEY="$API_KEY"
 echo "OC_GO_CC_API_KEY=$API_KEY" > "$ENV_FILE"
+echo "oc-go-cc-wrapper: usando clave #$INDEX de $TOTAL ($KEY_VAR)" >&2
 
 exec "$HOME/.local/bin/routatic-proxy" serve

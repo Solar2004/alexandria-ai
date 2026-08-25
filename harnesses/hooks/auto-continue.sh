@@ -4,7 +4,7 @@
 # Tope duro de ciclos consecutivos para no loopear infinito.
 # Off: touch harnesses/iterate/.auto_off   |   Reset: rm harnesses/iterate/.auto_cycles
 
-DIR="/home/artorias/Projectos/AlexanderTheGreat/proyecto-final/harnesses/iterate"
+DIR="/home/artorias/Projectos/AlexanderTheGreat/harnesses/iterate"
 STATE="$DIR/state.toml"
 COUNT="$DIR/.auto_cycles"
 MSG="Continuemos con el proximo ciclo de iteracion"

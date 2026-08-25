@@ -10,7 +10,8 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    agents_run_parallel, agents_show, check_network, feature_run, iterate_next, log_command,
+    agents_run_parallel, agents_show, check_network, feature_run, harness_list, harness_new,
+    harness_use, iterate_next, log_command,
     load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_bench_all, render_benchmark,
     render_bench_bigcode, render_bench_codecontests, render_bench_humaneval, render_build,
     render_cost_report, render_doctor, render_quality,
@@ -67,6 +68,30 @@ enum Command {
     },
     /// Ciclo watcher de harnesses evolutivos con persistencia.
     Evolve,
+    /// Crea un harness (paso CREAR del ciclo R20-R23; la IA lo usa en pleno trabajo).
+    HarnessNew {
+        /// Nombre corto (sin prefijo hx-): "sin-todos-pendientes".
+        name: String,
+        /// Objetivo verificable. Temporal: su cumplimiento autodestruye el harness.
+        #[arg(long)]
+        objective: String,
+        /// Documentación mínima obligatoria (>=20 chars): qué, por qué, cuándo.
+        #[arg(long)]
+        doc: String,
+        /// temporal | permanent (default temporal).
+        #[arg(long, default_value = "temporal")]
+        kind: String,
+        /// manual | phase:<Fase> | event:<Evento> (default manual).
+        #[arg(long, default_value = "manual")]
+        trigger: String,
+    },
+    /// Lista los harnesses del registry (estado, usos, trigger).
+    HarnessList,
+    /// Registra un uso del harness (alimenta la decisión promover/retirar).
+    HarnessUse {
+        /// Id del harness (hx-<slug>) o nombre.
+        id: String,
+    },
     /// Doctor del ecosistema ALEXANDRIA (crates, hooks, harnesses).
     Doctor,
     /// Cost-report del governor desde el ledger persistido.
@@ -195,6 +220,15 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Evolve) => {
             println!("{}", run_evolve_cycle());
+        }
+        Some(Command::HarnessNew { name, objective, doc, kind, trigger }) => {
+            println!("{}", harness_new(&name, &objective, &doc, &kind, &trigger));
+        }
+        Some(Command::HarnessList) => {
+            println!("{}", harness_list());
+        }
+        Some(Command::HarnessUse { id }) => {
+            println!("{}", harness_use(&id));
         }
         Some(Command::Doctor) => {
             println!("{}", render_doctor());

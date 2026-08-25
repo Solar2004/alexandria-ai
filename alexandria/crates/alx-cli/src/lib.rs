@@ -1430,6 +1430,104 @@ pub fn install_hooks_src(home: &str) -> (usize, bool) {
     (copiados, npm)
 }
 
+/// Directorio del registry de harnesses (harnesses/ del repo).
+fn harness_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../harnesses")
+}
+
+/// Paso CREAR del ciclo evolutivo (plan 16 §2): la IA formaliza una regla
+/// aprendida en pleno trabajo como harness persistente. Regla doc-min
+/// obligatoria (>=20 chars) — nada se escapa sin documentación.
+pub fn harness_new(name: &str, objective: &str, doc: &str, kind: &str, trigger: &str) -> String {
+    use alx_evolve::{HarnessCandidate, HarnessKind, Trigger};
+    let slug: String = name
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' { c.to_ascii_lowercase() } else { '-' })
+        .collect();
+    let kind_parsed = match kind.to_ascii_lowercase().as_str() {
+        "permanent" | "permanente" => HarnessKind::Permanent,
+        _ => HarnessKind::Temporal,
+    };
+    let trigger_parsed = if let Some(fase) = trigger.strip_prefix("phase:") {
+        Trigger::Phase(fase.to_string())
+    } else if let Some(ev) = trigger.strip_prefix("event:") {
+        Trigger::Event(ev.to_string())
+    } else {
+        Trigger::Manual
+    };
+    let dir = harness_dir();
+    let mut reg = alx_evolve::HarnessRegistry::load_from(&dir);
+    // seed igual que el watcher para no partir de vacío
+    if reg.all().is_empty() {
+        let _ = run_evolve_cycle();
+        reg = alx_evolve::HarnessRegistry::load_from(&dir);
+    }
+    let cand = HarnessCandidate {
+        suggested_name: slug.clone(),
+        kind: kind_parsed,
+        trigger: trigger_parsed,
+        objective: objective.to_string(),
+        doc: doc.to_string(),
+    };
+    match reg.add_candidate(cand, now_ms()) {
+        Some(id) => match reg.save_to(&dir) {
+            Ok(()) => format!(
+                "✓ harness {id} creado (kind={kind}, trigger={trigger})\n  objetivo: {objective}\nVigilancia: `alx evolve` revisa usos y objetivos; `alx harness-use {id}` tras aplicarlo."
+            ),
+            Err(e) => format!("✗ no pude persistir el registry: {e}"),
+        },
+        None => format!(
+            "✗ no se creó el harness (¿ya existe 'hx-{slug}'? ¿doc >=20 chars?)"
+        ),
+    }
+}
+
+/// Lista los harnesses vivos con estado/usos — la vista del paso VIGILAR.
+pub fn harness_list() -> String {
+    let dir = harness_dir();
+    let reg = alx_evolve::HarnessRegistry::load_from(&dir);
+    let mut out = String::from("## Harnesses (registry evolutivo)\n");
+    out.push_str(&format!("{:<24} {:<10} {:<8} {:<12} {:<6} objetivo\n", "id", "kind", "state", "trigger", "uses"));
+    for h in reg.all() {
+        let trigger = match &h.trigger {
+            alx_evolve::Trigger::Manual => "manual".to_string(),
+            alx_evolve::Trigger::Phase(p) => format!("phase:{p}"),
+            alx_evolve::Trigger::Event(e) => format!("event:{e}"),
+        };
+        out.push_str(&format!(
+            "{:<24} {:<10} {:<8} {:<12} {:<6} {}\n",
+            h.id,
+            format!("{:?}", h.kind).to_lowercase(),
+            format!("{:?}", h.state).to_lowercase(),
+            trigger,
+            h.uses,
+            h.objective
+        ));
+    }
+    if reg.all().is_empty() {
+        out.push_str("(vacío; `alx harness-new` crea el primero)\n");
+    }
+    out
+}
+
+/// Paso APLICAR/APRENDER: registra un uso real del harness.
+pub fn harness_use(id: &str) -> String {
+    let dir = harness_dir();
+    let mut reg = alx_evolve::HarnessRegistry::load_from(&dir);
+    let key = if id.starts_with("hx-") { id.to_string() } else { format!("hx-{id}") };
+    match reg.by_id_mut(&key) {
+        Some(h) => {
+            h.record_use();
+            let usos = h.uses;
+            match reg.save_to(&dir) {
+                Ok(()) => format!("✓ {key}: uso registrado ({usos} total). A los 5 usos el watcher lo promueve a permanente."),
+                Err(e) => format!("✗ persistencia: {e}"),
+            }
+        }
+        None => format!("✗ harness '{key}' no encontrado (`alx harness-list`)"),
+    }
+}
+
 pub fn run_setup() -> String {
     let home = std::env::var("HOME").unwrap_or_default();
     let mut out = String::from("# alx setup — integración con Claude Code\n");

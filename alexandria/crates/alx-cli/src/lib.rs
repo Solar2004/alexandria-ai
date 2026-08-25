@@ -795,13 +795,14 @@ fn generate_script(task: &str) -> String {
         .unwrap_or_else(|_| "http://127.0.0.1:8788".to_string());
     let model = std::env::var("ALX_BENCH_MODEL")
         .unwrap_or_else(|_| "deepseek-v4-flash".to_string());
+    // Lección 2026-08-25: deepseek RAZONA aunque le pidas thinking disabled
+    // (llegan bloques thinking igualmente). Con presupuesto pequeño el
+    // razonamiento se come los tokens y el texto sale vacío -> 0% en ambos
+    // modos. Presupuesto grande SIEMPRE para código; y timeout de proceso >
+    // timeout de curl (antes run_command mataba curl a los 35 s).
     let claude_path = url.contains("3460") || model.contains("claude") || model.contains("opus");
-    let (max_tokens, thinking) = if claude_path {
-        // Los modelos razonan: sin forzar thinking y con presupuesto.
-        (3000, None)
-    } else {
-        (400, Some(serde_json::json!({"type": "disabled"})))
-    };
+    let _ = claude_path;
+    let max_tokens: u32 = 4000;
     let mut body = serde_json::json!({
         "model": model,
         "max_tokens": max_tokens,
@@ -810,19 +811,16 @@ fn generate_script(task: &str) -> String {
             "content": format!("{task}. Escribe SOLO el codigo Python, sin explicacion.")
         }]
     });
-    if let Some(t) = thinking {
-        body["thinking"] = t;
-    }
     let body = body.to_string();
     let body_path = std::env::temp_dir().join("alx-gen-script.json");
     if std::fs::write(&body_path, &body).is_err() {
         return String::new();
     }
     let cmd = format!(
-        "curl -s -m 60 {url}/v1/messages -H 'content-type: application/json' -d @{}",
+        "curl -s -m 170 {url}/v1/messages -H 'content-type: application/json' -d @{}",
         body_path.display()
     );
-    let out = alx_gate::run_command(&cmd, 35_000);
+    let out = alx_gate::run_command(&cmd, 190_000);
     if out.exit_code != 0 {
         return String::new();
     }

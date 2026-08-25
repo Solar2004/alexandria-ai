@@ -326,6 +326,70 @@ SERVICIOS = {
 }
 
 
+def cmd_auto(args):
+    """Prueba candidatos con una generacion minima real y activa el primero
+    que funcione. Cura el 'el modelo de turno esta caido arriba' sin buscarlo
+    a mano:  routa auto  [--candidates m1,m2,...]"""
+    por_defecto = ("deepseek-v4-flash,kimi-k2.7-code,glm-5,qwen3.8-max,"
+                   "minimax-m3,grok-4.5,gpt-5.6-luna,"
+                   "ox-alpha-free,muse-spark-1.2-contributor")
+    argv = args or []
+    lista = os.environ.get("ROUTA_AUTO_CANDIDATES", por_defecto)
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--candidates" and i + 1 < len(argv):
+            lista = argv[i + 1]
+            i += 2
+            continue
+        i += 1
+    candidatos = [c.strip() for c in lista.split(",") if c.strip()]
+    # el modelo activo va primero: si funciona, no se toca nada
+    actual = cargar_config().get("models", {}).get("default", {}).get("model_id")
+    if actual in candidatos:
+        candidatos.remove(actual)
+    candidatos.insert(0, actual)
+
+    key = clave_activa()
+    if not key:
+        die("sin clave opencode-go")
+    ganador = None
+    print(f"probando {len(candidatos)} candidatos (generacion real minima)...\n")
+    for m in candidatos:
+        cuerpo = json.dumps({"model": m, "max_tokens": 64,
+                             "messages": [{"role": "user", "content": "ping"}]}).encode()
+        t0 = time.time()
+        try:
+            code, raw = http(UPSTREAM_MESSAGES, method="POST", timeout=60,
+                             headers={"content-type": "application/json",
+                                      "x-api-key": key,
+                                      "anthropic-version": "2023-06-01"},
+                             data=cuerpo)
+            ms = int((time.time() - t0) * 1000)
+            resp = json.loads(raw)
+            ok_gen = bool(resp.get("content"))
+            if code == 200 and ok_gen:
+                print(f"\033[32m✓ {m:<34} HTTP 200 en {ms}ms\033[0m")
+                if ganador is None:
+                    ganador = m
+            else:
+                print(f"\033[33m! {m:<34} HTTP {code} sin contenido\033[0m")
+        except urllib.error.HTTPError as e:
+            detalle = e.read().decode("utf-8", "replace")[:60]
+            print(f"\033[31m✗ {m:<34} HTTP {e.code} {detalle}\033[0m")
+        except Exception as e:
+            print(f"\033[31m✗ {m:<34} red: {e}\033[0m")
+        if ganador:
+            break
+
+    if not ganador:
+        die("ningun candidato genera; revisa creditos/red (routa doctor)")
+    if ganador == actual:
+        print(f"\nel modelo activo ({actual}) funciona: nada que cambiar")
+        return
+    print(f"\nganador: \033[1m{ganador}\033[0m — activando...")
+    cmd_use([ganador])
+
+
 def cmd_restart(args):
     objetivo = args[0] if args else "all"
     if objetivo == "all":
@@ -401,6 +465,8 @@ def main():
         salir_status(cmd_status())
     elif cmd == "doctor":
         cmd_doctor()
+    elif cmd == "auto":
+        cmd_auto([r[0] for r in rest if r])
     elif cmd == "restart":
         cmd_restart([r[0] for r in rest if r])
     elif cmd == "key":

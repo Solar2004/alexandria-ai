@@ -62,6 +62,18 @@ QUEUE_TIMEOUT = float(os.environ.get("ROUTA_QUEUE_TIMEOUT", "120"))
 RETRIES = int(os.environ.get("ROUTA_RETRIES", "2"))
 MIN_MAX_TOKENS = 1024
 
+# Failover de modelos: si el modelo REAL activo falla (5xx/429 tras los
+# reintentos), el gateway prueba estos candidatos EN ORDEN antes de rendirse.
+# Asi un modelo caido arriba (muse 500, ox-alpha-free 500...) no tumba Claude
+# Code: el usuario sigue trabajando y `routa doctor` avisa del problema.
+# Vacio = sin failover.
+FALLBACK_MODELS = [
+    m.strip() for m in os.environ.get(
+        "ROUTA_FALLBACK_MODELS",
+        "deepseek-v4-flash,kimi-k2.7-code,glm-5,qwen3.8-max,minimax-m3",
+    ).split(",") if m.strip()
+]
+
 PROBE_MAX_TOKENS = 8
 PROBE_MAX_CHARS = 32
 
@@ -119,16 +131,23 @@ def map_request_model(name):
 
 
 def rewrite_model(obj):
-    """En respuestas: nombre real -> visible, recursivo (JSON y eventos SSE)."""
-    target = real_model()
-    if not target:
+    """En respuestas: nombre real -> visible, recursivo (JSON y eventos SSE).
+
+    Reescribe CUALQUIER nombre que sepamos que es "real" (modelo activo,
+    fallbacks, alias legacy): si el failover sirvio con un candidato, la
+    respuesta igualmente debe verse como el modelo visible [1m].
+    """
+    targets = {real_model()}
+    targets.update(FALLBACK_MODELS)
+    targets.discard(None)
+    if not targets:
         return
     stack = [obj]
     while stack:
         cur = stack.pop()
         if isinstance(cur, dict):
             v = cur.get("model")
-            if isinstance(v, str) and v == target:
+            if isinstance(v, str) and v in targets:
                 cur["model"] = VISIBLE
             stack.extend(cur.values())
         elif isinstance(cur, list):
@@ -155,7 +174,8 @@ class EntropyGovernor:
         self.stats = {
             "in_flight": 0, "queued_peak": 0, "queued_now": 0,
             "served": 0, "retries": 0, "rejected_429": 0,
-            "breaker_opens": 0, "last_error": "",
+            "breaker_opens": 0, "failovers": 0, "last_served_model": "",
+            "last_error": "",
         }
 
     # -- circuit breaker ----------------------------------------------------
@@ -326,7 +346,7 @@ class GatewayHandler(BaseHandler):
             self.responder_json(200 if vivo else 503, {
                 "service": "routa-gateway", "upstream": UPSTREAM,
                 "upstream_alive": vivo, "real_model": real_model(),
-                "visible_model": VISIBLE,
+                "visible_model": VISIBLE, "fallbacks": FALLBACK_MODELS,
                 "governor": dict(GOV.stats),
                 "concurrency_limit": MAX_CONCURRENCY,
                 "breaker_open": GOV.breaker_open(),
@@ -394,7 +414,10 @@ class GatewayHandler(BaseHandler):
                                      "(upstream fallando); reintenta en segundos"}})
             return
 
-        # 4) envio con cola + reintentos jitterizados (no-streaming)
+        # 4) envio con cola + reintentos jitterizados + FAILOVER de modelos.
+        #    Orden: modelo activo (RETRIES+1 intentos) -> cada candidato de
+        #    FALLBACK_MODELS (1 intento cada uno). Streaming: un solo intento,
+        #    sin failover (no se puede rebobinar un SSE empezado).
         try:
             GOV.slot()
         except EntropyGovernor.Full:
@@ -404,25 +427,46 @@ class GatewayHandler(BaseHandler):
             }, extra_headers={"Retry-After": "5"})
             return
         try:
+            activo = real_model()
+            if streaming:
+                candidatos = [(None, RETRIES)]
+            else:
+                resto = [m for m in FALLBACK_MODELS if m and m != activo]
+                candidatos = [(None, RETRIES)] + [(m, 0) for m in resto]
             ultimo = None
-            for intento in range(RETRIES + 1):
-                try:
-                    self._reenviar(body, streaming)
-                    GOV._record_ok()
-                    return
-                except urllib.error.HTTPError as e:
-                    ultimo = e
-                    recuperable = e.code >= 500 or e.code == 429
-                    if streaming or not recuperable or intento >= RETRIES:
-                        raise
-                    GOV.stats["retries"] += 1
-                    GOV.sleep_backoff(intento)
-                except (urllib.error.URLError, OSError) as e:
-                    ultimo = e
-                    if streaming or intento >= RETRIES:
-                        raise
-                    GOV.stats["retries"] += 1
-                    GOV.sleep_backoff(intento)
+            for candidato, reintentos in candidatos:
+                cuerpo_intento = body
+                if candidato:
+                    data_fc = dict(data) if isinstance(data, dict) else {}
+                    data_fc["model"] = candidato
+                    cuerpo_intento = json.dumps(data_fc).encode()
+                for intento in range(reintentos + 1):
+                    try:
+                        self._reenviar(cuerpo_intento, streaming)
+                        GOV._record_ok()
+                        return
+                    except urllib.error.HTTPError as e:
+                        ultimo = e
+                        recuperable = e.code >= 500 or e.code == 429
+                        if not recuperable:
+                            self.responder_error_upstream(e)
+                            return
+                        if intento < reintentos:
+                            GOV.stats["retries"] += 1
+                            GOV.sleep_backoff(intento)
+                        break  # agotado este candidato -> siguiente
+                    except (urllib.error.URLError, OSError) as e:
+                        ultimo = e
+                        if intento < reintentos:
+                            GOV.stats["retries"] += 1
+                            GOV.sleep_backoff(intento)
+                        break
+                else:
+                    continue
+                if candidato is None and len(candidatos) > 1:
+                    # el primario fallo: registrar el failover y bajar con ruido
+                    GOV.stats["failovers"] += 1
+                    GOV.sleep_backoff(0)
             raise ultimo if ultimo else RuntimeError("sin respuesta")
         except Exception as e:
             GOV._record_fail(str(e))
@@ -451,6 +495,10 @@ class GatewayHandler(BaseHandler):
                     if line.startswith("data: ") and line != "data: [DONE]":
                         try:
                             ev = json.loads(line[6:])
+                            if ev.get("type") == "message_start":
+                                GOV.stats["last_served_model"] = \
+                                    ev.get("message", {}).get("model", "") or \
+                                    GOV.stats["last_served_model"]
                             rewrite_model(ev)
                             line = "data: " + json.dumps(ev)
                         except Exception:
@@ -464,6 +512,8 @@ class GatewayHandler(BaseHandler):
                 raw = up.read()
                 try:
                     obj = json.loads(raw)
+                    if isinstance(obj.get("model"), str):
+                        GOV.stats["last_served_model"] = obj["model"]
                     rewrite_model(obj)
                     raw = json.dumps(obj).encode()
                 except Exception:

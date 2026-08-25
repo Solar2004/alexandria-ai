@@ -20,6 +20,11 @@
 - **TUI**: `alx tui` = dashboard ratatui vivo (red+gobernador+harnesses+bucle).
 - Rutas muertas proyecto-final/ arregladas (night-run, bench-all, auto-continue).
 - ccmodel del statusline lee el config de routatic (ya no "modelo?").
+- **Registry de agentes conectado**: agents_show/render_agents leían FUERA
+  del repo ('../../../../'): registry vacío siempre. Ruta corregida + búsqueda
+  por slug (421 agentes reales ahora accesibles con `alx agents-show <nombre>`).
+- **alx spawn verificado en vivo**: agente real contra la cadena responde.
+- Informe nocturno incluye salud de la cadena (routa status + doctor).
 - 212 tests OK · clippy 0 · tsc hooks 0 errores.
 
 ## Ciclo 8 — routa: cadena v2 sin muse-stack + gobernador de entropía (2026-08-25)

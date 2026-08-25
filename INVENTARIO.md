@@ -8,14 +8,14 @@
 ## 1. Stack de modelos (cadena de ejecución)
 
 ```
-cc / claude → atg → headroom :8788 → cc-model-mask :3460 → routatic :3456 → opencode-go → deepseek-v4-flash (1M real)
+cc / claude → atg → headroom :8788 → routa-gateway :3460 → routatic :3456 → opencode-go → modelo real del config (`routa show`; 1M visible)
 ```
 
 | Capa | Puerto/Servicio | Función |
 |---|---|---|
 | `atg` (wrapper) | — | auto_init, tema sol/luna, re-brand ☀, env 1M |
 | headroom | :8788 | wrap de sesión (compresión, headroom) |
-| cc-model-mask | :3460 | disfraza el nombre: CC ve `claude-opus-4-6[1m]` → 1M window; upstream recibe deepseek |
+| routa-gateway | :3460 (+:3461 OpenAI) | máscara [1m] + suelo max_tokens + probes cortocircuitados + gobernador de entropía + failover de modelos; sustituye a cc-model-mask y cc-openai-bridge |
 | routatic-proxy | :3456 | routing por escenario, fallbacks, rota claves k1/k2, visión mimo-v2.5 |
 | cc-openai-bridge | :3461 | OpenAI/Responses API → Anthropic (para code-graph-rag Cypher gen) |
 | omniroute | :20128 | fallback free tiers (`cc --free`) |
@@ -29,7 +29,7 @@ cc / claude → atg → headroom :8788 → cc-model-mask :3460 → routatic :345
 |---|---|---|
 | headroom.service | :8788 | enabled |
 | oc-go-cc.service | :3456 | enabled (rota k1/k2) |
-| cc-model-mask.service | :3460 | enabled |
+| routa-gateway.service | :3460/:3461 | enabled |
 | cc-openai-bridge.service | :3461 | enabled |
 | omniroute.service | :20128 | enabled |
 | cloudcli.service | :3002 | enabled (control remoto, cc.centaury.net) |
@@ -76,7 +76,7 @@ caveman · claude-plugins-official · ecc · ponytail · superpowers-marketplace
 
 ## 9. Herramientas propias (`~/.local/bin` + repo scripts/)
 
-ccmodel · cc-model-mask.py · oc-go-cc-wrapper · hermes-perplexity-mcp · cc-openai-bridge.py · night-run.sh · build-agent-index.py · patch-logo.sh · backup.sh · install.sh · statusline ccstatusline (☀/☾, powerline)
+ccmodel · routa (CLI de modelos) · routa-gateway.py · oc-go-cc-wrapper v2 (clave sticky) · hermes-perplexity-mcp · night-run.sh · build-agent-index.py · patch-logo.sh · backup.sh · install.sh · statusline ccstatusline (☀/☾, powerline)
 
 ## 10. Memoria y orquestación
 

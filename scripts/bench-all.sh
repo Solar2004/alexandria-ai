@@ -4,8 +4,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WS="$REPO_ROOT/proyecto-final/alexandria"
-BENCH="$REPO_ROOT/proyecto-final/harnesses/bench"
+WS="$REPO_ROOT/alexandria"
+BENCH="$REPO_ROOT/harnesses/bench"
 BIN="$WS/target/debug/alx"
 MAX="${ALX_BENCH_MAX:-0}"   # 0 = todos (por familia)
 

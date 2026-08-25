@@ -2,6 +2,26 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## Ciclo 9 — auditoría autónoma: sistemas desconectados reparados (2026-08-25, sesión continua)
+
+- **Failover de modelos**: si el modelo activo 500s arriba (pasó con muse y con
+  ox-alpha-free), el gateway prueba candidatos (`ROUTA_FALLBACK_MODELS`) y
+  routatic usa sus fallbacks; `routa auto` encuentra un modelo vivo y lo activa.
+  Telemetría: failovers/último_modelo en `/stats`.
+- **Sistema de skills REPARADO**: lib/ y providers/ nunca existieron — 3 hooks
+  registrados morían en silencio. Reconstruidos: clasificación IA real vía la
+  cadena local (verificado: "refactor+migración" → safe-refactor + migration),
+  embeddings offline por hashing, vector-store sqlite, degradación elegante.
+- **Alexandria se instala sus hooks**: harnesses/hooks es la fuente canónica
+  (con lib/providers) y `alx setup` sincroniza + npm install automático.
+- **Auto-mejora completa (R20-R23)**: faltaba el paso CREAR → nuevos comandos
+  `alx harness-new/harness-list/harness-use`; SessionStart cicla `alx evolve`
+  automáticamente cada sesión.
+- **TUI**: `alx tui` = dashboard ratatui vivo (red+gobernador+harnesses+bucle).
+- Rutas muertas proyecto-final/ arregladas (night-run, bench-all, auto-continue).
+- ccmodel del statusline lee el config de routatic (ya no "modelo?").
+- 212 tests OK · clippy 0 · tsc hooks 0 errores.
+
 ## Ciclo 8 — routa: cadena v2 sin muse-stack + gobernador de entropía (2026-08-25)
 
 - **Cadena nueva**: `CC → headroom :8788 → routa-gateway :3460 → routatic :3456 → opencode-go`.

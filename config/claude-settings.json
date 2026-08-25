@@ -84,6 +84,11 @@
             "type": "command",
             "command": "/home/artorias/.local/bin/alx status",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/.local/bin/alx evolve",
+            "timeout": 10
           }
         ]
       }

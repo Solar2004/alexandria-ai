@@ -144,3 +144,31 @@ El harness evolutivo también se mejora a sí mismo:
 - **Doc-min es compuerta**: un harness sin `doc` no se registra (gate lo rechaza). "Nada se escapa."
 - **El watcher evita la basura**: sin autodestrucción, los harnesses temporales se acumulan como skills muertas.
 - **Self-evolución real**: el sistema que se construye a sí mismo, documentándose y podándose solo.
+
+## 12. Comandos del ciclo (implementados, v0.2.0+)
+
+El ciclo completo es ejecutable desde cualquier sesión de la IA:
+
+```bash
+# CREAR — formalizar un aprendizaje en pleno trabajo (doc-min >= 20 chars):
+alx harness-new sin-hex-literal \
+    --objective "cero colores hardcodeados en UI" \
+    --doc "Detectado al estilar la tarjeta X: hex literales rompen el tema luna." \
+    --kind temporal --trigger phase:Build
+
+# APLICAR/APRENDER — tras verificar que el harness se aplicó con éxito:
+alx harness-use sin-hex-literal
+
+# VIGILAR — listar estado y usos; y ciclar el watcher:
+alx harness-list
+alx evolve
+```
+
+Reglas operativas:
+- El watcher corre SOLO en cada SessionStart (`alx evolve` está registrado como
+  hook) y tras `alx night`. La IA NO necesita acordarse de ciclarlo a mano.
+- Temporal + objetivo cumplido → el watcher lo retira (paso 6a). 5 usos →
+  promoción a permanente (paso 6b).
+- Registry en disco: `harnesses/active/harnesses.jsonl` (JSONL, tolerante).
+- `alx tui` muestra el registry vivo junto a red y gobernador: la auto-mejora
+  es observable, no una caja negra.

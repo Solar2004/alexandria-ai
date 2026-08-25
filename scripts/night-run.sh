@@ -22,3 +22,18 @@ REPORT="/home/artorias/Projectos/AlexanderTheGreat/plan/night-report.md"
 } > "${REPORT}"
 
 echo "Informe nocturno: ${REPORT}"
+
+# --- Salud de la cadena (routa) ---
+# Los modelos upstream caen sin avisar (muse 500, ox-alpha-free 500...).
+# El informe nocturno debe revelarlo para que por la mañana sea obvio.
+{
+    echo
+    echo "--- Salud de la cadena (routa) ---"
+    if command -v routa >/dev/null 2>&1; then
+        routa status || true
+        echo
+        routa doctor || true
+    else
+        echo "routa no disponible en PATH"
+    fi
+} >> "${REPORT}"

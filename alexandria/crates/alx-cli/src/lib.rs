@@ -1366,6 +1366,70 @@ pub fn run_update() -> String {
 }
 
 /// `alx setup` — configura e verifica TODA la integración con Claude Code:
+/// Instala el sistema de hooks Node desde la fuente canónica
+/// `~/Projectos/AlexanderTheGreat/harnesses/hooks` hacia
+/// `<proyecto>/.claude/hooks`. Copia recursiva salvo node_modules/state/data.
+/// Si faltan node_modules, lanza `npm install --silent` (una vez).
+/// Devuelve (ficheros_copiados, npm_ejecutado).
+pub fn install_hooks_src(home: &str) -> (usize, bool) {
+    use std::path::{Path, PathBuf};
+    let src_root = PathBuf::from(format!("{home}/Projectos/AlexanderTheGreat/harnesses/hooks"));
+    let dst_root = PathBuf::from(format!("{home}/Projectos/AlexanderTheGreat/.claude/hooks"));
+    if !src_root.is_dir() {
+        return (0, false);
+    }
+    let skip = |p: &Path| {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| matches!(n, "node_modules" | "state" | "data" | "package-lock.json"))
+    };
+    let mut copiados = 0usize;
+    fn walk(src: &Path, dst: &Path, skip: &dyn Fn(&Path) -> bool, n: &mut usize) {
+        if let Ok(entries) = std::fs::read_dir(src) {
+            for e in entries.flatten() {
+                let sp = e.path();
+                if skip(&sp) {
+                    continue;
+                }
+                let dp = dst.join(e.file_name());
+                if sp.is_dir() {
+                    let _ = std::fs::create_dir_all(&dp);
+                    walk(&sp, &dp, skip, n);
+                } else {
+                    // copia solo si cambia (mtime+size) para no tocar mtime del hook sin motivo
+                    let necesita = match (std::fs::metadata(&dp), std::fs::metadata(&sp)) {
+                        (Ok(d), Ok(s)) => {
+                            d.len() != s.len()
+                                || d.modified().ok() != s.modified().ok()
+                        }
+                        _ => true,
+                    };
+                    if necesita && std::fs::copy(&sp, &dp).is_ok() {
+                        *n += 1;
+                    } else if dp.exists() {
+                        // ya sincronizado: cuenta como instalado la primera vez
+                    }
+                }
+            }
+        }
+    }
+    walk(&src_root, &dst_root, &skip, &mut copiados);
+
+    let mut npm = false;
+    let tiene_deps = dst_root.join("package.json").exists();
+    let falta_node_modules = !dst_root.join("node_modules").exists();
+    if copiados > 0 && tiene_deps && falta_node_modules {
+        let cmd = "npm install --silent --no-audit --no-fund";
+        let _ = alx_gate::run_command(&format!(
+            "cd {} && {}",
+            dst_root.display(),
+            cmd
+        ), 300_000);
+        npm = true;
+    }
+    (copiados, npm)
+}
+
 pub fn run_setup() -> String {
     let home = std::env::var("HOME").unwrap_or_default();
     let mut out = String::from("# alx setup — integración con Claude Code\n");
@@ -1431,6 +1495,20 @@ pub fn run_setup() -> String {
     let hooks_path = format!("{home}/Projectos/AlexanderTheGreat/.claude/hooks");
     let iterate_ok = std::path::Path::new(&hooks_path).join("auto-continue.sh").exists();
     out.push_str(&format!("hook iterate/auto-continue: {}\n", ok(iterate_ok)));
+
+    // 5b. Instalación del sistema de hooks desde la FUENTE CANÓNICA
+    //     (harnesses/hooks → .claude/hooks). Sin esto, un .claude/
+    //     regenerado a mano quedaba cojo: lib/ y providers/ nunca existieron
+    //     y 3 hooks morían con ERR_MODULE_NOT_FOUND en silencio.
+    let (copiados, npm) = install_hooks_src(&home);
+    if copiados > 0 {
+        out.push_str(&format!(
+            "hooks completos instalados (con lib/providers): {copiados} ficheros{}\n",
+            if npm { " + npm install" } else { "" }
+        ));
+    } else {
+        out.push_str("hooks completos: ✗ fuente no encontrada\n");
+    }
 
     // 6. Dependencias core (auto-habilitar) desde config/setup-deps.json.
     let deps_path = format!("{home}/Projectos/AlexanderTheGreat/config/setup-deps.json");

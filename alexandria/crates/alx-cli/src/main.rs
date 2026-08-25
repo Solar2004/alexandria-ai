@@ -246,6 +246,16 @@ fn run(cli: Cli) -> ExitCode {
             println!("{}", spawn_agent(&name, &task));
         }
         Some(Command::Tui) => {
+            // Dashboard ratatui vivo (alx-tui); fallback ANSI si no hay TTY.
+            if std::io::IsTerminal::is_terminal(&std::io::stdout()) {
+                return match alx_tui::main_tui() {
+                    Ok(()) => ExitCode::SUCCESS,
+                    Err(e) => {
+                        eprintln!("tui: {e}");
+                        ExitCode::from(1)
+                    }
+                };
+            }
             println!("{}", render_tui());
         }
         Some(Command::Report) => {

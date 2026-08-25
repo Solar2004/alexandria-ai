@@ -11,6 +11,7 @@ path = "src/main.rs"
 [dependencies]
 alx-core = { path = "../alx-core" }
 alx-lib = { path = "../alx-lib" }
+alx-tui = { path = "../alx-tui" }
 alx-task = { path = "../alx-task" }
 alx-harness = { path = "../alx-harness" }
 alx-gate = { path = "../alx-gate" }

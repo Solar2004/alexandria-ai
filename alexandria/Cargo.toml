@@ -17,6 +17,7 @@ members = [
   "crates/alx-cli",
   "crates/alx-evolve",
   "crates/alx-lib",
+  "crates/alx-tui",
 ]
 
 [workspace.package]

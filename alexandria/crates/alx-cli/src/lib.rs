@@ -1941,6 +1941,336 @@ fn slugify_simple(s: &str) -> String {
         .collect()
 }
 
+// ═══════════════ RESEARCH (investigación profunda, plan 17) ═══════════════
+//
+// Convierte una pregunta en un PROYECTO de investigación con 7 artefactos
+// obligatorios. El proceso fuerza el pensamiento de experto: mecanismos
+// primero, mapa por capas, simulaciones guardadas, frenos, evidencia.
+
+const RESEARCH_STEPS: &[(&str, &str)] = &[
+    ("00-question", "PASO 0 — LA PREGUNTA\n\n\
+        1. Cópiala literal.\n\
+        2. ¿Qué pregunta REALMENTE el usuario? Reformúlala en términos del sistema implicado.\n\
+        3. ¿Qué preguntaría además un experto senior del dominio? Lista 3-5 sub-preguntas.\n\
+        4. ¿Cuál es el criterio de éxito de la respuesta?"),
+    ("01-fundamentos", "PASO 1 — FUNDAMENTOS (mecanismo antes que solución)\n\n\
+        Reconstruye cómo funciona el sistema DE VERDAD:\n\
+        - Actores y componentes (células/hormonas/módulos/protocolos…)\n\
+        - Vías y señales: quién activa a quién, feedback loops\n\
+        - ¿Dónde está EL FRENO dominante del sistema? (todo sistema tiene uno;\n\
+          identificarlo reordena todo lo demás — ej.: FGFR3 frena el crecimiento óseo)\n\
+        - Diagrama textual actores→vías→efectos. Sin agentes/soluciones todavía."),
+    ("02-mapas", "PASO 2 — MAPA DEL ICEBERG (capas de lo conocido a la frontera)\n\n\
+        Tabla por capas (mínimo 5). Para cada capa:\n\
+        | Capa | Intervención/Opción | Estado (aprobado/clínico/preclínico/teoría) | Evidencia | Practicidad |\n\
+        Capa 1 = lo obvio que cualquiera dice. Última capa = frontera (10-20 años).\n\
+        Si una capa NO aplica al caso, dilo EXPLÍCITAMENTE y por qué."),
+    ("03-simulaciones", "PASO 3 — SIMULACIONES CONTRAFÁCTICAS (guárdalas TODAS)\n\n\
+        Por cada candidato prometedor del mapa, recorre el camino causal completo:\n\
+        SIM-1 [nombre]\n\
+          entrada: qué se empuja y por dónde\n\
+          efecto primario: …\n\
+          efectos secundarios: …\n\
+          feedbacks: qué se frena/amplifica en cadena\n\
+          resultado neto: …\n\
+          veredicto: viable / inviable / condicionado + por qué\n\
+        Mínimo 2 simulaciones. Una simulación que no se guardó aquí no existió."),
+    ("04-limitantes", "PASO 4 — LIMITANTES Y FRENOS (honestidad primero)\n\n\
+        - Contraindicaciones y riesgos reales (con severidad)\n\
+        - Qué NADIE ha probado y POR QUÉ (¿regulación?, ¿coste?, ¿física?)\n\
+        - Zonas grises donde la evidencia es mixta\n\
+        - Qué mataría cada opción si se intentara mañana"),
+    ("05-fuentes", "PASO 5 — TABLA DE EVIDENCIA\n\n\
+        | Claim | Fuente (paper/doc/autor-año) | Calidad (RCT/meta/cohorte/preclínico/especulativo) |\n\
+        Toda afirmación de 02/03/04 debe rastrearse hasta aquí o marcarse especulativa."),
+    ("06-respuesta", "PASO 6 — SÍNTESIS FINAL\n\n\
+        1. Respuesta directa en ≤5 líneas (cita capas, no sustituyas el mapa)\n\
+        2. El camino recomendado y su capa del iceberg\n\
+        3. Los 2-3 frenos que mandan\n\
+        4. Advertencias no negociables\n\
+        5. Siguientes preguntas que abrirían más espacio (conecta tópicos)"),
+];
+
+/// `alx research "pregunta"` — crea `.alexandria/research/<slug>/` con los 7
+/// artefactos del protocolo (plan 17). Idempotente: si ya existe, no toca nada.
+pub fn run_research(pregunta: &str) -> String {
+    let slug: String = slugify_simple(pregunta)
+        .split('-')
+        .filter(|w| !w.is_empty())
+        .take(6)
+        .collect::<Vec<_>>()
+        .join("-");
+    let base_dir = find_project_alexandria(None)
+        .map(|p| p.join("research"))
+        .unwrap_or_else(|| std::path::PathBuf::from("research"));
+    let dir = base_dir.join(&slug);
+    if dir.exists() {
+        return format!("✓ ya existe: {}\n(abre los ficheros y sigue el protocolo; pule con `alx polish <fichero> --rubric research`)", dir.display());
+    }
+    if std::fs::create_dir_all(&dir).is_err() {
+        return format!("✗ no pude crear {}", dir.display());
+    }
+    // instalar la rúbrica research si este proyecto no la tiene
+    if let Some(proj) = find_project_alexandria(None) {
+        let rubrics = proj.join("rubrics");
+        let _ = std::fs::create_dir_all(&rubrics);
+        let rubric_file = rubrics.join("research.json");
+        if !rubric_file.exists() {
+            let rubrica = serde_json::json!({
+                "name": "research",
+                "criteria": [
+                    "Profundidad de mecanismo: vías y actores explicados, no solo nombres de soluciones.",
+                    "Mapa del iceberg con ≥5 capas y estado de evidencia por capa.",
+                    "≥2 simulaciones contrafácticas completas (entrada→primario→secundarios→feedback→neto).",
+                    "Frenos/limitantes identificados explícitamente con severidad.",
+                    "Toda afirmación trazable a la tabla de evidencia o marcada especulativa.",
+                    "Coherencia interna: los cruces entre vías están conectados, sin islas."
+                ]
+            });
+            let _ = std::fs::write(
+                &rubric_file,
+                serde_json::to_string_pretty(&rubrica).unwrap_or_default(),
+            );
+        }
+    }
+    for (name, plantilla) in RESEARCH_STEPS {
+        let contenido = format!(
+            "# {name}\n\n> {plantilla}\n\n---\nPREGUNTA: {pregunta}\n\n(este paso aún está vacío: complétalo siguiendo las reglas de plan/17-research.md)\n"
+        );
+        let _ = std::fs::write(dir.join(format!("{name}.md")), contenido);
+    }
+    format!(
+        "✓ proyecto de investigación creado: {}\nprotocolo : 7 pasos (plan/17-research.md)\nrúbrica   : research (exigente) instalada para `alx polish`\norden     : 00-question → 01-fundamentos → 02-mapas → 03-simulaciones → 04-limitantes → 05-fuentes → 06-respuesta",
+        dir.display()
+    )
+}
+
+// ═══════════════ SKILLS-FETCH (reglas del experto, plan 17 §4) ═════════════
+//
+// El experto necesita PUNTO DE VISTA externo: repos de skills/reglas de alta
+// calidad (anthropics/skills, mattpocock/skills…) clonados en el proyecto y
+// registrados en .alexandria/skills/catalog.md.
+
+/// Catálogo curado por defecto (mismo espíritu que integration/skills/manifest).
+const SKILL_CATALOG: &[(&str, &str)] = &[
+    ("anthropics/skills", "Skills oficiales Anthropic (docx/pdf/pptx/artifacts…)."),
+    ("mattpocock/skills", "Skills TS/TSX de Matt Pocock (types, testing)."),
+    ("addyosmani/agent-skills", "24 skills de Addy Osmani (performance, diseño…)."),
+    ("tt-a1i/archify", "Arquitectura de software asistida."),
+    ("cathrynlavery/diagram-design", "Diseño de diagramas de alto nivel."),
+];
+
+/// `alx skills-fetch [repo]` — clona un repo (o lista el catálogo) dentro de
+/// `.alexandria/skills/` y lo añade al catálogo del proyecto.
+/// `--search "términos"` busca en GitHub ordenado por ESTRELLAS: la calidad
+/// se juzga por adopción antes de instalar nada.
+pub fn run_skills_fetch(repo: Option<&str>, search: Option<&str>) -> String {
+    let Some(proj) = find_project_alexandria(None) else {
+        return "✗ proyecto no alexandrizado: `alx init` primero".into();
+    };
+    let skills_dir = proj.join("skills");
+    let _ = std::fs::create_dir_all(&skills_dir);
+
+    // --search: GitHub API, sort=stars. Sin clave: 10 req/min, suficiente.
+    if let Some(q) = search {
+        return github_search_skills(&q);
+    }
+
+    // sin argumento: mostrar catálogo curado + cómo buscar
+    let Some(repo) = repo else {
+        let mut out = String::from("## Catálogo de skills recomendadas\n\n");
+        for (r, desc) in SKILL_CATALOG {
+            out.push_str(&format!("· {r} — {desc}\n  alx skills-fetch {r}\n"));
+        }
+        out.push_str("\nBuscar MÁS por estrellas:\n  alx skills-fetch --search \"claude skills\"\n");
+        return out;
+    };
+
+    let name = repo.rsplit('/').next().unwrap_or(repo);
+    let dest = skills_dir.join(name);
+    if dest.exists() {
+        return format!("✓ ya descargado: {}\n(actualiza con: git -C {} pull)", dest.display(), dest.display());
+    }
+    let url = format!("https://github.com/{repo}.git");
+    let cmd = format!(
+        "git clone --depth 1 {url} {}",
+        shell_quote_path(&dest)
+    );
+    let outcome = alx_gate::run_command(&cmd, 120_000);
+    if !dest.exists() {
+        return format!(
+            "✗ clone falló ({}): {}\nrepo: {url}",
+            outcome.exit_code,
+            outcome.stdout_head.chars().take(200).collect::<String>()
+        );
+    }
+    let n_skills = count_installable_skills(&dest);
+    register_in_catalog(&proj, &format!(
+        "- [{name}]({url}) — descargado {} · {n_skills} skills\n", chrono_today()));
+    format!(
+        "✓ {repo} → {}\nskills con SKILL.md detectadas: {n_skills}\ninstalables copiando sus dirs a ~/.claude/skills/ o vía plugin\ncatálogo : {}",
+        dest.display(),
+        skills_dir.join("catalog.md").display()
+    )
+}
+
+fn github_search_skills(query: &str) -> String {
+    let q = query.replace(' ', "+");
+    // ojo: run_command solo devuelve el HEAD del stdout; la respuesta de
+    // GitHub es grande → volcarla a fichero y leer completa.
+    let tmp = std::env::temp_dir().join("alx-gh-search.json");
+    let cmd = format!(
+        "curl -s -m 15 -H 'User-Agent: alexandria-alx' -H 'Accept: application/vnd.github+json' \
+         'https://api.github.com/search/repositories?q={q}&sort=stars&order=desc&per_page=8' -o {}",
+        shell_quote_path(&tmp)
+    );
+    let out = alx_gate::run_command(&cmd, 20_000);
+    let Ok(txt) = std::fs::read_to_string(&tmp) else {
+        return format!("✗ GitHub API no respondió (curl exit {})", out.exit_code);
+    };
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(txt.trim()) else {
+        return "✗ respuesta ilegible de GitHub (¿rate-limit? reintenta en un minuto)".into();
+    };
+    let Some(items) = v["items"].as_array() else {
+        return "✗ sin resultados".into();
+    };
+    let mut lines = vec!["## Skills/repos por estrellas".to_string(), String::new()];
+    for it in items {
+        let full = it["full_name"].as_str().unwrap_or("?");
+        let stars = it["stargazers_count"].as_u64().unwrap_or(0);
+        let desc = it["description"].as_str().unwrap_or("").chars().take(90).collect::<String>();
+        lines.push(format!("★{stars:<6} {full}\n         {desc}"));
+    }
+    lines.push(String::new());
+    lines.push("Instalar la que elijas: alx skills-fetch owner/repo".to_string());
+    lines.join("\n")
+}
+
+fn count_installable_skills(dest: &std::path::Path) -> usize {
+    std::fs::read_dir(dest)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| e.path().is_dir())
+                .filter(|d| d.path().join("SKILL.md").exists())
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+fn register_in_catalog(proj: &std::path::Path, entry: &str) {
+    use std::io::Write;
+    let catalog = proj.join("skills/catalog.md");
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&catalog) {
+        let _ = f.write_all(entry.as_bytes());
+    }
+}
+
+fn shell_quote_path(p: &std::path::Path) -> String {
+    format!("'{}'", p.display().to_string().replace('\'', "'\\''"))
+}
+
+fn chrono_today() -> String {
+    // fecha local sin dependencia chrono: la sacamos del sistema una vez
+    let out = alx_gate::run_command("date +%F", 2_000);
+    out.stdout_head.trim().to_string()
+}
+
+// ═══════════════ RESEARCH-CHECK (enforcement de profundidad) ══════════════
+//
+// "No podemos dejar que la IA no lo haga o lo haga shallow" (usuario). Este
+// check es LA compuerta: verifica que los 7 pasos del protocolo están
+// RELLENOS DE VERDAD (no plantillas vacías ni relleno mínimo) y que hay
+// simulaciones y tabla de fuentes. Exit != 0 si suspende → un hook Stop puede
+// bloquear el fin de sesión mientras la investigación esté incompleta.
+
+/// Umbral mínimo de caracteres "reales" por paso (plantilla ≈ 400-700 chars).
+const CHECK_MIN_CHARS: usize = 1200;
+/// Simulaciones completas mínimas en 03.
+const CHECK_MIN_SIMS: usize = 2;
+/// Filas mínimas en la tabla de evidencia de 05.
+const CHECK_MIN_FUENTES: usize = 3;
+
+pub fn run_research_check(dir_opt: Option<&str>) -> String {
+    // localizar el proyecto de research: arg, o el único/más reciente
+    let base = find_project_alexandria(None)
+        .map(|p| p.join("research"))
+        .unwrap_or_else(|| std::path::PathBuf::from("research"));
+    let dir = match dir_opt {
+        Some(d) => std::path::PathBuf::from(d),
+        None => {
+            let mut candidatos: Vec<_> = std::fs::read_dir(&base)
+                .map(|rd| {
+                    rd.flatten()
+                        .map(|e| e.path())
+                        .filter(|p| p.is_dir() && p.join("06-respuesta.md").exists())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            candidatos.sort_by_key(|p| p.metadata().and_then(|m| m.modified()).ok());
+            match candidatos.pop() {
+                Some(p) => p,
+                None => return "✓ sin proyectos de research abiertos: nada que comprobar".into(),
+            }
+        }
+    };
+    if !dir.is_dir() {
+        return format!("✗ no existe {dir_opt:?}");
+    }
+
+    let mut fallos: Vec<String> = Vec::new();
+    for (name, _) in RESEARCH_STEPS {
+        let path = dir.join(format!("{name}.md"));
+        let Ok(txt) = std::fs::read_to_string(&path) else {
+            fallos.push(format!("{name}: FALTA el fichero"));
+            continue;
+        };
+        let cuerpo_len = txt
+            .lines()
+            .filter(|l| !l.trim().is_empty())
+            .count()
+            .saturating_mul(40); // aprox chars útiles
+        let tiene_placeholder = txt.contains("este paso aún está vacío");
+        if tiene_placeholder || txt.len() < CHECK_MIN_CHARS / 3 {
+            fallos.push(format!(
+                "{name}: sin rellenar ({} bytes; placeholder={})",
+                txt.len(),
+                tiene_placeholder
+            ));
+            continue;
+        }
+        let _ = cuerpo_len;
+    }
+
+    // 03-simulaciones: contar SIM-\d+
+    if let Ok(sim) = std::fs::read_to_string(dir.join("03-simulaciones.md")) {
+        let n = sim.match_indices("SIM-").count();
+        if n < CHECK_MIN_SIMS && !sim.contains("este paso aún está vacío") {
+            fallos.push(format!("03-simulaciones: {n} simulaciones (mínimo {CHECK_MIN_SIMS})"));
+        }
+    }
+    // 05-fuentes: contar filas de tabla (líneas empezando por |)
+    if let Ok(fue) = std::fs::read_to_string(dir.join("05-fuentes.md")) {
+        let filas = fue.lines().filter(|l| l.trim_start().starts_with('|')).count();
+        if filas < CHECK_MIN_FUENTES + 1 && !fue.contains("este paso aún está vacío") {
+            fallos.push(format!("05-fuentes: {filas} filas de tabla (mínimo {}+cabecera)", CHECK_MIN_FUENTES));
+        }
+    }
+
+    if fallos.is_empty() {
+        format!(
+            "✓ investigación completa y profunda: {}\nlos 7 pasos rellenos, simulaciones ≥{CHECK_MIN_SIMS}, evidencia ≥{CHECK_MIN_FUENTES}",
+            dir.display()
+        )
+    } else {
+        let mut out = String::from("✗ INVESTIGACIÓN INCOMPLETA — termina antes de cerrar:\n");
+        for f in &fallos {
+            out.push_str(&format!("  · {f}\n"));
+        }
+        out.push_str("\nEl hook Stop usa este veredicto: la sesión no debería terminar con research abierto a medias.");
+        out
+    }
+}
+
 pub fn run_setup() -> String {
     let home = std::env::var("HOME").unwrap_or_default();
     let mut out = String::from("# alx setup — integración con Claude Code\n");

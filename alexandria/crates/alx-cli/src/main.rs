@@ -86,6 +86,27 @@ enum Command {
         #[arg(long)]
         apply: bool,
     },
+    /// Abre un proyecto de investigación profunda (protocolo plan/17):
+    /// fundamentos → iceberg → simulaciones guardadas → frenos → evidencia.
+    Research {
+        /// La pregunta a investigar.
+        pregunta: String,
+    },
+    /// Descarga un repo de skills/reglas al proyecto (.alexandria/skills/).
+    /// Sin argumento muestra el catálogo curado.
+    SkillsFetch {
+        /// Repo GitHub "owner/repo".
+        repo: Option<String>,
+        /// Buscar en GitHub ordenado por estrellas en vez de instalar.
+        #[arg(long)]
+        search: Option<String>,
+    },
+    /// Comprueba que la investigación abierta cumple el protocolo (plan 17):
+    /// 7 pasos rellenos, ≥2 simulaciones, tabla de evidencia. Exit 1 si no.
+    ResearchCheck {
+        /// Dir concreto del research (por defecto: el más reciente).
+        dir: Option<String>,
+    },
     /// Crea un harness (paso CREAR del ciclo R20-R23; la IA lo usa en pleno trabajo).
     HarnessNew {
         /// Nombre corto (sin prefijo hx-): "sin-todos-pendientes".
@@ -247,6 +268,20 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Patterns { apply }) => {
             println!("{}", alx_cli::run_patterns(apply));
+        }
+        Some(Command::Research { pregunta }) => {
+            println!("{}", alx_cli::run_research(&pregunta));
+        }
+        Some(Command::SkillsFetch { repo, search }) => {
+            println!("{}", alx_cli::run_skills_fetch(repo.as_deref(), search.as_deref()));
+        }
+        Some(Command::ResearchCheck { dir }) => {
+            let informe = alx_cli::run_research_check(dir.as_deref());
+            let ok = informe.starts_with('✓');
+            println!("{informe}");
+            if !ok {
+                return ExitCode::from(1);
+            }
         }
         Some(Command::HarnessNew { name, objective, doc, kind, trigger }) => {
             println!("{}", harness_new(&name, &objective, &doc, &kind, &trigger));

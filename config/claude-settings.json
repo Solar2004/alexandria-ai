@@ -68,6 +68,11 @@
             "type": "command",
             "command": "/home/artorias/Projectos/AlexanderTheGreat/harnesses/iterate/auto-iterate.sh",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/harnesses/hooks/research-guard.sh",
+            "timeout": 15
           }
         ]
       }

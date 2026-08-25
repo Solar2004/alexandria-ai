@@ -10,7 +10,7 @@
 #   - ~/.claude.json (MCPs globales + directorios de trust)
 #   - ~/.config (headroom/env, routatic-proxy, oc-go-cc keys,
 #                ccstatusline, systemd user services)
-#   - ~/.local/bin scripts propios (cc-model-mask, ccmodel, wrapper)
+#   - ~/.local/bin scripts propios (routa, routa-gateway.py, ccmodel, wrapper)
 #   - ~/.zshrc (aliases cc/claude/sub*)
 #   - lista de paquetes instalados (uv tool + npm -g) para reinstalar
 #  ⚠️  El tar contiene CLAVES (headroom, oc-go-cc). Guárdalo en
@@ -29,7 +29,7 @@ if [ "${1:-}" = "--restore" ]; then
   tar -xzf "$LATEST" -C /home/artorias
   # reactivar servicios systemd user
   systemctl --user daemon-reload 2>/dev/null || true
-  for s in headroom oc-go-cc cc-model-mask omniroute; do
+  for s in headroom oc-go-cc routa-gateway omniroute; do
     systemctl --user enable "$s.service" 2>/dev/null || true
   done
   echo "OK — config, claves y servicios restaurados."
@@ -61,7 +61,8 @@ tar -czf "$OUT" \
   .config/oc-go-cc \
   .config/ccstatusline \
   .config/systemd/user \
-  .local/bin/cc-model-mask.py \
+  .local/bin/routa \
+  .local/bin/routa-gateway.py \
   .local/bin/ccmodel \
   .local/bin/oc-go-cc-wrapper \
   .local/bin/hermes-perplexity-mcp \

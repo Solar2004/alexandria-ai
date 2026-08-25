@@ -2430,7 +2430,7 @@ pub fn run_setup() -> String {
         "dependencias core habilitadas: {core_ok} (faltan {core_missing} → /plugin install)\n"
     ));
 
-    // 7. Sync themes desde proyecto-final/integration/themes → global + perfil.
+    // 7. Sync themes desde integration/themes (ruta real) → global + perfil.
     let integration_themes = format!(
         "{home}/Projectos/AlexanderTheGreat/integration/themes"
     );

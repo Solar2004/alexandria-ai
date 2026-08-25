@@ -305,7 +305,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<
 
             // -- panel iteración --
             let (iter, max) = load_iterate();
-            let pct = if max > 0 { (iter * 100 / max).min(100) as u16 } else { 0 };
+            let pct = iter.checked_mul(100).and_then(|v| v.checked_div(max)).unwrap_or(0).min(100) as u16;
             let inner = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Length(3), Constraint::Min(0)])

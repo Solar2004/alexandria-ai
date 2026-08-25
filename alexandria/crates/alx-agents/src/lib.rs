@@ -207,7 +207,16 @@ impl AgentRegistry {
 
     /// Primer agente con el nombre exacto dado.
     pub fn by_name(&self, name: &str) -> Option<&AgentSpec> {
-        self.agents.iter().find(|a| a.name == name)
+        // Búsqueda tolerante: exacta, y si no, normalizada (case/slug).
+        // El frontmatter dice "Agents Orchestrator" y el usuario escribe
+        // "agents-orchestrator": ambos deben funcionar.
+        if let Some(a) = self.agents.iter().find(|a| a.name == name) {
+            return Some(a);
+        }
+        let wanted = slugify_name(name);
+        self.agents
+            .iter()
+            .find(|a| slugify_name(&a.name) == wanted)
     }
 
     /// Agentes cuya fase declarada coincide, en orden estable de inserción.
@@ -330,6 +339,16 @@ pub fn build_envelope(
         tools: spec.tools.clone(),
         budget_tokens: budget_for_tier(spec.tier),
     }
+}
+
+/// Normaliza nombres de agente para búsquedas: minúsculas, no alfanuméricos
+/// → '-'. "Agents Orchestrator" == "agents-orchestrator" == "AgentsOrchestrator".
+pub fn slugify_name(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string()
 }
 
 #[cfg(test)]
@@ -518,6 +537,11 @@ phase: Review
         let added = registry.by_name("from-file").expect("agente añadido");
         assert_eq!(added.tier, ModelTier::T3Premium);
         assert_eq!(added.phase, Some(PhaseId::Review));
+
+        // by_name tolerante: slug y mayúsculas encuentran al mismo agente.
+        assert!(registry.by_name("from-file").is_some());
+        assert!(registry.by_name("From File").is_some());
+        assert!(registry.by_name("FROM_FILE").is_some());
 
         std::fs::remove_file(&plain).ok();
         std::fs::remove_file(&agent).ok();

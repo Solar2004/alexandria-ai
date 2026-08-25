@@ -2,6 +2,29 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## Ciclo 10 — experto por proyecto + investigación profunda (2026-08-25, sesión continua 2)
+
+- **`.alexandria/` por proyecto**: `alx init` crea registry/rúbricas/skills/
+  lecciones/config propios; el motor resuelve automático proyecto-vs-global.
+  El harness se ADAPTA a cada proyecto y aprende con él.
+- **Investigación profunda (plan/17)**: `alx research <pregunta>` abre el
+  protocolo de 7 pasos (mecanismo → iceberg → simulaciones guardadas → frenos
+  → evidencia → síntesis). `alx research-check` es compuerta dura (exit 1 si
+  superficial) y `research-guard.sh` BLOQUEA cerrar la sesión con research
+  a medias. La IA ya no puede quedarse en lo obvio.
+- **Pulido dosificado**: `alx polish` evalúa con critic real contra rúbrica,
+  mejora con LLM, y DECIDE cuántas rondas viendo la mejora (meseta → parada).
+  Verificado en vivo: util.js 0.70→1.00 APROBADO en 2 rondas.
+- **Skills del experto**: `alx skills-fetch --search` busca en GitHub POR
+  ESTRELLAS; instalar = un comando. Catálogo curado incluido.
+- **Recurrencia → harnesses**: `alx patterns [--apply]` mina métricas de hooks.
+- **Cero modelos hardcodeados**: modelo_real_activo() lee en vivo el config de
+  routatic (cambiar modelo = cambia TODO el motor). Env ALX_MODEL = override.
+- **Fix crítico de benchmarks**: run_command trunca stdout a 4000 chars ->
+  respuestas largas cortadas -> 0/6 falso. Volcado a fichero; harness vuelve
+  a ganar (N=4: 1/4 vs 3/4). Muestra N=20 en curso.
+- 212 tests · clippy 0 · tsc hooks 0.
+
 ## Ciclo 9 — auditoría autónoma: sistemas desconectados reparados (2026-08-25, sesión continua)
 
 - **Failover de modelos**: si el modelo activo 500s arriba (pasó con muse y con

@@ -68,6 +68,24 @@ enum Command {
     },
     /// Ciclo watcher de harnesses evolutivos con persistencia.
     Evolve,
+    /// Alexadriza el proyecto actual: crea .alexandria/ (registry, rúbricas,
+    /// skills y diario de lecciones propios de ESTE proyecto).
+    Init,
+    /// Pule un fichero contra la rúbrica del proyecto; el sistema DECIDE
+    /// cuántas rondas según la mejora vista (meseta → parada).
+    Polish {
+        /// Fichero a pulir.
+        path: String,
+        /// Rúbrica en .alexandria/rubrics/<nombre>.json (default si falta).
+        #[arg(long, default_value = "default")]
+        rubric: String,
+    },
+    /// Detecta problemas recurrentes en las métricas y propone harnesses.
+    Patterns {
+        /// Crear los harnesses propuestos directamente.
+        #[arg(long)]
+        apply: bool,
+    },
     /// Crea un harness (paso CREAR del ciclo R20-R23; la IA lo usa en pleno trabajo).
     HarnessNew {
         /// Nombre corto (sin prefijo hx-): "sin-todos-pendientes".
@@ -220,6 +238,15 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Evolve) => {
             println!("{}", run_evolve_cycle());
+        }
+        Some(Command::Init) => {
+            println!("{}", alx_cli::project_init());
+        }
+        Some(Command::Polish { path, rubric }) => {
+            println!("{}", alx_cli::run_polish(&path, &rubric));
+        }
+        Some(Command::Patterns { apply }) => {
+            println!("{}", alx_cli::run_patterns(apply));
         }
         Some(Command::HarnessNew { name, objective, doc, kind, trigger }) => {
             println!("{}", harness_new(&name, &objective, &doc, &kind, &trigger));

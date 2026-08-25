@@ -1431,8 +1431,94 @@ pub fn install_hooks_src(home: &str) -> (usize, bool) {
 }
 
 /// Directorio del registry de harnesses (harnesses/ del repo).
-fn harness_dir() -> std::path::PathBuf {
+fn harness_dir_global() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../harnesses")
+}
+
+/// Busca `.alexandria/` subiendo desde `start` (o cwd) hasta la raíz.
+/// None = este proyecto no está alexandrizado.
+pub fn find_project_alexandria(start: Option<&std::path::Path>) -> Option<std::path::PathBuf> {
+    let mut dir = match start {
+        Some(p) => p.to_path_buf(),
+        None => std::env::current_dir().ok()?,
+    };
+    loop {
+        let cand = dir.join(".alexandria");
+        if cand.is_dir() {
+            return Some(cand);
+        }
+        if !dir.pop() {
+            return None;
+        }
+    }
+}
+
+/// Directorio de registry de harnesses AWARE del proyecto: si el cwd (o un
+/// ancestro) tiene `.alexandria/`, los harnesses aprendidos en ese proyecto
+/// viven y mueren con él; si no, se usa el registry global del repo.
+fn harness_dir() -> std::path::PathBuf {
+    match find_project_alexandria(None) {
+        Some(proj) => proj,
+        None => harness_dir_global(),
+    }
+}
+
+/// Fuente del registry activo, para mostrar al usuario de dónde lee.
+pub fn harness_dir_source() -> &'static str {
+    if find_project_alexandria(None).is_some() {
+        "proyecto (.alexandria)"
+    } else {
+        "global (repo)"
+    }
+}
+
+/// `alx init` — alexadriza el proyecto actual: crea `.alexandria/` con el
+/// esqueleto completo. Idempotente: no toca lo que ya existe.
+pub fn project_init() -> String {
+    let cwd = match std::env::current_dir() {
+        Ok(d) => d,
+        Err(e) => return format!("✗ sin cwd: {e}"),
+    };
+    let base = cwd.join(".alexandria");
+    if base.is_dir() {
+        return format!("✓ ya inicializado: {}", base.display());
+    }
+    let mut creadas = Vec::new();
+    for rel in ["active", "archive", "rubrics", "skills", "polish"] {
+        let d = base.join(rel);
+        if std::fs::create_dir_all(&d).is_ok() {
+            creadas.push(rel);
+        }
+    }
+    // lessons.md: el diario de aprendizajes del proyecto (la IA añade aquí).
+    let lessons = base.join("lessons.md");
+    if !lessons.exists() {
+        let _ = std::fs::write(
+            &lessons,
+            "# Lecciones de este proyecto\n\n\
+             Aprendizajes que la IA formaliza mientras trabaja. Cada lección\n\
+             puede convertirse en harness con:\n\
+             `alx harness-new <slug> --objective ... --doc \"...\"`\n\n",
+        );
+    }
+    // config.toml mínimo con defaults documentados.
+    let cfg = base.join("config.toml");
+    if !cfg.exists() {
+        let _ = std::fs::write(
+            &cfg,
+            "# Configuración Alexandria del proyecto\n\
+             [polish]\n\
+             # techo de rondas: el sistema puede pararse antes si ve meseta\n\
+             max_rounds = 4\n\
+             # mejora mínima entre rondas para seguir puliendo (0..=1)\n\
+             min_delta = 0.05\n",
+        );
+    }
+    format!(
+        "✓ .alexandria creado en {}\n  dirs: {}\n  El registry de harnesses de ESTE proyecto ya está activo (`alx harness-list`).\n  Siguiente paso sugerido: `alx skills-fetch anthropics/skills` para dotar de reglas al experto.",
+        cwd.display(),
+        creadas.join(", ")
+    )
 }
 
 /// Paso CREAR del ciclo evolutivo (plan 16 §2): la IA formaliza una regla
@@ -1462,6 +1548,11 @@ pub fn harness_new(name: &str, objective: &str, doc: &str, kind: &str, trigger: 
         let _ = run_evolve_cycle();
         reg = alx_evolve::HarnessRegistry::load_from(&dir);
     }
+    // Nota de diseño (plan §11): add_candidate SIEMPRE crea Temporal — la regla
+    // protege del ruido del detector automático. Un `--kind permanent`
+    // EXPLÍCITO por CLI es otra cosa: es una decisión consciente, y aquí se
+    // promueve directamente tras crear.
+    let quiere_permanente = matches!(kind.to_ascii_lowercase().as_str(), "permanent" | "permanente");
     let cand = HarnessCandidate {
         suggested_name: slug.clone(),
         kind: kind_parsed,
@@ -1470,12 +1561,20 @@ pub fn harness_new(name: &str, objective: &str, doc: &str, kind: &str, trigger: 
         doc: doc.to_string(),
     };
     match reg.add_candidate(cand, now_ms()) {
-        Some(id) => match reg.save_to(&dir) {
-            Ok(()) => format!(
-                "✓ harness {id} creado (kind={kind}, trigger={trigger})\n  objetivo: {objective}\nVigilancia: `alx evolve` revisa usos y objetivos; `alx harness-use {id}` tras aplicarlo."
-            ),
-            Err(e) => format!("✗ no pude persistir el registry: {e}"),
-        },
+        Some(id) => {
+            if quiere_permanente {
+                if let Some(h) = reg.by_id_mut(&id) {
+                    h.promote(0);
+                }
+            }
+            match reg.save_to(&dir) {
+                Ok(()) => format!(
+                    "✓ harness {id} creado (kind={}, trigger={trigger})\n  objetivo: {objective}\nVigilancia: `alx evolve` revisa usos y objetivos; `alx harness-use {id}` tras aplicarlo.",
+                    if quiere_permanente { "permanent" } else { "temporal" }
+                ),
+                Err(e) => format!("✗ no pude persistir el registry: {e}"),
+            }
+        }
         None => format!(
             "✗ no se creó el harness (¿ya existe 'hx-{slug}'? ¿doc >=20 chars?)"
         ),
@@ -1526,6 +1625,320 @@ pub fn harness_use(id: &str) -> String {
         }
         None => format!("✗ harness '{key}' no encontrado (`alx harness-list`)"),
     }
+}
+
+// ═══════════════════════════ POLISH (pulido dosificado) ═══════════════════
+//
+// La idea (usuario, 2026-08-25): no iterar N veces "a ciegas". El sistema
+// evalúa el artefacto contra una RÚBRICA del proyecto (.alexandria/rubrics/),
+// mejora, re-evalúa, y DECIDE seguir o parar viendo la mejora entre rondas:
+// meseta → parada. El techo (max_rounds) es un seguro, no el objetivo.
+
+/// Rúbrica cargada de .alexandria/rubrics/<name>.json.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Rubric {
+    pub name: String,
+    /// Qué debe mirar el experto: coherencia, detalle, cuándo usar cada cosa…
+    pub criteria: Vec<String>,
+}
+
+impl Default for Rubric {
+    fn default() -> Self {
+        Self {
+            name: "default".into(),
+            criteria: vec![
+                "Corrección: hace lo que dice; sin bugs ni casos borde roto.".into(),
+                "Coherencia: consistente con el resto del proyecto (estilo, patrones, nombres).".into(),
+                "Nivel de detalle comparable a implementaciones de referencia de alta calidad.".into(),
+                "Simplicidad: nada superfluo; cada pieza justifica su existencia.".into(),
+                "Documentación mínima honesta (docstrings/readme donde aportan).".into(),
+            ],
+        }
+    }
+}
+
+fn load_rubric(name: &str) -> Rubric {
+    if let Some(proj) = find_project_alexandria(None) {
+        let path = proj.join("rubrics").join(format!("{name}.json"));
+        if let Ok(txt) = std::fs::read_to_string(&path) {
+            if let Ok(r) = serde_json::from_str::<Rubric>(&txt) {
+                return r;
+            }
+        }
+    }
+    Rubric::default()
+}
+
+fn polish_config() -> (u32, f64) {
+    // (max_rounds, min_delta) desde .alexandria/config.toml si existe; parse
+    // mínimo sin dependencias: buscamos claves sueltas.
+    let defaults = (4u32, 0.05f64);
+    let Some(proj) = find_project_alexandria(None) else {
+        return defaults;
+    };
+    let Ok(txt) = std::fs::read_to_string(proj.join("config.toml")) else {
+        return defaults;
+    };
+    let get_num = |key: &str| -> Option<f64> {
+        txt.lines()
+            .find(|l| l.trim_start().starts_with(key))
+            .and_then(|l| l.split('=').nth(1))
+            .and_then(|v| v.trim().parse::<f64>().ok())
+    };
+    let max_rounds = get_num("max_rounds").map(|v| v as u32).unwrap_or(defaults.0);
+    let min_delta = get_num("min_delta").unwrap_or(defaults.1);
+    (max_rounds.max(1), min_delta.clamp(0.0, 1.0))
+}
+
+/// Puntaje 0..=1 de un veredicto: 1 - penalizaciones (Block=.35, Major=.2,
+/// Minor=.08, Suggestion=.02), acotado a [0,1].
+pub fn verdict_score(v: &alx_critic::CriticVerdict) -> f64 {
+    let pen: f64 = v
+        .findings
+        .iter()
+        .map(|f| match f.severity {
+            alx_critic::Severity::Block => 0.35,
+            alx_critic::Severity::Major => 0.20,
+            alx_critic::Severity::Minor => 0.08,
+            alx_critic::Severity::Suggestion => 0.02,
+        })
+        .sum();
+    (1.0 - pen).clamp(0.0, 1.0)
+}
+
+/// Llamada LLM "mejora este artefacto contra estos hallazgos" por la cadena.
+/// Devuelve el artefacto mejorado (texto completo) o None si la red falla.
+fn improve_with_llm(artifact: &str, rubric: &Rubric, findings: &[String]) -> Option<String> {
+    let mut prompt = String::from(
+        "Eres el experto que pule artefactos. Mejora el ARTEFACTO aplicando los HALLAZGOS \
+         y los CRITERIOS. Devuelve el artefacto COMPLETO mejorado, sin explicaciones.\n\nCRITERIOS:\n",
+    );
+    for c in &rubric.criteria {
+        prompt.push_str(&format!("- {c}\n"));
+    }
+    prompt.push_str("\nHALLAZGOS DE LA ÚLTIMA EVALUACIÓN:\n");
+    for f in findings {
+        prompt.push_str(&format!("- {f}\n"));
+    }
+    prompt.push_str("\n<artefacto>\n");
+    prompt.push_str(&artifact.chars().take(24_000).collect::<String>());
+    prompt.push_str("\n</artefacto>");
+
+    let body = serde_json::json!({
+        "model": "deepseek-v4-flash",
+        "max_tokens": 3000,
+        "messages": [{"role": "user", "content": prompt}]
+    });
+    let cmd = format!(
+        "curl -s -m 120 -X POST http://127.0.0.1:8788/v1/messages \
+         -H 'content-type: application/json' \
+         -H 'anthropic-version: 2023-06-01' -d '{}'",
+        body.to_string().replace('\'', "'\\''")
+    );
+    let out = alx_gate::run_command(&cmd, 130_000);
+    let raw = out.stdout_head.trim();
+    let v: serde_json::Value = serde_json::from_str(raw).ok()?;
+    // texto puede venir en blocks; concatenar todos los type=text
+    let text: String = v["content"]
+        .as_array()?
+        .iter()
+        .filter_map(|b| b["text"].as_str())
+        .collect::<Vec<_>>()
+        .join("");
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+/// `alx polish <fichero> [--rubric NOMBRE]` — bucle evaluar→mejorar→decidir.
+/// El número de rondas NO es fijo: para cuando hay meseta (delta < min_delta)
+/// o aprobación del crítico; max_rounds solo techa.
+pub fn run_polish(path: &str, rubric_name: &str) -> String {
+    let ruta = std::path::Path::new(path);
+    if !ruta.is_file() {
+        return format!("✗ no existe el fichero {path}");
+    }
+    let mut artifact = match std::fs::read_to_string(ruta) {
+        Ok(t) => t,
+        Err(e) => return format!("✗ lectura: {e}"),
+    };
+    let rubric = load_rubric(rubric_name);
+    let (max_rounds, min_delta) = polish_config();
+    let criteria: Vec<String> = rubric.criteria.clone();
+
+    // destino del reporte: .alexandria/polish/ si hay proyecto; si no, junto al fichero
+    let report_dir = find_project_alexandria(None)
+        .map(|p| p.join("polish"))
+        .unwrap_or_else(|| ruta.parent().map(|p| p.to_path_buf()).unwrap_or_default());
+    let _ = std::fs::create_dir_all(&report_dir);
+    let stem = ruta.file_stem().and_then(|s| s.to_str()).unwrap_or("artifact");
+
+    let mut log = format!(
+        "# Polish de {path}\nRúbrica: {} · techos: max={max_rounds} min_delta={min_delta}\n\n",
+        rubric.name
+    );
+    let mut prev_score = -1.0f64;
+    let mut ronda = 0u32;
+    let decision_final;
+    loop {
+        ronda += 1;
+        let verdict = alx_critic::criticize_real(&artifact, &criteria.iter().map(|s| s.as_str()).collect::<Vec<_>>());
+        let score = verdict_score(&verdict);
+        log.push_str(&format!(
+            "## Ronda {ronda} · score {score:.2} · {}\n",
+            if verdict.approved { "APROBADO" } else { "con hallazgos" }
+        ));
+        for f in &verdict.findings {
+            log.push_str(&format!("- {:?}: {}\n", f.severity, f.message));
+        }
+        log.push('\n');
+
+        // ¿Parar? aprobado, meseta, o techo alcanzado.
+        if verdict.approved {
+            decision_final = format!("✓ aprobado en la ronda {ronda}");
+            break;
+        }
+        if prev_score >= 0.0 && (score - prev_score).abs() < min_delta {
+            decision_final = format!(
+                "■ meseta en ronda {ronda}: |Δ{:.2}| < min_delta {:.2} — más rondas no pagan; quedan {} hallazgos",
+                (score - prev_score).abs(),
+                min_delta,
+                verdict.findings.len()
+            );
+            break;
+        }
+        if ronda >= max_rounds {
+            decision_final = format!(
+                "▲ techo de rondas ({max_rounds}); score final {score:.2}; quedan {} hallazgos",
+                verdict.findings.len()
+            );
+            break;
+        }
+
+        // Mejorar con lo visto.
+        let findings: Vec<String> =
+            verdict.findings.iter().map(|f| f.message.clone()).collect();
+        match improve_with_llm(&artifact, &rubric, &findings) {
+            Some(mejorado) => {
+                // respaldo por ronda: nunca se pierde trabajo
+                let backup = report_dir.join(format!("{stem}-R{ronda}.md"));
+                let _ = std::fs::write(&backup, &mejorado);
+                artifact = mejorado;
+            }
+            None => {
+                decision_final = format!("✗ la cadena no respondió en ronda {ronda}; se conserva la versión evaluada");
+                break;
+            }
+        }
+        prev_score = score;
+    }
+
+    // escribir resultado final + log
+    let final_path = report_dir.join(format!("{stem}-final.md"));
+    let _ = std::fs::write(&final_path, &artifact);
+    let log_path = report_dir.join(format!("{stem}-polish.md"));
+    let _ = std::fs::write(&log_path, &log);
+    format!(
+        "{decision_final}\nresultado : {}\ndiario    : {}",
+        final_path.display(),
+        log_path.display()
+    )
+}
+
+// ═══════════════════ PATTERNS (recurrencia → harnesses) ═══════════════════
+//
+// Mina las métricas de hooks (metrics.jsonl) buscando problemas recurrentes
+// y propone harnesses listos para crearlos. Determinista y barato.
+
+/// `alx patterns [--apply]` — detecta recurrencia y propone CREAR harnesses.
+pub fn run_patterns(apply: bool) -> String {
+    use std::collections::HashMap;
+    let Some(proj) = find_project_alexandria(None) else {
+        return "✗ este proyecto no está alexandrizado (`alx init`)".into();
+    };
+    let metrics = proj
+        .ancestors()
+        .find_map(|p| {
+            let m = p.join(".claude/hooks/state/metrics.jsonl");
+            m.is_file().then_some(m)
+        })
+        .map(|p| std::fs::read_to_string(p).unwrap_or_default())
+        .unwrap_or_default();
+
+    // agrupar eventos blocked por kind+skill
+    let mut counts: HashMap<(String, String), u32> = HashMap::new();
+    for line in metrics.lines().filter(|l| !l.trim().is_empty()) {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+        if v["event"].as_str() == Some("blocked") {
+            let kind = v["kind"].as_str().unwrap_or("?").to_string();
+            let skills = match &v["skills"] {
+                serde_json::Value::Array(a) => a
+                    .iter()
+                    .filter_map(|s| s.as_str())
+                    .collect::<Vec<_>>()
+                    .join("+"),
+                _ => v["skill"].as_str().unwrap_or("?").to_string(),
+            };
+            *counts.entry((kind, skills)).or_insert(0) += 1;
+        }
+    }
+
+    let umbral = 3u32;
+    let mut recurrentes: Vec<_> = counts.into_iter().filter(|((_, _), n)| *n >= umbral).collect();
+    recurrentes.sort_by(|a, b| b.1.cmp(&a.1));
+    if recurrentes.is_empty() {
+        return format!(
+            "sin recurrencias ≥{umbral} en metrics.jsonl todavía;\nel sistema avisa solo cuando un patrón se repita"
+        );
+    }
+
+    let mut out = String::from("## Patrones recurrentes detectados\n");
+    for ((kind, skill), n) in &recurrentes {
+        let slug = format!("auto-{}-{}", kind, slugify_simple(&skill));
+        let cmd = format!(
+            "alx harness-new {slug} --objective \"eliminar bloqueos recurrentes [{kind}] {skill}\" \
+             --doc \"Detectado automaticamente: {n} bloqueos de tipo {kind} sobre {skill}. \
+             Formalizar la regla que los evita.\" --kind permanent --trigger event:PostToolUse"
+        );
+        out.push_str(&format!("\n· {kind} × {skill} → {n} veces\n  {cmd}\n"));
+        if apply {
+            let args = [
+                slug.clone(),
+                "--objective".into(),
+                format!("eliminar bloqueos recurrentes [{kind}] {skill}"),
+                "--doc".into(),
+                format!("Detectado automaticamente: {n} bloqueos de tipo {kind} sobre {skill}. Formalizar la regla que los evita."),
+                "--kind".into(),
+                "permanent".into(),
+                "--trigger".into(),
+                "event:PostToolUse".into(),
+            ];
+            out.push('\n');
+            out.push_str(&harness_new(
+                &args[0],
+                &args[2],
+                &args[4],
+                &args[6],
+                &args[8],
+            ));
+            out.push('\n');
+        }
+    }
+    if !apply {
+        out.push_str("\n(revisa y crea con --apply, o ajusta antes)")
+    }
+    out
+}
+
+fn slugify_simple(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .collect()
 }
 
 pub fn run_setup() -> String {

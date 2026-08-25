@@ -162,11 +162,34 @@ pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
     criticize_real_with_tokens(output, criteria, 500)
 }
 
+/// Modelo real activo, leído EN VIVO del config de routatic (fuente única
+/// que actualiza `routa use`). Env ALX_MODEL como override de experimento.
+fn modelo_real_activo() -> String {
+    if let Ok(m) = std::env::var("ALX_MODEL") {
+        if !m.trim().is_empty() {
+            return m;
+        }
+    }
+    let home = std::env::var("HOME").unwrap_or_default();
+    if let Ok(txt) =
+        std::fs::read_to_string(format!("{home}/.config/routatic-proxy/config.json"))
+    {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&txt) {
+            if let Some(m) = v["models"]["default"]["model_id"].as_str() {
+                if !m.is_empty() {
+                    return m.to_string();
+                }
+            }
+        }
+    }
+    "claude-opus-4-6[1m]".to_string()
+}
+
 /// Llamada al critic con `max_tokens` configurable.
 fn criticize_real_with_tokens(output: &str, criteria: &[&str], max_tokens: u32) -> CriticVerdict {
     let prompt = critic_prompt(output, criteria);
     let body = serde_json::json!({
-        "model": "deepseek-v4-flash",
+        "model": modelo_real_activo(),
         "max_tokens": max_tokens,
         "thinking": { "type": "disabled" },
         "messages": [{ "role": "user", "content": prompt }]

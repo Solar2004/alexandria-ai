@@ -360,7 +360,7 @@ pub fn gate_for_phase(phase: PhaseId) -> &'static str {
 }
 
 /// Resultado de una ejecución real del pipeline contra la cadena de red
-/// (headroom→mask→routatic→deepseek) con ledger de coste.
+/// (headroom→gateway→routatic→modelo real del config) con ledger de coste.
 #[derive(Debug, Clone)]
 pub struct RealRunResult {
     /// Resultado del pipeline (micro-tareas, gates, evidencia).
@@ -460,7 +460,7 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
         // simple que pide respuesta corta mejora el critic éxito.
         let envelope = format!("Tarea: {}. Responde en maximo 2 frases concisas.", child.title);
         let body = serde_json::json!({
-            "model": "deepseek-v4-flash",
+            "model": modelo_real_activo(),
             "max_tokens": 600,
             "thinking": { "type": "disabled" },
             "messages": [{ "role": "user", "content": envelope }]
@@ -793,8 +793,9 @@ fn generate_script(task: &str) -> String {
     // claude-*/[1m] al modelo real activo en el config de routatic.
     let url = std::env::var("ALX_BENCH_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:8788".to_string());
-    let model = std::env::var("ALX_BENCH_MODEL")
-        .unwrap_or_else(|_| "deepseek-v4-flash".to_string());
+    // Sin hardcodeo: el modelo lo dicta el config de routatic en vivo
+    // (ALX_BENCH_MODEL sigue disponible como override de experimento).
+    let model = modelo_real_activo();
     // Lección 2026-08-25: deepseek RAZONA aunque le pidas thinking disabled
     // (llegan bloques thinking igualmente). Con presupuesto pequeño el
     // razonamiento se come los tokens y el texto sale vacío -> 0% en ambos
@@ -803,7 +804,7 @@ fn generate_script(task: &str) -> String {
     let claude_path = url.contains("3460") || model.contains("claude") || model.contains("opus");
     let _ = claude_path;
     let max_tokens: u32 = 4000;
-    let mut body = serde_json::json!({
+    let body = serde_json::json!({
         "model": model,
         "max_tokens": max_tokens,
         "messages": [{
@@ -816,15 +817,23 @@ fn generate_script(task: &str) -> String {
     if std::fs::write(&body_path, &body).is_err() {
         return String::new();
     }
+    // OJO: run_command trunca stdout a 4000 chars (alx-gate STDOUT_HEAD_MAX).
+    // Las respuestas con código completo la superan -> el JSON salía cortado y
+    // TODO fallaba (0/6 en bench con respuestas válidas). Volcado a fichero.
+    let resp_path = std::env::temp_dir().join("alx-gen-script-resp.json");
     let cmd = format!(
-        "curl -s -m 170 {url}/v1/messages -H 'content-type: application/json' -d @{}",
-        body_path.display()
+        "curl -s -m 170 {url}/v1/messages -H 'content-type: application/json' -d @{} -o {}",
+        body_path.display(),
+        resp_path.display()
     );
     let out = alx_gate::run_command(&cmd, 190_000);
     if out.exit_code != 0 {
         return String::new();
     }
-    serde_json::from_str::<serde_json::Value>(&out.stdout_head)
+    let Ok(raw) = std::fs::read_to_string(&resp_path) else {
+        return String::new();
+    };
+    serde_json::from_str::<serde_json::Value>(raw.trim())
         .ok()
         .and_then(|v| {
             v["content"]
@@ -1723,18 +1732,28 @@ fn improve_with_llm(artifact: &str, rubric: &Rubric, findings: &[String]) -> Opt
     prompt.push_str("\n</artefacto>");
 
     let body = serde_json::json!({
-        "model": "deepseek-v4-flash",
+        "model": modelo_real_activo(),
         "max_tokens": 3000,
         "messages": [{"role": "user", "content": prompt}]
     });
+    // mismo motivo que generate_script: stdout_head trunca -> fichero
+    let resp_path = std::env::temp_dir().join("alx-polish-resp.json");
+    let body_path = std::env::temp_dir().join("alx-polish-body.json");
+    if std::fs::write(&body_path, body.to_string()).is_err() {
+        return None;
+    }
     let cmd = format!(
         "curl -s -m 120 -X POST http://127.0.0.1:8788/v1/messages \
          -H 'content-type: application/json' \
-         -H 'anthropic-version: 2023-06-01' -d '{}'",
-        body.to_string().replace('\'', "'\\''")
+         -H 'anthropic-version: 2023-06-01' -d @{} -o {}",
+        body_path.display(),
+        resp_path.display()
     );
     let out = alx_gate::run_command(&cmd, 130_000);
-    let raw = out.stdout_head.trim();
+    let Ok(raw_file) = std::fs::read_to_string(&resp_path) else {
+        return None;
+    };
+    let raw = raw_file.trim();
     let v: serde_json::Value = serde_json::from_str(raw).ok()?;
     // texto puede venir en blocks; concatenar todos los type=text
     let text: String = v["content"]
@@ -1754,6 +1773,34 @@ fn improve_with_llm(artifact: &str, rubric: &Rubric, findings: &[String]) -> Opt
 /// `alx polish <fichero> [--rubric NOMBRE]` — bucle evaluar→mejorar→decidir.
 /// El número de rondas NO es fijo: para cuando hay meseta (delta < min_delta)
 /// o aprobación del crítico; max_rounds solo techa.
+/// Modelo real activo, leído EN VIVO de la fuente única de verdad
+/// (~/.config/routatic-proxy/config.json — el mismo fichero que lee el
+/// routa-gateway y que actualiza `routa use`). Nada de modelos hardcodeados:
+/// cambiar el modelo con un comando cambia TODO el motor.
+///
+/// Prioridad: env ALX_MODEL (experimentos puntuales) > config routatic >
+/// alias visible (el gateway lo traduce igualmente).
+pub fn modelo_real_activo() -> String {
+    if let Ok(m) = std::env::var("ALX_MODEL") {
+        if !m.trim().is_empty() {
+            return m;
+        }
+    }
+    let home = std::env::var("HOME").unwrap_or_default();
+    if let Ok(txt) =
+        std::fs::read_to_string(format!("{home}/.config/routatic-proxy/config.json"))
+    {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&txt) {
+            if let Some(m) = v["models"]["default"]["model_id"].as_str() {
+                if !m.is_empty() {
+                    return m.to_string();
+                }
+            }
+        }
+    }
+    "claude-opus-4-6[1m]".to_string()
+}
+
 pub fn run_polish(path: &str, rubric_name: &str) -> String {
     let ruta = std::path::Path::new(path);
     if !ruta.is_file() {
@@ -1888,7 +1935,7 @@ pub fn run_patterns(apply: bool) -> String {
 
     let umbral = 3u32;
     let mut recurrentes: Vec<_> = counts.into_iter().filter(|((_, _), n)| *n >= umbral).collect();
-    recurrentes.sort_by(|a, b| b.1.cmp(&a.1));
+    recurrentes.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
     if recurrentes.is_empty() {
         return format!(
             "sin recurrencias ≥{umbral} en metrics.jsonl todavía;\nel sistema avisa solo cuando un patrón se repita"
@@ -1897,7 +1944,7 @@ pub fn run_patterns(apply: bool) -> String {
 
     let mut out = String::from("## Patrones recurrentes detectados\n");
     for ((kind, skill), n) in &recurrentes {
-        let slug = format!("auto-{}-{}", kind, slugify_simple(&skill));
+        let slug = format!("auto-{}-{}", kind, slugify_simple(skill));
         let cmd = format!(
             "alx harness-new {slug} --objective \"eliminar bloqueos recurrentes [{kind}] {skill}\" \
              --doc \"Detectado automaticamente: {n} bloqueos de tipo {kind} sobre {skill}. \
@@ -2071,7 +2118,7 @@ pub fn run_skills_fetch(repo: Option<&str>, search: Option<&str>) -> String {
 
     // --search: GitHub API, sort=stars. Sin clave: 10 req/min, suficiente.
     if let Some(q) = search {
-        return github_search_skills(&q);
+        return github_search_skills(q);
     }
 
     // sin argumento: mostrar catálogo curado + cómo buscar
@@ -3166,7 +3213,7 @@ pub fn spawn_agent(name: &str, task: &str) -> String {
     let mut prompt = caveman_compress(&format!("{}\n\n{}", env.system, env.task));
     prompt.push_str("\nResponde directamente, sin razonamiento previo.");
     let body = serde_json::json!({
-        "model": "deepseek-v4-flash",
+        "model": modelo_real_activo(),
         "max_tokens": 800,
         "thinking": { "type": "disabled" },
         "messages": [{ "role": "user", "content": prompt }]

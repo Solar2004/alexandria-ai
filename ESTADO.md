@@ -133,6 +133,20 @@
 - 3 experimentos controlados: feedback simple=34/60 (mejor), feedback rich=29/60 (revertido), ensamble pass@k=33/60 (revertido).
 - **Veredicto**: techo ~55% es del modelo deepseek-v4-flash; 5x inalcanzable en este benchmark con este modelo. Spec ensamble: `docs/ensamble-spec.md`.
 
+### Benchmark ciclo 10 (2026-08-25, verificado en vivo)
+
+- BigCodeBench sample N=20, unittest REAL, cadena actual
+  (deepseek-v4-flash con failover automático a minimax durante la carrera):
+  - DIRECTA: 3/20 = 15%
+  - HARNESS (plan-then-code + feedback): 9/20 = 45%
+  - Multiplicador: **3.0x** — consistente con el histórico (~4x) pese al
+    cambio de modelo. El techo absoluto es el modelo; el multiplicador es del
+    sistema.
+- Fix previo imprescindible: stdout truncado a 4000 chars cortaba respuestas
+  largas -> 0/20 falso. Volcado a fichero lo arregló (commit ea8b4bc).
+- Durante la carrera el failover actuó solo (deepseek caído → minimax sirvió):
+  el gobernador sostuvo 40+ minutos de generación continua sin saturar.
+
 ## Diagrama de estado (mermaid)
 
 ```mermaid

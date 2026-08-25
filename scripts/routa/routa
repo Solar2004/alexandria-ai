@@ -285,7 +285,7 @@ def cmd_doctor():
         die("doctor: sin clave activa")
     modelo = cargar_config().get("models", {}).get("default", {}).get("model_id")
     print(f"\nprueba real del modelo activo ({modelo}) contra opencode-go...")
-    cuerpo = json.dumps({"model": modelo, "max_tokens": 64,
+    cuerpo = json.dumps({"model": modelo, "max_tokens": 256,
                          "messages": [{"role": "user", "content": "ping"}]}).encode()
     t0 = time.time()
     try:
@@ -355,7 +355,7 @@ def cmd_auto(args):
     ganador = None
     print(f"probando {len(candidatos)} candidatos (generacion real minima)...\n")
     for m in candidatos:
-        cuerpo = json.dumps({"model": m, "max_tokens": 64,
+        cuerpo = json.dumps({"model": m, "max_tokens": 256,
                              "messages": [{"role": "user", "content": "ping"}]}).encode()
         t0 = time.time()
         try:

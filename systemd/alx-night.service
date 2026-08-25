@@ -3,4 +3,4 @@ Description=ALEXANDRIA night report (autonomous)
 
 [Service]
 Type=oneshot
-ExecStart=/home/artorias/Projectos/AlexanderTheGreat/proyecto-final/scripts/night-run.sh
+ExecStart=/home/artorias/Projectos/AlexanderTheGreat/scripts/night-run.sh

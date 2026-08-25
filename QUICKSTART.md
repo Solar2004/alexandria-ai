@@ -1,49 +1,67 @@
 # ALEXANDRIA — Quickstart
 
-> De cero a usar el motor en 3 pasos. Verificado.
+> De cero a usar el motor. Verificado.
 
-## 1. Instalar
+## 1. Instalar / actualizar
 
 ```bash
 cd ~/Projectos/AlexanderTheGreat
-./proyecto-final/install.sh
+./install.sh                 # motor alx + integración
+scripts/routa/install.sh     # cadena de modelos (gateway + CLI routa)
+alx setup                    # sincroniza hooks completos + statusline + MCP
 ```
-→ `~/.local/bin/alx` + verifica PHALANX.
 
-## 2. Ver el estado
+## 2. Estado
 
 ```bash
-alx tui        # dashboard completo (motor, red, coste, doctor, comandos)
-alx status     # estado simple
-alx network    # red real (headroom→mask→routatic, fallback omniroute)
+alx tui          # dashboard ratatui vivo: red, gobernador, harnesses, bucle
+alx status       # estado simple
+alx network      # red real con probes GET sin coste
+routa doctor     # salud de la cadena + generación real de prueba
+routa auto       # encuentra un modelo vivo y lo activa (si el actual 500s)
 ```
 
-## 3. Ejecutar
+## 3. Motor
 
 ```bash
-alx build                       # verifica el build del workspace (dogfood)
-alx run "mi tarea"              # pipeline demo (sin LLM)
-alx run "mi tarea" --real       # pipeline REAL: cadena LLM + critic + ledger
-alx feature "mi feature"        # genera artefacto en docs/features/ + verifica
-alx spawn general-purpose "task"# ejecuta un agente real contra la cadena
-alx doctor                      # valida el ecosistema (27 items)
-alx cost                        # coste acumulado real
+alx build                        # dogfood build
+alx run "tarea" --real           # pipeline REAL: cadena LLM + critic + ledger
+alx feature "feature"            # artefacto en docs/features/ + verificación
+alx spawn general-purpose "task" # agente real contra la cadena
+alx doctor                       # valida el ecosistema
+alx cost                         # coste acumulado real
 ```
 
-## Modo autónomo (hook de iteración)
+## 4. Proyectos: `.alexandria/` (el harness se adapta a CADA proyecto)
 
-- El sistema **itera solo** (R24): `state.toml` en `proyecto-final/harnesses/iterate/`.
-- `awaiting_user = true` → la AI espera tu respuesta en vez de forzar iteración.
-- `target_iter` → cuántas iteraciones se compromete la AI por trabajo.
-- `iter = 0` → ciclo completado, el hook se apaga solo hasta el próximo trabajo.
-- Cron nocturno: `systemctl --user list-timers alx-night` (02:00).
+```bash
+cd mi-proyecto
+alx init                # crea .alexandria/: registry propio, rúbricas, skills,
+                        # diario de lecciones y config del pulido
+alx harness-list        # registry DE ESTE proyecto (resuelto automático)
+alx harness-new <slug> --objective "..." --doc "..." [--kind permanent]
+alx evolve              # watcher: promueve por uso, retira cumplidos
+alx patterns --apply    # bloqueos recurrentes -> harnesses permanentes
+```
 
-## MCP
+## 5. Investigación profunda (plan/17) — pensamiento de experto
 
-`alx mcp` es un servidor MCP (registrado en `~/.claude.json`). Cualquier cliente lo conecta: `alx mcp`.
+```bash
+alx research "pregunta"   # 7 artefactos: pregunta → fundamentos → iceberg →
+                          # simulaciones → frenos → evidencia → síntesis
+alx research-check        # COMPUERTA: falla si está superficial (exit 1);
+                          # el hook Stop bloquea cerrar sesión a medias
+alx polish fichero.md --rubric research
+                          # pulido dosificado: para solo viendo la mejora
+                          # (meseta → parada; max_rounds solo techa)
+alx skills-fetch --search "claude skills"   # buscar en GitHub POR ESTRELLAS
+alx skills-fetch owner/repo                 # instalar reglas del experto
+```
 
-## Más
+## 6. Cadena de modelos (routa)
 
-- Estado real: `proyecto-final/ESTADO.md`
-- Plan y specs: `plan/` (00-vision → 17-orquestrator)
-- Misión: `plan/MISSION.md`
+```bash
+routa show / models / use <model>   # cambiar modelo = un comando
+routa status / key next / logs gateway
+```
+El gateway hace failover automático si el modelo activo cae arriba.

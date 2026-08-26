@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <rect width="960" height="520" fill="#0f1420"/>
+  <text x="480" y="38" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="bold" fill="#e8ecf4">ALEXANDRIA — System architecture</text>
+
+  <!-- col 1: Claude Code -->
+  <rect x="40" y="80" width="200" height="120" rx="10" fill="#1c2434" stroke="#e8b64c" stroke-width="1.5"/>
+  <text x="140" y="110" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#e8ecf4">Claude Code</text>
+  <text x="140" y="132" text-anchor="middle" font-family="sans-serif" font-size="10.5" fill="#8892a6">hooks · statusline · MCP</text>
+  <text x="140" y="150" text-anchor="middle" font-family="sans-serif" font-size="10.5" fill="#8892a6">themes · skills · plugins</text>
+  <text x="140" y="168" text-anchor="middle" font-family="monospace" font-size="10" fill="#4a9eff">alx setup → ⚡</text>
+  <line x1="60" y1="185" x2="100" y2="185" stroke="#e8b64c" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- col 2: Engine -->
+  <rect x="380" y="50" width="220" height="420" rx="12" fill="#1c2434" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="490" y="80" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#e8ecf4">Engine (16 crates)</text>
+  <g font-family="monospace" font-size="11" fill="#e8ecf4">
+    <rect x="400" y="95" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="112" text-anchor="middle">alx-gate · verifies</text>
+    <rect x="400" y="127" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="144" text-anchor="middle">alx-critic · critiques</text>
+    <rect x="400" y="159" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="176" text-anchor="middle">alx-task · decomposes</text>
+    <rect x="400" y="191" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="208" text-anchor="middle">alx-harness · stages</text>
+    <rect x="400" y="223" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="240" text-anchor="middle">alx-governor · cost</text>
+    <rect x="400" y="255" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="272" text-anchor="middle">alx-memory · recalls</text>
+    <rect x="400" y="287" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="304" text-anchor="middle">alx-mcp · protocol</text>
+    <rect x="400" y="319" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="336" text-anchor="middle">alx-bench · measures</text>
+    <rect x="400" y="351" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="368" text-anchor="middle">alx-night · autonomous</text>
+    <rect x="400" y="383" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="400" text-anchor="middle">alx-evolve · learns</text>
+    <rect x="400" y="415" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="432" text-anchor="middle">alx-audit · doctor</text>
+  </g>
+  <text x="490" y="458" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#8892a6">207 tests · clippy-clean</text>
+
+  <!-- col 3: LLM chain -->
+  <rect x="720" y="80" width="200" height="200" rx="10" fill="#1c2434" stroke="#2ecc71" stroke-width="1.5"/>
+  <text x="820" y="110" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#e8ecf4">Model chain</text>
+  <g font-family="monospace" font-size="11">
+    <text x="820" y="140" text-anchor="middle" fill="#e8ecf4">headroom :8788</text>
+    <text x="820" y="160" text-anchor="middle" fill="#8892a6">compress</text>
+    <text x="820" y="186" text-anchor="middle" fill="#e8ecf4">cc-model-mask :3460</text>
+    <text x="820" y="206" text-anchor="middle" fill="#8892a6">route model</text>
+    <text x="820" y="232" text-anchor="middle" fill="#e8ecf4">routatic :3456</text>
+    <text x="820" y="252" text-anchor="middle" fill="#8892a6">deepseek-v4-flash</text>
+    <text x="820" y="272" text-anchor="middle" fill="#e8b64c" font-size="10">model-agnostic</text>
+  </g>
+
+  <!-- arrows CC → engine -->
+  <path d="M240 130 C 300 130, 320 150, 380 160" stroke="#e8b64c" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+  <text x="300" y="118" text-anchor="middle" font-size="10" fill="#8892a6" font-family="sans-serif">hooks / MCP</text>
+  <path d="M240 165 C 300 200, 320 250, 380 270" stroke="#e8b64c" stroke-width="2" fill="none" opacity="0.7"/>
+  <text x="295" y="218" text-anchor="middle" font-size="10" fill="#8892a6" font-family="sans-serif">statusline</text>
+
+  <!-- arrows engine → chain -->
+  <path d="M600 200 C 650 200, 670 180, 720 170" stroke="#2ecc71" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+  <text x="655" y="192" text-anchor="middle" font-size="10" fill="#8892a6" font-family="sans-serif">LLM calls</text>
+
+  <!-- verify loop -->
+  <path d="M600 280 C 650 340, 650 380, 600 430 M490 470 L 490 460" stroke="#e05252" stroke-width="1.5" fill="none" stroke-dasharray="5 4"/>
+  <text x="700" y="400" text-anchor="middle" font-size="10" fill="#e05252" font-family="sans-serif">verify → critique → improve (R24)</text>
+
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#e8b64c"/>
+    </marker>
+  </defs>
+</svg>

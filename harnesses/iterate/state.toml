@@ -4,4 +4,4 @@ work_unit = "(sesión nueva — iteración por commit de trabajo real)"
 max_auto = 20
 target_iter = 20
 awaiting_user = false
-last_commit = "6951d2b"
+last_commit = "6e1b0df"

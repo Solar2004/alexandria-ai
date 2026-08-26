@@ -58,7 +58,7 @@ enum Command {
     Mcp,
     /// Estado del plugin PHALANX (config + hooks).
     Phalanx,
-    /// Dogfood: ejecuta el pipeline y escribe el artefacto real en docs/features/.
+    /// Dogfood: ejecuta el pipeline y escribe el artefacto real en artifacts/features/.
     Feature {
         /// Título de la feature.
         titulo: String,
@@ -255,7 +255,7 @@ fn run(cli: Cli) -> ExitCode {
             println!("{}", render_phalanx_status());
         }
         Some(Command::Feature { titulo, real }) => {
-            println!("{}", feature_run(&titulo, real, "docs/features"));
+            println!("{}", feature_run(&titulo, real, "artifacts/features"));
         }
         Some(Command::Evolve) => {
             println!("{}", run_evolve_cycle());

@@ -35,3 +35,6 @@ package-lock.json
 # ── Plan media ──
 plan/media/
 night-ops/report/
+
+# ── Artefactos del pipeline (alx feature) ──
+artifacts/

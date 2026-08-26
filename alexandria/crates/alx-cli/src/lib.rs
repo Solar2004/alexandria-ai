@@ -1749,7 +1749,7 @@ fn improve_with_llm(artifact: &str, rubric: &Rubric, findings: &[String]) -> Opt
         body_path.display(),
         resp_path.display()
     );
-    let out = alx_gate::run_command(&cmd, 130_000);
+    let _ = alx_gate::run_command(&cmd, 130_000);
     let Ok(raw_file) = std::fs::read_to_string(&resp_path) else {
         return None;
     };

@@ -26,7 +26,7 @@ routa auto       # encuentra un modelo vivo y lo activa (si el actual 500s)
 ```bash
 alx build                        # dogfood build
 alx run "tarea" --real           # pipeline REAL: cadena LLM + critic + ledger
-alx feature "feature"            # artefacto en docs/features/ + verificación
+alx feature "feature"            # artefacto en artifacts/features/ + verificación
 alx spawn general-purpose "task" # agente real contra la cadena
 alx doctor                       # valida el ecosistema
 alx cost                         # coste acumulado real

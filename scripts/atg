@@ -78,7 +78,7 @@ apply_theme() {
   jq --arg t "custom:$t" '.theme = $t' /home/artorias/.claude/settings.json > /tmp/atg-theme.json \
     && mv /tmp/atg-theme.json /home/artorias/.claude/settings.json
   # statusline sol/luna (ccstatusline)
-  local src="/home/artorias/Projectos/AlexanderTheGreat/proyecto-final/statusline/ccstatus-$t.json"
+  local src="/home/artorias/Projectos/AlexanderTheGreat/statusline/ccstatus-$t.json"
   [ -f "$src" ] && cp "$src" /home/artorias/.config/ccstatusline/settings.json
 }
 
@@ -88,9 +88,9 @@ ensure_patched() {
   local BIN=$(ls -1t "$VDIR"/2.* 2>/dev/null | head -1)
   [ -n "$BIN" ] || return 0
   # LOGO (☀) — funciona en la versión actual.
-  bash /home/artorias/Projectos/AlexanderTheGreat/proyecto-final/scripts/patch-logo.sh "$BIN" >/dev/null 2>&1 || true
+  bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-logo.sh "$BIN" >/dev/null 2>&1 || true
   # BRANDING de texto (patch-brand.sh) — "Claude Code" → "ALEXANDRIA " (mismo byte-length, solo display).
-  bash /home/artorias/Projectos/AlexanderTheGreat/proyecto-final/scripts/patch-brand.sh "$BIN" >/dev/null 2>&1 || true
+  bash /home/artorias/Projectos/AlexanderTheGreat/scripts/patch-brand.sh "$BIN" >/dev/null 2>&1 || true
   # BRANDING completo (patch-cc) — falla en 2.1.231 (entrypoint movido); log silencioso.
   if grep -aq "AlexanderTheGreat" "$BIN" 2>/dev/null; then
     return 0  # ya parchado

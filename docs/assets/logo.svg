@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#1e2a44"/>
+      <stop offset="100%" stop-color="#0f1420"/>
+    </radialGradient>
+  </defs>
+  <circle cx="80" cy="80" r="76" fill="url(#bg)"/>
+  <circle cx="80" cy="80" r="76" fill="none" stroke="#e8b64c" stroke-width="2.5"/>
+  <circle cx="80" cy="80" r="66" fill="none" stroke="#e8b64c" stroke-width="0.8" stroke-dasharray="3 5"/>
+  <!-- laurel izquierdo -->
+  <path d="M28 95 Q40 70 56 62 M30 100 Q44 84 60 74 M34 106 Q46 94 58 86"
+        stroke="#2ecc71" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- laurel derecho -->
+  <path d="M132 95 Q120 70 104 62 M130 100 Q116 84 100 74 M126 106 Q114 94 102 86"
+        stroke="#2ecc71" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- rays -->
+  <g stroke="#e8b64c" stroke-width="1.2" opacity="0.55">
+    <line x1="80" y1="14" x2="80" y2="30"/>
+    <line x1="80" y1="130" x2="80" y2="146"/>
+    <line x1="14" y1="80" x2="30" y2="80"/>
+    <line x1="130" y1="80" x2="146" y2="80"/>
+    <line x1="33" y1="33" x2="44" y2="44"/>
+    <line x1="116" y1="116" x2="127" y2="127"/>
+    <line x1="127" y1="33" x2="116" y2="44"/>
+    <line x1="44" y1="116" x2="33" y2="127"/>
+  </g>
+  <text x="80" y="74" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#e8ecf4" font-weight="bold">ΑΛΕΞ</text>
+  <text x="80" y="100" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#e8ecf4" font-weight="bold">ΑΝΔΡΕΙΑ</text>
+  <text x="80" y="122" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#e8b64c" letter-spacing="3">AUTONOMOUS ENGINE</text>
+  <circle cx="80" cy="80" r="4" fill="#e8b64c"/>
+</svg>

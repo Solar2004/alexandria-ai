@@ -26,6 +26,7 @@ Execution-verified on real datasets — the harness turns model failures into pa
 | Benchmark | Direct AI (no harness) | **ALEXANDRIA harness** | Advantage |
 |---|---|---|---|
 | BigCodeBench (ICLR'25) · N=20 sample | 15% | **45%** | **3.0x** |
+| BigCodeBench (ICLR'25) · N=8, R28 stall-detect | 25% | **87.5%** | **3.5x** |
 | BigCodeBench held-out · N=30 | 7% | **73%** | **~11x** |
 | HumanEval · N=164 | 90% | **95%** | +6% |
 
@@ -43,6 +44,10 @@ Execution-verified on real datasets — the harness turns model failures into pa
 - **Hook-driven iteration (R24)** — the agent can't "finish" without verifying; state auto-advances with real commits
 - **16-crate Rust engine** — gate, critic, memory, governor, task graph, MCP server, night ops
 - **Self-setup** — `alx setup` generates the full Claude Code integration from one canonical template
+- **Project-adaptive learning** — `alx init` creates a per-project `.alexandria/` (registry, rubrics, skills, lessons) that adapts the harness to each repo
+- **Deep research protocol** — `alx research <q>` runs a 7-step protocol (mechanism → iceberg → simulations → brakes → evidence → synthesis) with a hard gate (`research-check`)
+- **Dosed polish** — `alx polish <file>` evaluates against the project rubric, improves with the LLM, and decides when to stop (plateau)
+- **Benchmark stall-detection (R28)** — when the same test fails twice, the harness discards the approach and re-solves with a different algorithm (4→6 attempts)
 - **Model-agnostic** — works with any model the LLM chain routes to (`deepseek-v4-flash`, Claude, ...)
 - **Multi-session aware** — per-session iteration state via `ALX_SESSION_ID`
 - **No telemetry** — privacy-first
@@ -94,19 +99,82 @@ claude      # the harness runs automatically
 alx bench   # re-run the benchmarks yourself
 ```
 
-## 🧰 Commands
+## 🧰 Commands (38)
+
+### Core lifecycle
 
 | Command | What it does |
 |---|---|
 | `alx setup` | Generate/verify the full Claude Code integration (`.claude/` regenerable) |
-| `alx bench` | Real benchmarks · 3 families (BigCodeBench, HumanEval, CodeContests) · execution-verified |
-| `alx feature "task"` | Full pipeline: decompose → harness → verify → critic |
+| `alx update` | Auto-update: git pull + rebuild + reinstall |
 | `alx status` | System state (real, from disk) |
 | `alx network` | LLM chain health (POST probes, honest codes) |
-| `alx doctor` | Audit of the ecosystem (plugins, hooks, harnesses) |
-| `alx mcp` | Serve ALEXANDRIA as an MCP server |
-| `alx night` | Autonomous night-ops report |
+| `alx doctor` | Audit of the ecosystem (crates, hooks, harnesses) |
+| `alx cost` | Accumulated cost report from the persisted ledger |
+| `alx metrics` | Lines of code per crate |
+
+### Pipelines & harness
+
+| Command | What it does |
+|---|---|
+| `alx feature "task"` | Full pipeline: decompose → harness → verify → critic (writes `artifacts/features/` + build check) |
+| `alx run "task" --real` | Real pipeline: LLM chain + real critic + must-checks + evolve + ledger |
+| `alx polish <file>` | Dose-polish a file against the project rubric (plateau → stop, decided by the system) |
+| `alx patterns [--apply]` | Mine hooks metrics for recurring problems and propose harnesses |
+| `alx evolve` | Evolutionary harness watcher with persistence |
+| `alx init` | Create `.alexandria/` per-project registry, rubrics, skills, lessons |
+| `alx iterate --next` | Motor-managed iteration loop (state.toml) |
+| `alx night` | Autonomous night-ops report (systemd timer) |
+
+### Research & skills
+
+| Command | What it does |
+|---|---|
+| `alx research "q"` | Deep-research protocol (7 steps: mechanism → iceberg → simulations → brakes → evidence → synthesis) |
+| `alx research-check` | Hard gate: exits 1 if the research is superficial |
+| `alx skills-fetch` | Curated catalog of GitHub skills (by stars); `--search` finds, installs in one command |
+| `alx harness-new` | Create a harness (temporal/permanent, manual/phase/event trigger) |
+| `alx harness-list` / `alx harness-use` | Registry listing / usage tracking |
+
+### Agents
+
+| Command | What it does |
+|---|---|
+| `alx agents` | Agent registry + spawn envelope |
+| `alx agents-show <name>` | Show a real agent from the registry (421 agents) |
+| `alx spawn <agent> <task>` | Real headless spawn against the LLM chain |
+| `alx agents-run "task"` | Run 3 agents in parallel on one task |
+
+### Benchmarks (3 families)
+
+| Command | What it does |
+|---|---|
+| `alx bench` | Run all families: BigCodeBench + HumanEval + CodeContests |
+| `alx bench-bigcode` | BigCodeBench (ICLR'25) — direct vs harness, real unittests |
+| `alx bench-humaneval` | HumanEval (164) — family 2, generality |
+| `alx bench-codecontests` | CodeContests (30) — family 3, I/O-based |
+
+### Interfaces
+
+| Command | What it does |
+|---|---|
+| `alx mcp` | Serve ALEXANDRIA as an MCP server (6 tools) |
 | `alx tui` | Live dashboard: network, governor, harnesses, loop |
+| `alx report` | Full markdown report: TUI + cost + doctor + agents |
+| `alx weekly` | Weekly summary (cost, telemetry, harnesses, metrics) |
+| `alx phalanx` | PHALANX plugin state (config + 10 hooks) |
+| `alx task add/list` | DAG task management |
+| `alx build` | Dogfood: verify the workspace builds (real gate) |
+| `alx quality` / `alx benchmark` | Legacy scorecard benchmarks |
+
+### Env vars
+
+| Var | What it controls |
+|---|---|
+| `ALX_BENCH_MAX` | Cap benchmark problems (runtime) |
+| `ALX_BENCH_FILE` | Different problem set (held-out validation) |
+| `ALX_MODEL` | Override the active model |
+| `ALX_SESSION_ID` | Per-session iteration state |
 
 See [docs/quickstart.md](docs/quickstart.md) for the full guide.
 

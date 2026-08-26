@@ -2,6 +2,21 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## Ciclo 11 — harness de benchmark con detección de estancamiento + documentación completa (2026-08-26)
+
+- **R28 en el harness de benchmark**: si el MISMO test falla 2x seguidas, el
+  modelo DESCARTa el enfoque y reescribe desde cero con algoritmo distinto
+  (antes "corrige" repetía el mismo error). Intentos 4→6 en las 3 familias.
+- **Medido en vivo (N=8, deepseek-v4-flash, unittest REAL)**:
+  directa 2/8 (25%) vs **harness 7/8 (87.5%) = 3.5x** — recupera 5/6 fallos
+  de la directa. Evidencia: `harnesses/bench/results/bigcode8-ciclo11-stall-detect.md`.
+  N=20 completo pendiente para el ratio oficial.
+- **README documentado de verdad**: tabla de 38 comandos (antes 9), features
+  de los ciclos 9-10 (init/research/polish/skills-fetch/harness-new), env vars,
+  resultado N=8 en la tabla de benchmarks. Quickstart con sección de benchmarks.
+- Benchmark chart regenerado con datos verificados; badge de 212 tests.
+- 212 tests · clippy 0 warnings.
+
 ## Ciclo 10 — experto por proyecto + investigación profunda (2026-08-25, sesión continua 2)
 
 - **`.alexandria/` por proyecto**: `alx init` crea registry/rúbricas/skills/

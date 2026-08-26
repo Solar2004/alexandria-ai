@@ -1060,19 +1060,33 @@ pub fn render_bench_bigcode() -> String {
         // HARNESS (plan-then-code): el modelo describe el algoritmo ANTES de
         // escribir codigo, luego itera con feedback. La directa queda como
         // baseline puro (sin plan). Experiment: ciclo 7, iter 8.
+        // R28: deteccion de estancamiento — si el MISMO test falla 2 veces
+        // seguidas, "corrige" no ayuda (el modelo repite el mismo error);
+        // se fuerza reescritura completa con enfoque distinto.
         let mut h = false;
         let mut feedback = String::new();
-        for _ in 0..4 {
-            let prompt = format!(
-                "{problem}\n\nCompleta task_func. PRIMERO describe tu algoritmo en UNA frase (fuera del codigo), LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. {feedback}No escribas tests."
+        let mut last_frag = String::new();
+        let mut stalls = 0usize;
+        for attempt in 0..6 {
+            let mut instruction = format!(
+                "Completa task_func. PRIMERO describe tu algoritmo en UNA frase (fuera del codigo), LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. {feedback}No escribas tests."
             );
+            if stalls >= 2 {
+                instruction = format!(
+                    "La solucion anterior se estanca: el test '{last_frag}' sigue fallando. NO corrijas la funcion anterior: DESCARTA tu enfoque y resuelve el problema desde cero con un algoritmo DISTINTO. PRIMERO describe el nuevo algoritmo en UNA frase, LUEGO codigo completo entre marcadores ```python. No escribas tests."
+                );
+            }
+            let prompt = format!("{problem}\n\n{instruction}");
             let sol = extract_script(&generate_script(&prompt));
             let (ok, frag) = run_bigcode(&sol, &test);
             if ok {
                 h = true;
                 break;
             }
+            stalls = if frag == last_frag { stalls + 1 } else { 0 };
+            last_frag = frag.clone();
             feedback = format!("El test fallo. Detalle: {frag}. Corrige task_func. ");
+            let _ = attempt;
         }
         if h {
             h_ok += 1;
@@ -1166,19 +1180,30 @@ pub fn render_bench_humaneval() -> String {
         if d {
             d_ok += 1;
         }
-        // Harness: plan-then-code + feedback, 4 intentos.
+        // Harness: plan-then-code + feedback, 6 intentos con detección de
+        // estancamiento (mismo fallo 2x → reescritura con enfoque distinto).
         let mut h = false;
         let mut feedback = String::new();
-        for _ in 0..4 {
-            let prompt = format!(
-                "{prompt}\n\nCompleta {entry}: PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. {feedback}No escribas tests."
+        let mut last_frag = String::new();
+        let mut stalls = 0usize;
+        for _ in 0..6 {
+            let mut instruction = format!(
+                "Completa {entry}: PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe SOLO el codigo python de la funcion completa entre marcadores ```python. {feedback}No escribas tests."
             );
+            if stalls >= 2 {
+                instruction = format!(
+                    "La solucion anterior se estanca: '{last_frag}' sigue fallando. NO corrijas la funcion anterior: DESCARTA tu enfoque y resuelve desde cero con un algoritmo DISTINTO. PRIMERO describe el nuevo algoritmo en UNA frase, LUEGO codigo completo entre marcadores ```python. No escribas tests."
+                );
+            }
+            let prompt = format!("{prompt}\n\n{instruction}");
             let sol = extract_script(&generate_script(&prompt));
             let (ok, frag) = run_humaneval(&sol, &test, &entry);
             if ok {
                 h = true;
                 break;
             }
+            stalls = if frag == last_frag { stalls + 1 } else { 0 };
+            last_frag = frag.clone();
             feedback = format!("El test fallo. Detalle: {frag}. Corrige {entry}. ");
         }
         if h {
@@ -1279,16 +1304,26 @@ pub fn render_bench_codecontests() -> String {
         }
         let mut h = false;
         let mut feedback = String::new();
-        for _ in 0..4 {
-            let prompt = format!(
-                "{desc}\n\nEscribe SOLO codigo Python que lea de stdin y escriba a stdout. PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe el codigo entre marcadores ```python. {feedback}"
+        let mut last_frag = String::new();
+        let mut stalls = 0usize;
+        for _ in 0..6 {
+            let mut instruction = format!(
+                "Escribe SOLO codigo Python que lea de stdin y escriba a stdout. PRIMERO describe tu algoritmo en UNA frase, LUEGO escribe el codigo entre marcadores ```python. {feedback}"
             );
+            if stalls >= 2 {
+                instruction = format!(
+                    "La solucion anterior se estanca: '{last_frag}' sigue fallando. NO corrijas: DESCARTA tu enfoque y resuelve desde cero con un algoritmo DISTINTO. PRIMERO describe el nuevo algoritmo en UNA frase, LUEGO codigo entre marcadores ```python."
+                );
+            }
+            let prompt = format!("{desc}\n\n{instruction}");
             let sol = extract_script(&generate_script(&prompt));
             let (ok, frag) = run_codecontests(&sol, &tests);
             if ok {
                 h = true;
                 break;
             }
+            stalls = if frag == last_frag { stalls + 1 } else { 0 };
+            last_frag = frag.clone();
             feedback = format!("El test fallo. Detalle: {frag}. Corrige. ");
         }
         if h {

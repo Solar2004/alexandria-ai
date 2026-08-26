@@ -65,3 +65,17 @@ routa show / models / use <model>   # cambiar modelo = un comando
 routa status / key next / logs gateway
 ```
 El gateway hace failover automático si el modelo activo cae arriba.
+
+## 7. Benchmarks (3 familias, execution-verified)
+
+```bash
+alx bench                  # todo: BigCodeBench + HumanEval + CodeContests
+ALX_BENCH_MAX=8 alx bench-bigcode    # muestra corta (rápida)
+ALX_BENCH_FILE=harnesses/bench/bigcodebench-holdout.jsonl alx bench-bigcode  # held-out
+alx bench-humaneval        # familia 2 (generalidad, 164)
+alx bench-codecontests     # familia 3 (I/O-based, 30)
+```
+
+El harness usa plan-then-code + feedback con **detección de estancamiento**
+(R28): si el mismo test falla 2 veces seguidas, descarta el enfoque y
+reescribe con algoritmo distinto (hasta 6 intentos).

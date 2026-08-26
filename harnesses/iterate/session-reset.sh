@@ -5,6 +5,8 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE="$DIR/state.toml"
 [ -n "$ALX_SESSION_ID" ] && STATE="$DIR/state-$ALX_SESSION_ID.toml"
 REPO="/home/artorias/Projectos/AlexanderTheGreat"
+# contador de auto-ciclos de la sesión ANTERIOR fuera: el loop R24 empieza limpio
+rm -f "$DIR/.auto_cycles"
 HEAD=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo "")
 MAX=$(grep -E '^max_iter' "$STATE" | head -1 | cut -d= -f2 | tr -d ' ' | grep -oP '\d+' || echo 20)
 TARGET=$(grep -E '^target_iter' "$STATE" | head -1 | cut -d= -f2 | tr -d ' ' | grep -oP '\d+' || echo "$MAX")

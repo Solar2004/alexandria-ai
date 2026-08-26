@@ -74,6 +74,22 @@ systemd/          # services (alx-night, cloudcli, headroom, omniroute)
 statusline/       # powerline statusline themes
 ```
 
+## 🤖 Autonomous mode
+
+Launch the engine hands-off and watch it work:
+
+```bash
+atg --dangerously-skip-permissions   # reads the mission, picks backlog work, runs the R24 loop
+atg --auto                           # same, keeping permission prompts
+```
+
+No prompt needed — the wrapper injects an autonomous kickoff (read
+`plan/MISSION.md`, pick the most valuable unit from `plan/ideas.md`,
+execute VERIFICA→CRITICA→MEJORA until `target_iter`). The hook chain keeps
+it going: every real commit advances the iteration state (`auto-iterate`),
+and when Claude stops, `auto-continue` re-injects the next cycle (capped at
+20 cycles/session, stops early on `awaiting_user` or completion).
+
 ## 🚀 Quick start
 
 **One-command install:**

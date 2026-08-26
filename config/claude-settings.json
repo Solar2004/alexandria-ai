@@ -75,6 +75,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/auto-continue.sh",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "SessionStart": [

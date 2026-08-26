@@ -4,6 +4,9 @@
 #  Wrapper único: aplica headroom (compresión), tema sol/luna
 #  y el statusline con datos. Modos:
 #    atg            → claude + headroom (recomendado)
+#    atg --dangerously-skip-permissions → AUTÓNOMO: lee la misión, elige
+#                     trabajo del backlog y ejecuta el ciclo R24 solo
+#    atg --auto     → autónomo explícito (igual, sin skip-permissions)
 #    atg --raw      → claude directo a routatic (sin headroom)
 #    atg --free     → claude vía OmniRoute (fallback gratuito)
 #    atg --bare     → claude modo minimal (sin plugins/themes)
@@ -113,9 +116,10 @@ export ALX_SESSION_ID="${ALX_SESSION_ID:-$(cat /proc/sys/kernel/random/uuid 2>/d
 # declarar hechos antes de cada edit. Los hooks de ALEXANDRIA siguen activos.
 export ECC_GATEGUARD=off
 
-# Contexto real del modelo: CC ve claude-opus-4-6[1m] (1M) vía cc-model-mask; compacta al ~92% de 1M
-export CLAUDE_CODE_AUTO_COMPACT_WINDOW=900000
-export ANTHROPIC_MODEL="claude-opus-4-6[1m]"
+# Contexto real del modelo: CC ve claude-opus-4-6[1m] (1M) vía cc-model-mask; compacta al ~92% de 1M.
+# Respeta env pre-existente (modo ahorro: wrapper exporta ANTHROPIC_MODEL sin [1m] + ventana baja).
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-900000}"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-opus-4-6[1m]}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -123,12 +127,27 @@ while [[ $# -gt 0 ]]; do
     --raw)   MODE=raw;   shift ;;
     --bare)  MODE=bare;  shift ;;
     --clean) MODE=clean; shift ;;
+    --auto)  MODE=auto;  shift ;;   # arranque autónomo explícito
     --help|-h)
       sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) break ;;
   esac
 done
+
+# ── Arranque autónomo (R29): flags sin prompt ⇒ el motor se pone a trabajar ──
+# atg --dangerously-skip-permissions  → lee la misión, elige trabajo del backlog
+# y ejecuta el ciclo VERIFICA→CRITICA→MEJORA con commits reales.
+if [[ "${MODE}" != "bare" && "${MODE}" != "clean" ]]; then
+  HAS_PROMPT=0
+  for a in "$@"; do
+    if [[ "${a:0:1}" != "-" ]]; then HAS_PROMPT=1; break; fi
+  done
+  if [[ $HAS_PROMPT -eq 0 && $# -gt 0 ]] || [[ "${MODE}" == "auto" && $HAS_PROMPT -eq 0 ]]; then
+    KICKOFF="ARRANQUE AUTÓNOMO del motor ALEXANDRIA. Lee plan/MISSION.md y docs/status.md. Elige AHORA la unidad de trabajo más valiosa: backlog pendiente en plan/ideas.md, mejoras del motor que pida MISSION, o deuda técnica conocida (docs/status.md). Declara tu elección en una frase y EJECUTA el ciclo R24 completo: implementa → VERIFICA (tests/build reales, nunca 'debería funcionar') → CRITICA → MEJORA → commit atómico. Repite hasta completar target_iter o agotar el backlog. NO preguntes al usuario salvo bloqueo duro que exija decisión humana."
+    set -- "$KICKOFF" "$@"
+  fi
+fi
 
 case "$MODE" in
   free)
@@ -145,7 +164,7 @@ case "$MODE" in
     # pantalla 100% limpia: -c retoma la sesión del dir o crea sin cabecera
     exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude -c "$@"
     ;;
-  cc)
+  cc|auto)
     exec env HOME=/home/artorias DISABLE_AUTOUPDATER=1 HEADROOM_BEACON=off ANTHROPIC_AUTH_TOKEN=unused "$HEADROOM" wrap claude --1m --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
     ;;
 esac

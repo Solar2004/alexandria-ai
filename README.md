@@ -10,7 +10,7 @@ Gives any LLM agent a *self-improving harness*: staged execution, real verificat
 self-critique, and iteration driven by actual work — not promises.
 
 [![Rust](https://img.shields.io/badge/Rust-16_crates-orange)](https://www.rust-lang.org)
-[![Tests](https://img.shields.io/badge/Tests-207_passing-brightgreen)](https://github.com/Solar2004/alexandria-ai/actions)
+[![Tests](https://img.shields.io/badge/Tests-212_passing-brightgreen)](https://github.com/Solar2004/alexandria-ai/actions)
 [![Clippy](https://img.shields.io/badge/Clippy-0_warnings-blue)](https://github.com/Solar2004/alexandria-ai/actions)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/Solar2004/alexandria-ai/pulls)
@@ -25,9 +25,9 @@ Execution-verified on real datasets — the harness turns model failures into pa
 
 | Benchmark | Direct AI (no harness) | **ALEXANDRIA harness** | Advantage |
 |---|---|---|---|
-| BigCodeBench (ICLR'25) · 186 tasks | 11% | **67%** | **~6x** |
-| BigCodeBench held-out · 30 tasks | 7% | **73%** | **~11x** |
-| HumanEval · 164 tasks | 90% | **95%** | +6% |
+| BigCodeBench (ICLR'25) · N=20 sample | 15% | **45%** | **3.0x** |
+| BigCodeBench held-out · N=30 | 7% | **73%** | **~11x** |
+| HumanEval · N=164 | 90% | **95%** | +6% |
 
 ![Benchmark chart](docs/benchmark-chart.svg)
 
@@ -143,7 +143,7 @@ ALEXANDRIA is **model-agnostic** — the harness works with any model the chain 
 
 - **Real datasets**: BigCodeBench (ICLR'25), HumanEval, CodeContests — from official sources
 - **Execution-verified**: tests run against real outputs, not text matching
-- **Honest**: the harness improves function-completion (~6x); on hard competitive I/O
+- **Honest**: the harness improves function-completion (~3-11x across real runs); on hard competitive I/O
   it matches the model — measured, reported, no overclaiming
 - **Reproducible**: `alx bench` re-runs everything; `alx setup` regenerates the full integration
 

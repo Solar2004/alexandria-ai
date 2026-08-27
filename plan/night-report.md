@@ -1,4 +1,4 @@
-# Informe nocturno — 2026-08-26 10:52
+# Informe nocturno — 2026-08-27 09:27
 
 ## Informe nocturno
 
@@ -23,9 +23,9 @@ Coste estimado: 0.00 USD
 [1;36m│ Coste:[0m Coste estimado total: $0.005660
 [1;36m│ Doctor:[0m Total items: 28
 [1;36m│ Telemetría:[0m 49 eventos · night systemd: 02:00
-[1;36m│ Métricas:[0m Total: 10877 líneas
+[1;36m│ Métricas:[0m Total: 11404 líneas
 [1;36m│ Agentes reales:[0m 0 en el ecosistema
-[1;36m│ Comandos ejecutados:[0m 60084
+[1;36m│ Comandos ejecutados:[0m 77146
 [1;36m│ Comandos:[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui
 [1;33m╚══════════════════════════════════════════════════════════════════╝[0m
 
@@ -92,7 +92,7 @@ budget: 15000 tokens
   alx-agents: 667 líneas
   alx-audit: 462 líneas
   alx-bench: 348 líneas
-  alx-cli: 3834 líneas
+  alx-cli: 4361 líneas
   alx-core: 471 líneas
   alx-critic: 552 líneas
   alx-evolve: 688 líneas
@@ -106,7 +106,7 @@ budget: 15000 tokens
   alx-night: 239 líneas
   alx-task: 431 líneas
   alx-tui: 337 líneas
-Total: 10877 líneas
+Total: 11404 líneas
 
 
 --- Resumen semanal ---
@@ -124,11 +124,11 @@ Vivos: 1 · Retirados: 1
 ## Agentes
 3 especializados (general-purpose, code-reviewer, test-engineer)
 ## Métricas
-Total: 10877 líneas
+Total: 11404 líneas
 
 
-
---- Salud de la cadena (routa) ---
 --- Salud de la cadena (routa) ---
 routa no disponible en PATH
+
+--- Salud de la cadena (routa) ---
 routa no disponible en PATH

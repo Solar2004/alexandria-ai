@@ -2144,6 +2144,339 @@ const SKILL_CATALOG: &[(&str, &str)] = &[
 /// `.alexandria/skills/` y lo añade al catálogo del proyecto.
 /// `--search "términos"` busca en GitHub ordenado por ESTRELLAS: la calidad
 /// se juzga por adopción antes de instalar nada.
+
+// ─── Scorer de calidad de skills ────────────────────────────────────────
+// La pregunta que responde: ¿esta skill aporta conocimiento FUNCIONAL que la
+// IA no generaría por su cuenta (scripts ejecutables, librerías concretas,
+// comandos, gates de verificación) o es prosa genérica que ya sabe?
+
+/// Resultado del análisis de una skill.
+pub struct SkillScore {
+    pub name: String,
+    pub points: i32,
+    pub signals: Vec<String>,
+    pub anti_signals: Vec<String>,
+}
+
+impl SkillScore {
+    pub fn verdict(&self) -> (&'static str, &'static str) {
+        if self.points >= 70 {
+            ("\x1b[1;32mINSTALAR ⭐\x1b[0m", "conocimiento funcional alto")
+        } else if self.points >= 45 {
+            ("\x1b[1;33mPROBAR\x1b[0m", "valor parcial")
+        } else {
+            ("\x1b[1;31mDESCARTAR\x1b[0m", "genérica — la IA ya lo sabe")
+        }
+    }
+}
+
+/// Cuenta ocurrencias de un patrón en un texto (case-insensitive).
+fn count_matches(text: &str, needle: &str) -> usize {
+    text.to_lowercase().matches(needle).count()
+}
+
+/// Analiza un directorio de skill (con SKILL.md) y puntúa su valor funcional.
+pub fn score_skill_dir(dir: &std::path::Path) -> Option<SkillScore> {
+    let skill_md = dir.join("SKILL.md");
+    let Ok(text) = std::fs::read_to_string(&skill_md) else { return None };
+    let name = dir.file_name()?.to_string_lossy().to_string();
+    let mut pts = 0i32;
+    let mut plus: Vec<String> = Vec::new();
+    let mut minus: Vec<String> = Vec::new();
+
+    // + scripts/ ejecutables: activos FUNCIONALES (lo más valioso)
+    let scripts = std::fs::read_dir(dir.join("scripts"))
+        .map(|rd| rd.flatten().count())
+        .unwrap_or(0);
+    if scripts > 0 {
+        pts += 25;
+        plus.push(format!("scripts/ ({scripts} archivos ejecutables)"));
+    }
+
+    // + bloques de código en la doc
+    let code_blocks = count_matches(&text, "\n```");
+    if code_blocks >= 2 {
+        let p = (code_blocks as i32 * 2).min(12);
+        pts += p;
+        plus.push(format!("{} bloques de código (+{})", code_blocks / 2, p));
+    }
+
+    // + comandos concretos ejecutables (backticks con binarios reales)
+    let cmd_words = ["npm ", "cargo ", "pip ", "pytest", "git ", "curl ", "docker ", "make ", "npx "];
+    let cmds: usize = cmd_words.iter().map(|w| count_matches(&text, w)).sum();
+    if cmds > 0 {
+        let p = (cmds as i32 * 3).min(15);
+        pts += p;
+        plus.push(format!("comandos concretos ({cmds}) (+{p})"));
+    }
+
+    // + librerías/APIs específicas (import/require/from X import)
+    let imports = count_matches(&text, "import ")
+        + count_matches(&text, "require(")
+        + count_matches(&text, "use ");
+    if imports > 0 {
+        let p = (imports as i32 * 2).min(15);
+        pts += p;
+        plus.push(format!("librerías/APIs nombradas ({imports}) (+{p})"));
+    }
+
+    // + gates de verificación (la skill obliga a comprobar resultado)
+    let gates = ["verify", "check", "must pass", "exit code", "validation", "gate"]
+        .iter().map(|w| count_matches(&text, w)).sum::<usize>();
+    if gates >= 2 {
+        pts += 10;
+        plus.push(format!("gates de verificación ({gates}) (+10)"));
+    }
+
+    // + referencias a ficheros de config/rutas concretas
+    let configs = [".json\"", ".toml\"", ".yaml\"", ".yml\"", ".env"]
+        .iter().map(|w| count_matches(&text, w)).sum::<usize>();
+    if configs > 0 {
+        pts += 5;
+        plus.push(format!("rutas/config concretas ({configs}) (+5)"));
+    }
+
+    // − prosa genérica sin especificidad (lo que la IA YA sabe)
+    let generic = ["best practices", "clean code", "be concise", "think carefully",
+        "high quality", "follow standards", "pay attention", "as needed"]
+        .iter().map(|w| count_matches(&text, w)).sum::<usize>();
+    if generic >= 3 && cmds == 0 && scripts == 0 {
+        let p = (generic as i32 * 4).min(20);
+        pts -= p;
+        minus.push(format!("prosa genérica sin funcionalidad (-{p})"));
+    }
+
+    // − demasiado corta sin nada
+    let lines = text.lines().count();
+    if lines < 20 && scripts == 0 {
+        pts -= 15;
+        minus.push(format!("muy corta ({lines} líneas, sin assets) (-15)"));
+    } else if lines >= 40 {
+        pts += 8;
+        plus.push(format!("documentación sustancial ({lines} líneas) (+8)"));
+    }
+
+    Some(SkillScore { name, points: pts.clamp(-30, 100), signals: plus, anti_signals: minus })
+}
+
+/// Tabla de scoring para todos los skills instalables bajo un directorio.
+pub fn render_skills_score(root: &std::path::Path) -> String {
+    let mut out = String::from("## Calidad de skills (análisis funcional)\n\n");
+    let mut scored: Vec<SkillScore> = Vec::new();
+    // buscar dirs con SKILL.md (profundidad ≤3)
+    fn walk(dir: &std::path::Path, depth: usize, acc: &mut Vec<std::path::PathBuf>) {
+        if depth > 3 { return; }
+        if dir.join("SKILL.md").exists() {
+            acc.push(dir.to_path_buf());
+            return; // una skill encontrada no se baja más
+        }
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for e in rd.flatten() {
+                if e.path().is_dir() && !e.file_name().to_string_lossy().starts_with('.') {
+                    walk(&e.path(), depth + 1, acc);
+                }
+            }
+        }
+    }
+    let mut dirs = Vec::new();
+    walk(root, 0, &mut dirs);
+    for d in &dirs {
+        if let Some(s) = score_skill_dir(d) {
+            scored.push(s);
+        }
+    }
+    if scored.is_empty() {
+        return out + "sin skills con SKILL.md encontradas\n";
+    }
+    scored.sort_by(|a, b| b.points.cmp(&a.points));
+    for s in &scored {
+        let (verdict, why) = s.verdict();
+        out.push_str(&format!("{verdict} \x1b[1m{}\x1b[0m — {} pts ({why})\n", s.name, s.points));
+        for sig in &s.signals {
+            out.push_str(&format!("   \x1b[32m+\x1b[0m {sig}\n"));
+        }
+        for anti in &s.anti_signals {
+            out.push_str(&format!("   \x1b[31m−\x1b[0m {anti}\n"));
+        }
+    }
+    out.push_str(&format!(
+        "\n{} skills analizadas · criterio: conocimiento FUNCIONAL (scripts, libs,\ncomandos, gates) sobre prosa genérica que el modelo ya genera solo.\n",
+        scored.len()
+    ));
+    out
+}
+
+
+
+/// Llamada LLM cruda por la cadena canónica (headroom → gateway → routatic).
+/// Sin sufijos de benchmark ni compresión: prompt entra, texto sale.
+fn llm_raw(prompt: &str, max_tokens: u32, timeout_ms: u64) -> Option<String> {
+    let body = serde_json::json!({
+        "model": modelo_real_activo(),
+        "max_tokens": max_tokens,
+        "thinking": { "type": "disabled" },
+        "messages": [{ "role": "user", "content": prompt }]
+    })
+    .to_string();
+    let body_path = std::env::temp_dir().join("alx-llm-raw.json");
+    std::fs::write(&body_path, &body).ok()?;
+    let cmd = format!(
+        "curl -s -m {} http://127.0.0.1:8788/v1/messages -H 'content-type: application/json' -d @{}",
+        timeout_ms / 1000,
+        shell_quote_path(&body_path)
+    );
+    let out = alx_gate::run_command(&cmd, timeout_ms + 5000);
+    if out.exit_code != 0 {
+        return None;
+    }
+    let v: serde_json::Value = serde_json::from_str(out.stdout_head.trim()).ok()?;
+    let arr = v["content"].as_array()?;
+    let text: String = arr
+        .iter()
+        .filter(|b| b["type"] == "text")
+        .filter_map(|b| b["text"].as_str())
+        .collect::<Vec<_>>()
+        .join("");
+    if text.trim().is_empty() { None } else { Some(text) }
+}
+
+/// Extrae los fragmentos entre backticks de un markdown (comandos, APIs).
+fn extract_backticks(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let mut parts = line.split('`');
+        parts.next(); // antes del primer `
+        while let Some(seg) = parts.next() {
+            let seg = seg.trim().to_lowercase();
+            if !seg.is_empty() && seg.len() <= 80 {
+                out.push(seg);
+            }
+            parts.next(); // salta el cierre
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Extrae encabezados ## de un markdown (secciones del skill).
+fn extract_headings(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = text
+        .lines()
+        .filter_map(|l| l.strip_prefix("## "))
+        .map(|h| h.trim().to_lowercase())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// CHALLENGE de skills: la IA escribe EN FRÍO su propia versión del skill
+/// (sin ver la de internet) y comparamos. El valor REAL de la skill externa
+/// es su DELTA: lo que aporta y el modelo NO generó por su cuenta.
+/// Delta alto ⇒ conocimiento no-obvio ⇒ puntos extra en el score.
+pub fn run_skills_challenge(skill_dir: &std::path::Path) -> String {
+    let Ok(fetched) = std::fs::read_to_string(skill_dir.join("SKILL.md")) else {
+        return format!("✗ {}: sin SKILL.md", skill_dir.display());
+    };
+    // tema: nombre del dir + primera línea de description del frontmatter
+    let name = skill_dir
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let description = fetched
+        .lines()
+        .find(|l| l.trim_start().starts_with("description:"))
+        .map(|l| l.split(':').skip(1).collect::<String>().trim().to_string())
+        .unwrap_or_default();
+
+    let mut out = format!("## Challenge: {name} — internet vs IA en frío\n\n");
+
+    // 1. baseline ciego (sin enseñarle la skill externa)
+    let topic = if description.is_empty() {
+        name.replace(['-', '_'], " ")
+    } else {
+        format!("{}: {description}", name.replace(['-', '_'], " "))
+    };
+    let baseline_prompt = format!(
+        "Escribe la mejor SKILL.md posible para el tema «{topic}». \
+         Formato: frontmatter YAML (name, description), luego instrucciones \
+         concretas con comandos ejecutables, librerías específicas y pasos \
+         verificables. Sin relleno genérico."
+    );
+    out.push_str("⏳ generando baseline de la IA (en frío, sin ver la skill externa)...\n");
+    let Some(baseline) = llm_raw(&baseline_prompt, 1200, 90_000) else {
+        return out + "✗ la cadena LLM no respondió — challenge abortado (el score base sigue válido)\n";
+    };
+
+    // persistir para auditoría: el baseline junto a la skill
+    let baseline_path = skill_dir.join("BASELINE-IA.md");
+    let _ = std::fs::write(&baseline_path, &baseline);
+    out.push_str(&format!("✓ baseline guardado: {}\n\n", baseline_path.display()));
+
+    // 2. comparación funcional: ¿qué tiene la externa que el baseline NO?
+    let fetched_cmds = extract_backticks(&fetched);
+    let base_cmds = extract_backticks(&baseline);
+    let uniq_cmds: Vec<_> = fetched_cmds
+        .iter()
+        .filter(|c| !base_cmds.contains(c))
+        .cloned()
+        .collect();
+
+    let fetched_h = extract_headings(&fetched);
+    let base_h = extract_headings(&baseline);
+    let uniq_h: Vec<_> = fetched_h.iter().filter(|h| !base_h.contains(*h)).cloned().collect();
+
+    let has_scripts = skill_dir.join("scripts").exists();
+
+    let mut delta_pts = 0i32;
+    out.push_str("**Elementos que SOLO la skill externa aporta** (lo que la IA no generó sola):\n");
+    if has_scripts {
+        delta_pts += 15;
+        out.push_str("   \x1b[32m+\x1b[0m directorio scripts/ funcional (+15)\n");
+    }
+    for c in uniq_cmds.iter().take(8) {
+        delta_pts += 4;
+        out.push_str(&format!("   \x1b[32m+\x1b[0m comando/API: `{c}` (+4)\n"));
+    }
+    if uniq_cmds.len() > 8 {
+        out.push_str(&format!("   … y {} más (+{})\n", uniq_cmds.len() - 8, (uniq_cmds.len() - 8) * 4));
+        delta_pts += ((uniq_cmds.len() - 8) * 4) as i32;
+    }
+    for h in uniq_h.iter().take(5) {
+        delta_pts += 2;
+        out.push_str(&format!("   \x1b[32m+\x1b[0m sección única: «{h}» (+2)\n"));
+    }
+
+    // elementos que la IA también genera sola = sin valor añadido
+    let overlap = fetched_cmds.len().saturating_sub(uniq_cmds.len());
+    if overlap > 0 && uniq_cmds.is_empty() && !has_scripts {
+        out.push_str("   \x1b[31m−\x1b[0m todo lo que aporta ya estaba en el baseline de la IA\n");
+    }
+    out.push_str(&format!(
+        "\n**Delta vs baseline IA: {delta_pts} pts** ({} comandos únicos, {} secciones únicas, scripts: {})\n",
+        uniq_cmds.len(),
+        uniq_h.len(),
+        if has_scripts { "sí" } else { "no" }
+    ));
+
+    // 3. score final = base + delta
+    let mut base = score_skill_dir(skill_dir)
+        .map(|s| s.points)
+        .unwrap_or(0);
+    base = (base + delta_pts).clamp(-30, 100);
+    let verdict = if base >= 70 {
+        "\x1b[1;32mINSTALAR ⭐\x1b[0m"
+    } else if base >= 45 {
+        "\x1b[1;33mPROBAR\x1b[0m"
+    } else {
+        "\x1b[1;31mDESCARTAR\x1b[0m"
+    };
+    out.push_str(&format!("\n**SCORE FINAL CON CHALLENGE: {base}/100 → {verdict}**\n"));
+    out
+}
+
+
 pub fn run_skills_fetch(repo: Option<&str>, search: Option<&str>) -> String {
     let Some(proj) = find_project_alexandria(None) else {
         return "✗ proyecto no alexandrizado: `alx init` primero".into();
@@ -2188,9 +2521,10 @@ pub fn run_skills_fetch(repo: Option<&str>, search: Option<&str>) -> String {
     register_in_catalog(&proj, &format!(
         "- [{name}]({url}) — descargado {} · {n_skills} skills\n", chrono_today()));
     format!(
-        "✓ {repo} → {}\nskills con SKILL.md detectadas: {n_skills}\ninstalables copiando sus dirs a ~/.claude/skills/ o vía plugin\ncatálogo : {}",
+        "✓ {repo} → {}\nskills con SKILL.md detectadas: {n_skills}\ninstalables copiando sus dirs a ~/.claude/skills/ o vía plugin\ncatálogo : {}\n\n{}",
         dest.display(),
-        skills_dir.join("catalog.md").display()
+        skills_dir.join("catalog.md").display(),
+        render_skills_score(&dest)
     )
 }
 
@@ -3041,8 +3375,124 @@ pub fn render_agents() -> String {
 }
 
 /// TUI dashboard: estado del motor en terminal con paneles (ANSI, sin deps).
-pub fn render_tui() -> String {
-    let mut out = String::from("\x1b[1;33m╔═ ALEXANDRIA — Motor de desarrollo IA autónomo ═════════════════╗\x1b[0m\n");
+
+// ─── Actividad en vivo (alx watch) ──────────────────────────────────────
+
+/// Ruta del log de actividad que escribe el hook activity-tracker.sh.
+fn activity_log_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/activity.jsonl")
+}
+
+/// Mapea un evento de activity.jsonl a un estado legible de ALEXANDRIA
+/// (con color ANSI). Devuelve None para eventos sin valor visual.
+fn activity_state(ev: &str, tool: &str, detail: &str) -> Option<(String, String)> {
+    let d = detail.trim();
+    match (ev, tool) {
+        ("UserPromptSubmit", _) => Some(("\x1b[1;35m🎯 TAREA\x1b[0m".into(), d.to_string())),
+        ("Notification", _) => Some(("\x1b[33m💬 aviso\x1b[0m".into(), d.to_string())),
+        (_, "Task") => Some(("\x1b[1;36m🤖 AGENTE desplegado\x1b[0m".into(), d.to_string())),
+        (_, "Skill") => Some(("\x1b[1;35m🎓 SKILL activa\x1b[0m".into(), d.to_string())),
+        (_, "TodoWrite") => Some(("\x1b[1;34m📋 PLANIFICANDO\x1b[0m".into(), d.to_string())),
+        (_, t) if t == "WebFetch" || t == "WebSearch" => {
+            let where_ = if d.contains("github.com") { "GitHub" } else { "web" };
+            Some((format!("\x1b[1;33m🌐 BUSCANDO ({where_})\x1b[0m"), d.to_string()))
+        }
+        (_, "Bash") => {
+            let cmd = d.to_lowercase();
+            let state = if cmd.contains("cargo test") || cmd.contains("pytest") || cmd.contains("npm test") || cmd.contains("go test") {
+                "\x1b[1;32m🧪 VERIFICANDO\x1b[0m"
+            } else if cmd.contains("git commit") {
+                "\x1b[1;32m📦 COMMIT\x1b[0m"
+            } else if cmd.contains("cargo build") || cmd.contains("npm run build") || cmd.contains("make") {
+                "\x1b[36m🔨 COMPILANDO\x1b[0m"
+            } else if cmd.contains("git ") {
+                "\x1b[34m🔀 git\x1b[0m"
+            } else {
+                "\x1b[37m⚙️  ejecutando\x1b[0m"
+            };
+            Some((state.into(), d.chars().take(70).collect()))
+        }
+        (_, t) if t == "Edit" || t == "MultiEdit" || t == "Write" => {
+            let base = d.rsplit('/').next().unwrap_or(d);
+            Some(("\x1b[1;33m✏️  EDITANDO\x1b[0m".into(), base.to_string()))
+        }
+        (_, t) if t == "Read" || t == "Grep" || t == "Glob" => {
+            Some(("\x1b[90m🔍 EXPLORANDO código\x1b[0m".into(), d.chars().take(60).collect()))
+        }
+        ("Stop", _) => Some(("\x1b[90m⏸  ciclo terminado\x1b[0m".into(), String::new())),
+        _ => None,
+    }
+}
+
+/// Snapshot del dashboard de actividad: estado actual, agentes activos
+/// (últimos 15 min) y últimos movimientos. Fuente: activity.jsonl.
+pub fn render_activity() -> String {
+    let path = activity_log_path();
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return "(sin actividad registrada aún — los hooks la escribirán aquí)".into();
+    };
+    let now_ms = now_ms();
+    let mut states: Vec<(u64, String, String)> = Vec::new();
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue };
+        let ts = v["ts"].as_u64().unwrap_or(0);
+        let ev = v["ev"].as_str().unwrap_or("");
+        let tool = v["tool"].as_str().unwrap_or("");
+        let detail = v["detail"].as_str().unwrap_or("");
+        if let Some((state, det)) = activity_state(ev, tool, detail) {
+            states.push((ts, state, det));
+        }
+    }
+
+    let mut out = String::new();
+    // ESTADO ACTUAL = último evento con valor visual
+    if let Some((_, state, det)) = states.last() {
+        out.push_str(&format!("\x1b[1;37m▸ ESTADO:\x1b[0m {state}  \x1b[90m{det}\x1b[0m\n"));
+    }
+    // AGENTES activos: Task events de los últimos 15 min
+    let agents: Vec<_> = states.iter()
+        .filter(|(ts, s, _)| s.contains("AGENTE") && now_ms.saturating_sub(*ts) < 15 * 60 * 1000)
+        .collect();
+    out.push_str(&format!("\x1b[1;37m▸ Agentes (15 min):\x1b[0m {}\n", agents.len()));
+    for (_, _, det) in agents.iter().rev().take(3) {
+        out.push_str(&format!("   · {det}\n"));
+    }
+    // ÚLTIMOS MOVIMIENTOS
+    out.push_str("\x1b[1;37m▸ Actividad reciente:\x1b[0m\n");
+    for (ts, state, det) in states.iter().rev().take(8) {
+        let secs = (now_ms.saturating_sub(*ts) / 1000).min(9999);
+        out.push_str(&format!("   \x1b[90m-{secs:>4}s\x1b[0m {state} \x1b[90m{det}\x1b[0m\n"));
+    }
+    out
+}
+
+/// `alx watch` — dashboard vivo: refresca cada segundo hasta Ctrl-C.
+/// `--once` imprime un solo snapshot (para scripts y tests).
+pub fn run_watch(once: bool) -> ! {
+    loop {
+        // clear + home
+        print!("\x1b[2J\x1b[H");
+        let mut out = String::from("\x1b[1;33m╔═ ALEXANDRIA watch — actividad en vivo ═════════════════════════╗\x1b[0m\n");
+        out.push_str(&render_status_persisted());
+        out.push('\n');
+        out.push_str(&render_activity());
+        let cost_line: String = render_cost_report()
+            .lines()
+            .find(|l| l.contains("Coste"))
+            .unwrap_or("Coste: n/a")
+            .to_string();
+        out.push_str(&format!("\x1b[1;36m│ {cost_line}\x1b[0m\n"));
+        out.push_str("\x1b[90m(Ctrl-C para salir · fuente: alexandria/state/activity.jsonl)\x1b[0m\n");
+        println!("{out}");
+        if once {
+            std::process::exit(0);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+    }
+}
+
+
+pub fn render_tui() -> String {    let mut out = String::from("\x1b[1;33m╔═ ALEXANDRIA — Motor de desarrollo IA autónomo ═════════════════╗\x1b[0m\n");
 
     out.push_str("\x1b[1;36m│ Motor:\x1b[0m 16 crates · 205 tests · `alx` en PATH\n");
 

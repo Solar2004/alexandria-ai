@@ -15,6 +15,15 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/activity-tracker.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -27,6 +36,16 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/activity-tracker.sh",
+            "timeout": 10
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "PostToolUse": [
@@ -49,6 +68,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/activity-tracker.sh",
+            "timeout": 10
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "Stop": [
@@ -84,6 +113,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/activity-tracker.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -102,6 +140,17 @@
           {
             "type": "command",
             "command": "/home/artorias/.local/bin/alx evolve",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/activity-tracker.sh",
             "timeout": 10
           }
         ]

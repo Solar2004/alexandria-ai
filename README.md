@@ -148,7 +148,11 @@ alx bench   # re-run the benchmarks yourself
 |---|---|
 | `alx research "q"` | Deep-research protocol (7 steps: mechanism → iceberg → simulations → brakes → evidence → synthesis) |
 | `alx research-check` | Hard gate: exits 1 if the research is superficial |
-| `alx skills-fetch` | Curated catalog of GitHub skills (by stars); `--search` finds, installs in one command |
+| `alx skills-fetch owner/repo` | Fetch GitHub skills by stars → `.alexandria/skills/` (with quality score) |
+| `alx skills-fetch --search "q"` | Search GitHub repos by stars |
+| `alx skills-fetch repo --challenge` | Also generate AI baseline cold & compare delta (non-obvious value) |
+| `alx skills-score <dir>` | Score skills OFFLINE: functional knowledge (scripts, libs, gates) vs generic |
+| `alx skills-challenge <dir>` | Challenge: AI writes its own skill cold vs external → delta measures value |
 | `alx harness-new` | Create a harness (temporal/permanent, manual/phase/event trigger) |
 | `alx harness-list` / `alx harness-use` | Registry listing / usage tracking |
 
@@ -175,6 +179,7 @@ alx bench   # re-run the benchmarks yourself
 | Command | What it does |
 |---|---|
 | `alx mcp` | Serve ALEXANDRIA as an MCP server (6 tools) |
+| `alx watch [--once]` | Live activity dashboard: states, agents, recent moves (from `activity.jsonl`) |
 | `alx tui` | Live dashboard: network, governor, harnesses, loop |
 | `alx report` | Full markdown report: TUI + cost + doctor + agents |
 | `alx weekly` | Weekly summary (cost, telemetry, harnesses, metrics) |

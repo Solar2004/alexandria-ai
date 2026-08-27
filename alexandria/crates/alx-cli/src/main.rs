@@ -100,6 +100,21 @@ enum Command {
         /// Buscar en GitHub ordenado por estrellas en vez de instalar.
         #[arg(long)]
         search: Option<String>,
+        /// Tras descargar, la IA escribe su propia versión del skill en frío
+        /// y se compara: el DELTA mide el valor real (lo que la IA no genera sola).
+        #[arg(long)]
+        challenge: bool,
+    },
+    /// Challenge de skill ya descargada: baseline IA en frío vs skill externa.
+    SkillsChallenge {
+        /// Directorio de la skill (con SKILL.md) o nombre dentro de .alexandria/skills/.
+        path: String,
+    },
+    /// Analiza la calidad FUNCIONAL de las skills bajo un directorio
+    /// (scripts, comandos, librerías, gates) sin llamar al LLM.
+    SkillsScore {
+        /// Directorio raíz a analizar (recursivo, profundidad 3).
+        path: String,
     },
     /// Comprueba que la investigación abierta cumple el protocolo (plan 17):
     /// 7 pasos rellenos, ≥2 simulaciones, tabla de evidencia. Exit 1 si no.
@@ -144,6 +159,12 @@ enum Command {
     },
     /// TUI dashboard del motor (estado, red, coste, comandos).
     Tui,
+    /// Dashboard vivo de actividad: estados de Claude/agentes en tiempo real.
+    Watch {
+        /// Un solo snapshot sin loop (para scripts).
+        #[arg(long)]
+        once: bool,
+    },
     /// Reporte completo del motor (markdown): TUI + coste + doctor + agentes.
     Report,
     /// Spawn de agentes headless en paralelo sobre una tarea.
@@ -272,8 +293,27 @@ fn run(cli: Cli) -> ExitCode {
         Some(Command::Research { pregunta }) => {
             println!("{}", alx_cli::run_research(&pregunta));
         }
-        Some(Command::SkillsFetch { repo, search }) => {
-            println!("{}", alx_cli::run_skills_fetch(repo.as_deref(), search.as_deref()));
+        Some(Command::SkillsFetch { repo, search, challenge }) => {
+            let out = alx_cli::run_skills_fetch(repo.as_deref(), search.as_deref());
+            println!("{out}");
+            // challenge automático tras descargar: ¿aporta lo que la IA no genera?
+            if challenge {
+                if let Some(repo) = repo.as_deref() {
+                    let name = repo.rsplit('/').next().unwrap_or(repo);
+                    let dir = std::path::Path::new(".alexandria/skills").join(name);
+                    println!("\n{}", alx_cli::run_skills_challenge(&dir));
+                }
+            }
+        }
+        Some(Command::SkillsChallenge { path }) => {
+            let p = std::path::PathBuf::from(&path);
+            let p = if p.exists() { p } else {
+                std::path::Path::new(".alexandria/skills").join(&path)
+            };
+            println!("{}", alx_cli::run_skills_challenge(&p));
+        }
+        Some(Command::SkillsScore { path }) => {
+            println!("{}", alx_cli::render_skills_score(std::path::Path::new(&path)));
         }
         Some(Command::ResearchCheck { dir }) => {
             let informe = alx_cli::run_research_check(dir.as_deref());
@@ -306,6 +346,9 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Spawn { name, task }) => {
             println!("{}", spawn_agent(&name, &task));
+        }
+        Some(Command::Watch { once }) => {
+            alx_cli::run_watch(once);
         }
         Some(Command::Tui) => {
             // Dashboard ratatui vivo (alx-tui); fallback ANSI si no hay TTY.

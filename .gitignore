@@ -38,3 +38,4 @@ night-ops/report/
 
 # ── Artefactos del pipeline (alx feature) ──
 artifacts/
+alexandria/state/activity.jsonl

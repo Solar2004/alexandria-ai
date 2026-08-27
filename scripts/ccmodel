@@ -1,2 +1,3 @@
 #!/bin/sh
-echo deepseek-v4-flash
+# Lee el modelo activo de routatic en vivo (cambiar con `routa use <modelo>`)
+python3 -c "import json; d=json.load(open('/home/artorias/.config/routatic-proxy/config.json')); print(d['models']['default']['model_id'])" 2>/dev/null || echo deepseek-v4-flash

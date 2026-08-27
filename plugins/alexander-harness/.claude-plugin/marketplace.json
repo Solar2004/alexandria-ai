@@ -9,7 +9,7 @@
       "name": "alexander-harness",
       "source": "./",
       "description": "Harness propio: seleccion y spawn de subagentes (dispatcher), inventario y reglas de delegacion. 選賢與能",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

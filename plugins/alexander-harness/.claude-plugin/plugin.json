@@ -1,6 +1,6 @@
 {
   "name": "alexander-harness",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AlexanderTheGreat Harness — 選賢與能: seleccion y spawn de subagentes por tarea (agent dispatch), inventario de agentes y skills, reglas de delegacion.",
   "author": {
     "name": "AlexanderTheGreat",

@@ -7,6 +7,7 @@
 #    atg --dangerously-skip-permissions → AUTÓNOMO: lee la misión, elige
 #                     trabajo del backlog y ejecuta el ciclo R24 solo
 #    atg --auto     → autónomo explícito (igual, sin skip-permissions)
+#    atg --no-fallback → solo modelo default con reintentos (sin fallback a hy3/kimi)
 #    atg --raw      → claude directo a routatic (sin headroom)
 #    atg --free     → claude vía OmniRoute (fallback gratuito)
 #    atg --bare     → claude modo minimal (sin plugins/themes)
@@ -128,12 +129,22 @@ while [[ $# -gt 0 ]]; do
     --bare)  MODE=bare;  shift ;;
     --clean) MODE=clean; shift ;;
     --auto)  MODE=auto;  shift ;;   # arranque autónomo explícito
+    --no-fallback) export ROUTA_NO_FALLBACK=1; shift ;;  # solo modelo default con reintentos
     --help|-h)
       sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) break ;;
   esac
 done
+
+# ── Router sin fallback: reintenta solo el modelo default ──
+if [[ -n "${ROUTA_NO_FALLBACK:-}" ]]; then
+  systemctl --user set-environment ROUTA_NO_FALLBACK=1 2>/dev/null || true
+  systemctl --user restart routa-gateway 2>/dev/null || true
+  sleep 1
+else
+  systemctl --user unset-environment ROUTA_NO_FALLBACK 2>/dev/null || true
+fi
 
 # ── Arranque autónomo (R29): flags sin prompt ⇒ el motor se pone a trabajar ──
 # atg --dangerously-skip-permissions  → lee la misión, elige trabajo del backlog
@@ -144,7 +155,16 @@ if [[ "${MODE}" != "bare" && "${MODE}" != "clean" ]]; then
     if [[ "${a:0:1}" != "-" ]]; then HAS_PROMPT=1; break; fi
   done
   if [[ $HAS_PROMPT -eq 0 && $# -gt 0 ]] || [[ "${MODE}" == "auto" && $HAS_PROMPT -eq 0 ]]; then
-    KICKOFF="ARRANQUE AUTÓNOMO del motor ALEXANDRIA. Lee plan/MISSION.md y docs/status.md. Elige AHORA la unidad de trabajo más valiosa: backlog pendiente en plan/ideas.md, mejoras del motor que pida MISSION, o deuda técnica conocida (docs/status.md). Declara tu elección en una frase y EJECUTA el ciclo R24 completo: implementa → VERIFICA (tests/build reales, nunca 'debería funcionar') → CRITICA → MEJORA → commit atómico. Repite hasta completar target_iter o agotar el backlog. NO preguntes al usuario salvo bloqueo duro que exija decisión humana."
+    KICKOFF="ARRANQUE AUTÓNOMO del motor ALEXANDRIA. Lee plan/MISSION.md y docs/status.md. Elige AHORA la unidad de trabajo más valiosa: backlog pendiente en plan/ideas.md, mejoras del motor que pida MISSION, o deuda técnica conocida (docs/status.md). Declara tu elección en una frase y EJECUTA el ciclo R24 completo.
+
+FLUJO OBLIGATORIO (no te saltes pasos):
+1. PLAN: descompon la tarea en micro-tareas verificables (usa alx feature o TodoWrite).
+2. SKILLS: si la tarea requiere conocimiento especializado (frontend, 3D, testing, infra...) y no tienes la skill en .alexandria/skills/ o ~/.claude/skills/, BÚSCALA ANTES DE CODIFICAR: alx skills-fetch --search \"<tema>\" (ordena por estrellas), puntúala con alx skills-score <dir> y alx skills-challenge <dir>, y si es funcional (INSTALAR/PROBAR) instálala con alx skills-fetch owner/repo. Si el proyecto no tiene .alexandria/, ejecuta alx init primero.
+3. PLUGINS: activa los instalados que apliquen (/caveman para commits terse, /ecc para harness, /superpowers para brainstorm si hace falta).
+4. DIVISIÓN EN AGENTES: si la tarea es grande o multi-dominio, divide y spawnea subagentes con Task (cada uno con su skill y contexto mínimo) — no hagas todo inline.
+5. IMPLEMENTA → VERIFICA (tests/build reales, nunca 'debería funcionar') → CRITICA → MEJORA → commit atómico.
+
+Repite hasta completar target_iter o agotar el backlog. NO preguntes al usuario salvo bloqueo duro que exija decisión humana."
     set -- "$KICKOFF" "$@"
   fi
 fi

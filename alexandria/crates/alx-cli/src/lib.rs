@@ -3453,9 +3453,36 @@ pub fn render_activity() -> String {
     let agents: Vec<_> = states.iter()
         .filter(|(ts, s, _)| s.contains("AGENTE") && now_ms.saturating_sub(*ts) < 15 * 60 * 1000)
         .collect();
-    out.push_str(&format!("\x1b[1;37m▸ Agentes (15 min):\x1b[0m {}\n", agents.len()));
-    for (_, _, det) in agents.iter().rev().take(3) {
-        out.push_str(&format!("   · {det}\n"));
+    if agents.is_empty() {
+        if let Some((ts, _, det)) = states.iter().rev().find(|(_, s, _)| s.contains("TAREA")) {
+            // cwd del proyecto donde se lanzó la tarea (del log)
+            let cwd_str = std::fs::read_to_string(activity_log_path()).ok()
+                .and_then(|txt| {
+                    for line in txt.lines().rev() {
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                            if v["ev"].as_str() == Some("UserPromptSubmit") && v["ts"].as_u64() == Some(*ts) {
+                                let c = v["cwd"].as_str().unwrap_or("");
+                                if !c.is_empty() {
+                                    let home = std::env::var("HOME").unwrap_or_default();
+                                    let short = if c.starts_with(&home) { c.replacen(&home, "~", 1) } else { c.to_string() };
+                                    return Some(short);
+                                }
+                            }
+                        }
+                    }
+                    None
+                })
+                .map(|c| format!(" \x1b[90m({c})\x1b[0m"))
+                .unwrap_or_default();
+            out.push_str(&format!("\x1b[1;37m▸ Agente principal:\x1b[0m \x1b[36m{det}\x1b[0m{cwd_str}\n"));
+        } else {
+            out.push_str("\x1b[1;37m▸ Agente principal:\x1b[0m \x1b[90m(esperando tarea)\x1b[0m\n");
+        }
+    } else {
+        out.push_str(&format!("\x1b[1;37m▸ Agentes (15 min):\x1b[0m {}\n", agents.len()));
+        for (_, _, det) in agents.iter().rev().take(3) {
+            out.push_str(&format!("   · {det}\n"));
+        }
     }
     // ÚLTIMOS MOVIMIENTOS
     out.push_str("\x1b[1;37m▸ Actividad reciente:\x1b[0m\n");

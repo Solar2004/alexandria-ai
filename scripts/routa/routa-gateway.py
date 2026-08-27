@@ -10,7 +10,7 @@ anade lo que faltaba:
      verdad: cambiar el modelo con `routa use <model>` no requiere tocar
      nada aqui). En la respuesta el nombre real se reescribe al visible,
      asi Claude Code cree hablar con un modelo de 1M y no compacta pronto.
-  2. Suelo de max_tokens: muse/deepseek razonan antes de emitir texto; con
+  2. Suelo de max_tokens: muse razonan antes de emitir texto; con
      presupuesto minusculo devuelven content vacio y routatic lo trata como
      400 -> 502. Todo presupuesto < MIN_MAX_TOKENS se sube a 1024.
   3. Health-probes cortocircuitados: los sondeos tipo ping se responden aqui
@@ -67,12 +67,16 @@ MIN_MAX_TOKENS = 1024
 # Asi un modelo caido arriba (muse 500, ox-alpha-free 500...) no tumba Claude
 # Code: el usuario sigue trabajando y `routa doctor` avisa del problema.
 # Vacio = sin failover.
-FALLBACK_MODELS = [
-    m.strip() for m in os.environ.get(
-        "ROUTA_FALLBACK_MODELS",
-        "deepseek-v4-flash,kimi-k2.7-code,glm-5,qwen3.8-max,minimax-m3",
-    ).split(",") if m.strip()
-]
+# Si ROUTA_NO_FALLBACK=1, solo el modelo activo con reintentos (sin fallback)
+if os.environ.get("ROUTA_NO_FALLBACK"):
+    FALLBACK_MODELS: list[str] = []
+else:
+    FALLBACK_MODELS = [
+        m.strip() for m in os.environ.get(
+            "ROUTA_FALLBACK_MODELS",
+            "hy3,hy3-preview,deepseek-v4-flash,kimi-k2.7-code,glm-5",
+        ).split(",") if m.strip()
+    ]
 
 PROBE_MAX_TOKENS = 8
 PROBE_MAX_CHARS = 32
@@ -82,8 +86,10 @@ PROBE_MAX_CHARS = 32
 ALIAS_EXACT = {
     VISIBLE,
     VISIBLE.split("[")[0],
-    "deepseek-v4-flash",       # legado: la cadena vieja lo usaba como REAL
+    "deepseek-v4-flash",
     "deepseek-v4-flash[1m]",
+    "muse-spark-1.2-contributor",
+    "muse-spark-1.2-contributor[1m]",
 }
 
 

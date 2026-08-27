@@ -27,6 +27,6 @@ cat <<EOF
 
 [ITERATE.trigger — R24]
 Iteración $ITER/$MAX. Unidad actual: ${WORK:-<sin nombre>}
-Regla: al terminar cualquier unidad de trabajo → VERIFICA (tests/evidencia real, no "debería funcionar") → CRITICA (qué falló, qué mejorar) → MEJORA. Un solo pase sin verificar = INCOMPLETO.
+Regla: al terminar cualquier unidad → PLAN (si no existe) → verifica SKILLS necesarias (alx skills-fetch --search si falta) → activa PLUGINS que apliquen (/caveman, /ecc) → DIVIDE en subagentes si es grande (Task) → VERIFICA (tests/evidencia real) → CRITICA → MEJORA. Un solo pase sin verificar = INCOMPLETO.
 El estado (iter/work_unit) se AUTO-actualiza con cada commit (auto-iterate.sh) — NO lo edites a mano.
 EOF

@@ -12,6 +12,7 @@ LOG="$REPO/alexandria/state/activity.jsonl"
 IN=$(cat)   # drena y parsea el JSON del hook
 EV=$(printf '%s' "$IN" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("hook_event_name",""))' 2>/dev/null)
 SESSION=$(printf '%s' "$IN" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("session_id","")[:8])' 2>/dev/null)
+CWD=$(printf '%s' "$IN" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("cwd",""))' 2>/dev/null)
 TOOL=$(printf '%s' "$IN" | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("tool_name",""))' 2>/dev/null)
 
 # detalle según evento/herramienta (barato, solo strings del input)
@@ -21,7 +22,15 @@ d = json.load(sys.stdin)
 ev = d.get("hook_event_name", "")
 ti = d.get("tool_input") or {}
 if ev == "UserPromptSubmit":
-    print(str(d.get("prompt", ""))[:90]); raise SystemExit
+    p = d.get("prompt") or d.get("user_prompt") or d.get("message") or d.get("input") or ""
+    if isinstance(p, dict):
+        p = p.get("text","") or str(p)
+    # algunos hooks mandan el prompt dentro de tool_input
+    if not p:
+        ti2 = d.get("tool_input") or {}
+        if isinstance(ti2, dict):
+            p = ti2.get("prompt") or ti2.get("user_prompt") or ""
+    print(str(p)[:90]); raise SystemExit
 if ev == "Notification":
     print(str(d.get("message", ""))[:90]); raise SystemExit
 tool = d.get("tool_name", "")
@@ -45,11 +54,12 @@ else:
 ' 2>/dev/null)
 
 TS=$(date +%s%3N)
-printf '{"ts":%s,"ev":"%s","tool":"%s","detail":"%s","session":"%s"}\n' \
+printf '{"ts":%s,"ev":"%s","tool":"%s","detail":"%s","session":"%s","cwd":"%s"}\n' \
   "$TS" \
   "$(printf '%s' "$EV" | tr -d '"')" \
   "$(printf '%s' "$TOOL" | tr -d '"')" \
   "$(printf '%s' "$DETAIL" | tr -d '"' | tr '\n' ' ')" \
-  "$SESSION" >> "$LOG" 2>/dev/null
+  "$SESSION" \
+  "$(printf '%s' "$CWD" | tr -d '"')" >> "$LOG" 2>/dev/null
 
 exit 0

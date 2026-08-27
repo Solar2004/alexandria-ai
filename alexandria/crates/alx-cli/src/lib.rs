@@ -2144,7 +2144,6 @@ const SKILL_CATALOG: &[(&str, &str)] = &[
 /// `.alexandria/skills/` y lo añade al catálogo del proyecto.
 /// `--search "términos"` busca en GitHub ordenado por ESTRELLAS: la calidad
 /// se juzga por adopción antes de instalar nada.
-
 // ─── Scorer de calidad de skills ────────────────────────────────────────
 // La pregunta que responde: ¿esta skill aporta conocimiento FUNCIONAL que la
 // IA no generaría por su cuenta (scripts ejecutables, librerías concretas,
@@ -2288,7 +2287,7 @@ pub fn render_skills_score(root: &std::path::Path) -> String {
     if scored.is_empty() {
         return out + "sin skills con SKILL.md encontradas\n";
     }
-    scored.sort_by(|a, b| b.points.cmp(&a.points));
+    scored.sort_by_key(|a| std::cmp::Reverse(a.points));
     for s in &scored {
         let (verdict, why) = s.verdict();
         out.push_str(&format!("{verdict} \x1b[1m{}\x1b[0m — {} pts ({why})\n", s.name, s.points));
@@ -3375,7 +3374,6 @@ pub fn render_agents() -> String {
 }
 
 /// TUI dashboard: estado del motor en terminal con paneles (ANSI, sin deps).
-
 // ─── Actividad en vivo (alx watch) ──────────────────────────────────────
 
 /// Ruta del log de actividad que escribe el hook activity-tracker.sh.

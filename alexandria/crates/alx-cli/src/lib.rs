@@ -2149,6 +2149,7 @@ const SKILL_CATALOG: &[(&str, &str)] = &[
 // IA no generaría por su cuenta (scripts ejecutables, librerías concretas,
 // comandos, gates de verificación) o es prosa genérica que ya sabe?
 
+#[allow(clippy::empty_line_after_doc_comments)]
 /// Resultado del análisis de una skill.
 pub struct SkillScore {
     pub name: String,
@@ -3376,6 +3377,7 @@ pub fn render_agents() -> String {
 /// TUI dashboard: estado del motor en terminal con paneles (ANSI, sin deps).
 // ─── Actividad en vivo (alx watch) ──────────────────────────────────────
 
+#[allow(clippy::empty_line_after_doc_comments)]
 /// Ruta del log de actividad que escribe el hook activity-tracker.sh.
 fn activity_log_path() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/activity.jsonl")

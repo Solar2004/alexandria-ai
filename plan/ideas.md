@@ -21,3 +21,11 @@ informe nocturno (night-run.sh).
 
 ...
 Crear mas ideas asi de buenas en el worflow gigante que crearemos
+
+## Ideas del análisis Prime Agent (2026-08-28)
+
+- **update/delete explícitos de harness**: `alx harness-update <id> --objective/--doc/--trigger` — CRUD completo estilo Continual Harness.
+- **refine para subagentes**: minar el ledger + sessions para reescribir los prompts de los agentes de agents/ con evidencia (qué variante resolvió más rápido).
+- **gate configurable en kickoff**: `atg --auto --gate "cargo test"` — el gate corre antes de cerrar cada unidad; si falla, output acotado de vuelta al agente (estilo Prime Agent autonomous-gate, incl. skip si el workspace no cambió).
+- **A2A por fichero**: buzón `state/mailbox-<session>.jsonl` para que agents-run paralelos se pasen resultados (familia nuclear de sesiones).
+- **Skills como módulos ejecutables**: los scripts/ de cada skill exportables como comandos `alx skill-run <skill> <script>` con evidencia automática.

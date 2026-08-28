@@ -128,6 +128,23 @@ impl ToolCatalog {
         );
         with_schema("phalanx.status", "Estado del sistema phalanx (config + hooks).", default_input_schema());
         with_schema(
+            "skill.harness",
+            "Crea/activa el harness temporal de una skill con sus pasos (se reinyectan cada prompt).",
+            schema_with(&["skill"]),
+        );
+        with_schema(
+            "harness.step",
+            "Marca un paso (1-indexed) del harness de skill como hecho.",
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "id del harness (hx-skill-...)"},
+                    "step": {"type": "integer", "description": "número de paso"}
+                },
+                "required": ["id", "step"]
+            }),
+        );
+        with_schema(
             "lsp.check",
             "Diagnostics LSP REALES (rust-analyzer/tsserver/pyright) sobre ficheros.",
             serde_json::json!({
@@ -147,9 +164,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_catalog_has_eleven_tools() {
+    fn default_catalog_has_thirteen_tools() {
         let catalog = ToolCatalog::alexandria_default();
-        assert_eq!(catalog.list().len(), 11);
+        assert_eq!(catalog.list().len(), 13);
     }
 
     #[test]

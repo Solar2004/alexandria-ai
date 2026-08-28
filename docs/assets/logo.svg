@@ -1,32 +1,88 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="40%" r="70%">
-      <stop offset="0%" stop-color="#1e2a44"/>
-      <stop offset="100%" stop-color="#0f1420"/>
+    <radialGradient id="bgGlow" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#182338"/>
+      <stop offset="100%" stop-color="#0b0f1a"/>
     </radialGradient>
+    <linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2336"/>
+      <stop offset="100%" stop-color="#141b2b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5d78e"/>
+      <stop offset="100%" stop-color="#e8b64c"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0 L0 0 0 32" fill="none" stroke="#26314b" stroke-width="0.4" opacity="0.35"/>
+    </pattern>
+    <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0 0 L9 3.5 L0 7 Z" fill="#e8b64c"/>
+    </marker>
+    <marker id="arrg" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0 0 L9 3.5 L0 7 Z" fill="#3ddc84"/>
+    </marker>
   </defs>
-  <circle cx="80" cy="80" r="76" fill="url(#bg)"/>
-  <circle cx="80" cy="80" r="76" fill="none" stroke="#e8b64c" stroke-width="2.5"/>
-  <circle cx="80" cy="80" r="66" fill="none" stroke="#e8b64c" stroke-width="0.8" stroke-dasharray="3 5"/>
-  <!-- laurel izquierdo -->
-  <path d="M28 95 Q40 70 56 62 M30 100 Q44 84 60 74 M34 106 Q46 94 58 86"
-        stroke="#2ecc71" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <!-- laurel derecho -->
-  <path d="M132 95 Q120 70 104 62 M130 100 Q116 84 100 74 M126 106 Q114 94 102 86"
-        stroke="#2ecc71" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <!-- rays -->
-  <g stroke="#e8b64c" stroke-width="1.2" opacity="0.55">
-    <line x1="80" y1="14" x2="80" y2="30"/>
-    <line x1="80" y1="130" x2="80" y2="146"/>
-    <line x1="14" y1="80" x2="30" y2="80"/>
-    <line x1="130" y1="80" x2="146" y2="80"/>
-    <line x1="33" y1="33" x2="44" y2="44"/>
-    <line x1="116" y1="116" x2="127" y2="127"/>
-    <line x1="127" y1="33" x2="116" y2="44"/>
-    <line x1="44" y1="116" x2="33" y2="127"/>
+  <circle cx="120" cy="120" r="116" fill="url(#bgGlow)"/>
+  <circle cx="120" cy="120" r="116" fill="url(#grid)"/>
+  <circle cx="120" cy="120" r="114" fill="none" stroke="url(#gold)" stroke-width="3"/>
+  <circle cx="120" cy="120" r="106" fill="none" stroke="#e8b64c" stroke-width="0.7" stroke-dasharray="2 6" opacity="0.6"/>
+  <circle cx="120" cy="120" r="74" fill="#0b0f1a" opacity="0.55"/>
+  <!-- sol verginiano -->
+  <g filter="url(#glow)">
+    <path d="M118.6 76.1 L120.0 42.0 L121.4 76.1 Z" fill="url(#gold)"/>
+    <path d="M122.5 76.3 L130.4 60.8 L125.1 77.4 Z" fill="url(#gold)"/>
+    <path d="M126.0 78.0 L151.1 54.9 L128.0 80.0 Z" fill="url(#gold)"/>
+    <path d="M128.6 80.9 L145.2 75.6 L129.7 83.5 Z" fill="url(#gold)"/>
+    <path d="M129.9 84.6 L164.0 86.0 L129.9 87.4 Z" fill="url(#gold)"/>
+    <path d="M129.7 88.5 L145.2 96.4 L128.6 91.1 Z" fill="url(#gold)"/>
+    <path d="M128.0 92.0 L151.1 117.1 L126.0 94.0 Z" fill="url(#gold)"/>
+    <path d="M125.1 94.6 L130.4 111.2 L122.5 95.7 Z" fill="url(#gold)"/>
+    <path d="M121.4 95.9 L120.0 130.0 L118.6 95.9 Z" fill="url(#gold)"/>
+    <path d="M117.5 95.7 L109.6 111.2 L114.9 94.6 Z" fill="url(#gold)"/>
+    <path d="M114.0 94.0 L88.9 117.1 L112.0 92.0 Z" fill="url(#gold)"/>
+    <path d="M111.4 91.1 L94.8 96.4 L110.3 88.5 Z" fill="url(#gold)"/>
+    <path d="M110.1 87.4 L76.0 86.0 L110.1 84.6 Z" fill="url(#gold)"/>
+    <path d="M110.3 83.5 L94.8 75.6 L111.4 80.9 Z" fill="url(#gold)"/>
+    <path d="M112.0 80.0 L88.9 54.9 L114.0 78.0 Z" fill="url(#gold)"/>
+    <path d="M114.9 77.4 L109.6 60.8 L117.5 76.3 Z" fill="url(#gold)"/>
+    <circle cx="120" cy="86" r="10" fill="url(#gold)"/>
+    <circle cx="120" cy="86" r="4.5" fill="#0b0f1a"/>
   </g>
-  <text x="80" y="74" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#e8ecf4" font-weight="bold">ΑΛΕΞ</text>
-  <text x="80" y="100" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#e8ecf4" font-weight="bold">ΑΝΔΡΕΙΑ</text>
-  <text x="80" y="122" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#e8b64c" letter-spacing="3">AUTONOMOUS ENGINE</text>
-  <circle cx="80" cy="80" r="4" fill="#e8b64c"/>
+  <!-- laureles -->
+  <path d="M88 190 Q 54 160 58 114" stroke="#3ddc84" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="87.2" cy="183.7" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(18 87.2 183.7)"/>
+    <ellipse cx="79.1" cy="186.7" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(122 79.1 186.7)"/>
+    <ellipse cx="83.0" cy="173.2" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(16 83.0 173.2)"/>
+    <ellipse cx="74.9" cy="176.4" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(120 74.9 176.4)"/>
+    <ellipse cx="78.7" cy="162.6" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(13 78.7 162.6)"/>
+    <ellipse cx="70.8" cy="166.2" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(117 70.8 166.2)"/>
+    <ellipse cx="74.4" cy="152.0" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(11 74.4 152.0)"/>
+    <ellipse cx="66.7" cy="156.0" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(115 66.7 156.0)"/>
+    <ellipse cx="70.1" cy="141.5" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(9 70.1 141.5)"/>
+    <ellipse cx="62.5" cy="145.7" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(113 62.5 145.7)"/>
+    <ellipse cx="65.8" cy="130.9" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(6 65.8 130.9)"/>
+    <ellipse cx="58.4" cy="135.5" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(110 58.4 135.5)"/>
+    <ellipse cx="61.5" cy="120.4" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(4 61.5 120.4)"/>
+    <ellipse cx="54.3" cy="125.2" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(108 54.3 125.2)"/>
+  <path d="M152 190 Q 186 160 182 114" stroke="#3ddc84" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="155.1" cy="177.3" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-122 155.1 177.3)"/>
+    <ellipse cx="163.2" cy="180.3" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-18 163.2 180.3)"/>
+    <ellipse cx="159.6" cy="166.9" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-120 159.6 166.9)"/>
+    <ellipse cx="167.6" cy="170.2" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-16 167.6 170.2)"/>
+    <ellipse cx="164.1" cy="156.4" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-117 164.1 156.4)"/>
+    <ellipse cx="172.0" cy="160.1" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-13 172.0 160.1)"/>
+    <ellipse cx="168.7" cy="146.0" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-115 168.7 146.0)"/>
+    <ellipse cx="176.4" cy="150.0" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-11 176.4 150.0)"/>
+    <ellipse cx="173.2" cy="135.6" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-113 173.2 135.6)"/>
+    <ellipse cx="180.8" cy="139.8" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-9 180.8 139.8)"/>
+    <ellipse cx="177.8" cy="125.2" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-110 177.8 125.2)"/>
+    <ellipse cx="185.1" cy="129.7" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-6 185.1 129.7)"/>
+    <ellipse cx="182.3" cy="114.8" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-108 182.3 114.8)"/>
+    <ellipse cx="189.5" cy="119.6" rx="7.2" ry="3.1" fill="#3ddc84" opacity="0.92" transform="rotate(-4 189.5 119.6)"/>
+  <text x="120" y="176" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#eceff7" font-weight="bold" letter-spacing="1">ΑΛΕΞΑΝΔΡΕΙΑ</text>
+  <text x="120" y="196" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#e8b64c" letter-spacing="3.5">AUTONOMOUS ENGINE</text>
 </svg>

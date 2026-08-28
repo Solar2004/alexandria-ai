@@ -236,6 +236,25 @@ enum Command {
         /// Ficheros a verificar.
         files: Vec<String>,
     },
+    /// Crea (o reutiliza) el harness temporal de una skill con sus pasos.
+    SkillHarness {
+        /// Nombre de la skill (como en la tool Skill).
+        skill: String,
+    },
+    /// Marca el paso n (1-indexed) del harness de skill como hecho.
+    HarnessStep {
+        /// Id del harness (hx-skill-<slug>).
+        id: String,
+        /// Número de paso.
+        step: usize,
+    },
+    /// Retira el harness de la skill (fin de unidad — se archiva).
+    SkillHarnessDone {
+        /// Id del harness.
+        id: String,
+    },
+    /// Guard de skills para Stop: pasos marcados o bloquea (exit 2).
+    SkillCheck,
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -473,6 +492,22 @@ fn run(cli: Cli) -> ExitCode {
             if code != 0 {
                 return ExitCode::from(code as u8);
             }
+        }
+        Some(Command::SkillHarness { skill }) => {
+            println!("{}", alx_cli::skill_harness_ensure(&skill));
+        }
+        Some(Command::HarnessStep { id, step }) => {
+            println!("{}", alx_cli::harness_step(&id, step));
+        }
+        Some(Command::SkillHarnessDone { id }) => {
+            println!("{}", alx_cli::skill_harness_done(&id));
+        }
+        Some(Command::SkillCheck) => {
+            let (msg, code) = alx_cli::skill_check();
+            if !msg.is_empty() {
+                eprintln!("{msg}");
+            }
+            return ExitCode::from(code as u8);
         }
         Some(Command::Update) => {
             println!("{}", run_update());

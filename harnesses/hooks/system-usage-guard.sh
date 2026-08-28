@@ -37,6 +37,16 @@ if [ -f "$ACT" ]; then
   fi
 fi
 # 3. Harness por proyecto: si hay .alexandria/ y 0 harnesses, sugerir (no bloquear, solo avisar)
+# 4. Skills: si se activó una skill en esta sesión y no se marcó ningún paso,
+#    el skill-check bloquea (exit 2) con el checklist.
+SKILL_MSG=$(alx skill-check 2>/dev/null)
+SKILL_RC=$?
+if [ "$SKILL_RC" = "2" ]; then
+  MSG_JSON=$(printf '%s' "$SKILL_MSG" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+  printf '{"decision":"block","reason":%s}\n' "$MSG_JSON"
+  exit 0
+fi
+
 if [ ${#FALTAS[@]} -eq 0 ]; then
   exit 0
 fi

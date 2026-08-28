@@ -2,6 +2,52 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## Ciclo 13 — skills que se EJECUTAN + assets regenerados (2026-08-28, sesión 2)
+
+### Skill-harness: el patrón "skills ejecutadas, no leídas"
+
+Inspirado en el análisis de diet103/claude-code-infrastructure-showcase
+(sugerencia ya existía) y Prime Agent de Prime Intellect (Continual Harness).
+Lo que faltaba: NADIE verificaba que los pasos de la skill se cumplieran.
+
+- **Activación → harness temporal automático**: al usar la tool Skill, el
+  dispatcher (`alx hook post-tool-use`) extrae los pasos del SKILL.md
+  (headings/checklists/verificaciones, cap 8) y crea `hx-skill-<name>`
+  temporal con `<id>.steps.json` estructurado. VERIFICADO: caveman-compress
+  → 8 pasos extraídos.
+- **Reinyección cada prompt**: `alx hook user-prompt-submit` inyecta el
+  checklist completo (☐/☑) de cada skill activa en additionalContext — la AI
+  no puede olvidar la skill que está ejecutando. VERIFICADO.
+- **Guard de Stop**: `alx skill-check` (integrado en system-usage-guard) —
+  skill activa en ESTA sesión con 0/N pasos marcados → bloquea con el
+  checklist. VERIFICADO: rc2 sin pasos, rc0 tras marcar.
+- **Cierre con evidencia**: `alx harness-step <id> <n>` marca; `alx
+  skill-harness-done <id>` retira y archiva (el watcher lo consolida con
+  usos reales). Todo por MCP también (`skill.harness`, `harness.step`).
+- El propio harness es DATO del motor: hot reload lo lista, evolve lo
+  promueve/retira — auto-mejora real, no prompt hoping.
+
+### Mapeo Prime Agent → Alexandria (qué replicar después)
+
+| Prime Agent | Alexandria hoy | Siguiente paso |
+|---|---|---|
+| Continual Harness CRUD | harness-new/list/evolve + hot reload | update/delete explícitos por id |
+| /refine (edición mínima con evidencia) | evolve-detect + patterns --apply + promote por usos | refinar prompts de subagentes desde el ledger |
+| autonomous gate (`--autonomous-gate`) | gates verify_build + skill-check + system-usage-guard | gate configurable en el kickoff de atg |
+| RLM/REPL programmatic calling | — (Claude Code no expone REPL) | N/A en este runtime |
+| A2A messaging entre sesiones | agents-run paralelo | mensajería via state compartido |
+
+### Assets
+
+- `scripts/gen-assets.py` reescrito: sol verginiano procedural, laurel,
+  glow/grid, helpers panel/chip/arrow. Contenido REAL: routa-gateway (no
+  cc-model-mask retirado), 17 crates, 221 tests, LSP, hot reload.
+- XML válido + render verificado con chromium headless (3/3).
+
+### Estado
+
+- **221 tests · 0 fallos · clippy 0**.
+
 ## Ciclo 12 — todo lo desconectado, CONECTADO + LSP real + harness hot reload (2026-08-28)
 
 ### Lo que estaba muerto y ahora funciona (verificado en vivo)

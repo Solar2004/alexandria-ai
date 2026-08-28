@@ -3290,10 +3290,34 @@ pub fn run_phalanx_event(cc_event: &str) -> i32 {
 
     let mut outcome = phalanx_dispatch(&event, &vars);
 
+    // Skill-harness: al activar la tool Skill, se crea el harness temporal de
+    // la skill con sus pasos extraídos del SKILL.md (auto-mejora en vivo).
+    if event == "ToolPost" {
+        let v: serde_json::Value = serde_json::from_str(&stdin_text).unwrap_or_default();
+        if v["tool_name"].as_str() == Some("Skill") {
+            if let Some(skill) = v["tool_input"]["skill"].as_str() {
+                let msg = skill_harness_ensure(skill);
+                if !msg.is_empty() {
+                    outcome.report.push_str(&msg);
+                    outcome.report.push('\n');
+                }
+            }
+        }
+    }
+
     // Hot reload: si el registry de harnesses cambió en disco, la nota entra
     // en el contexto de la MISMA sesión (sin reiniciar Claude Code).
     if let Some(nota) = harness_hot_reload_note() {
         outcome.context.push(nota);
+    }
+
+    // Skills activas: sus checklists se reinyectan en CADA prompt — la AI no
+    // puede olvidar los pasos de la skill que está ejecutando.
+    if event == "UserPromptSubmit" || event == "SessionStart" {
+        let checklists = active_skill_checklists();
+        if !checklists.is_empty() {
+            outcome.context.push(checklists);
+        }
     }
 
     // LSP opt-in: con ALX_LSP=1, el fichero editado (ToolPost) se verifica con
@@ -3787,11 +3811,269 @@ pub fn execute_mcp_tool(name: &str, args: &serde_json::Value) -> String {
             let (out, _code) = run_lsp_check(&files);
             out
         }
+        "skill.harness" => {
+            let skill = args["skill"].as_str().unwrap_or("");
+            if skill.is_empty() {
+                return "✗ skill.harness requiere {\"skill\": \"<nombre>\"}".to_string();
+            }
+            skill_harness_ensure(skill)
+        }
+        "harness.step" => {
+            let id = args["id"].as_str().unwrap_or("");
+            let step = args["step"].as_u64().unwrap_or(0) as usize;
+            if id.is_empty() || step == 0 {
+                return "✗ harness.step requiere {\"id\", \"step\"}".to_string();
+            }
+            harness_step(id, step)
+        }
         _ => format!("✗ tool '{name}' no existe en el catálogo del motor"),
     }
 }
 
-/// Parsea un nombre de fase (case-insensitive) a `PhaseId`; default Build.
+// ─── Skill-harness: las skills se EJECUTAN, no se leen ──────────────
+// Cuando la sesión activa una skill (tool Skill), el dispatcher crea un
+// harness temporal `hx-skill-<name>` con los PASOS extraídos del SKILL.md.
+// El hot reload los reinyecta en CADA prompt (no puede olvidarlos), el guard
+// de Stop exige marcarlos, y al terminar se retira solo (evolve).
+
+/// Extrae los pasos verificables de un SKILL.md: headings, checklists,
+/// numeraciones y líneas de verificación/regla. Cap 8 pasos × 140 chars.
+pub fn extract_skill_steps(md: &str) -> Vec<String> {
+    let mut steps: Vec<String> = Vec::new();
+    for line in md.lines() {
+        let t = line.trim();
+        let es_paso = t.starts_with("## ")
+            || t.starts_with("- [ ]")
+            || t.starts_with("- [x]")
+            || (t.chars().next().is_some_and(|c| c.is_ascii_digit()) && t.contains(". "))
+            || ["verify", "gate", "siempre", "nunca", "must", "before", "checkpoint"]
+                .iter()
+                .any(|k| t.to_lowercase().contains(k));
+        if !es_paso || t.len() < 8 {
+            continue;
+        }
+        let limpio = t
+            .trim_start_matches("## ")
+            .trim_start_matches("- [ ] ")
+            .trim_start_matches("- [x] ")
+            .trim()
+            .chars()
+            .take(140)
+            .collect::<String>();
+        if !limpio.is_empty() && !steps.contains(&limpio) {
+            steps.push(limpio);
+        }
+        if steps.len() >= 8 {
+            break;
+        }
+    }
+    steps
+}
+
+/// Busca el SKILL.md de una skill en las fuentes conocidas.
+pub fn find_skill_md(name: &str) -> Option<std::path::PathBuf> {
+    let mut candidates = vec![
+        std::env::current_dir().ok()?.join(".claude/skills").join(name).join("SKILL.md"),
+        std::env::current_dir().ok()?.join(".alexandria/skills").join(name).join("SKILL.md"),
+        repo_root().join(".claude/skills").join(name).join("SKILL.md"),
+        repo_root().join("integration/skills").join(name).join("SKILL.md"),
+        repo_root().join("skills").join(name).join("SKILL.md"),
+    ];
+    if let Ok(home) = std::env::var("HOME") {
+        candidates.push(std::path::PathBuf::from(home).join(".claude/skills").join(name).join("SKILL.md"));
+    }
+    candidates.into_iter().find(|p| p.is_file())
+}
+
+fn steps_path_for(harness_id: &str) -> std::path::PathBuf {
+    harness_dir().join("active").join(format!("{harness_id}.steps.json"))
+}
+
+/// Crea (o reutiliza) el harness temporal de una skill con sus pasos.
+/// Devuelve informe; la creación dispara el hot reload en el próximo prompt.
+pub fn skill_harness_ensure(skill: &str) -> String {
+    let skill = skill.trim();
+    if skill.is_empty() {
+        return String::new();
+    }
+    let md = match find_skill_md(skill).and_then(|p| std::fs::read_to_string(p).ok()) {
+        Some(md) => md,
+        None => return format!("skill-harness: SKILL.md de '{skill}' no encontrado (fuentes: .claude/skills, ~/.claude/skills, .alexandria/skills, integration/skills, skills)"),
+    };
+    let steps = extract_skill_steps(&md);
+    if steps.is_empty() {
+        return format!("skill-harness: '{skill}' sin pasos extraíbles (SKILL.md sin headings/checklists)");
+    }
+    let slug: String = skill
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .collect();
+    let id = format!("hx-skill-{slug}");
+    let dir = harness_dir();
+    let mut reg = HarnessRegistry::load_from(&dir);
+    if reg.by_id(&id).is_none() {
+        let cand = alx_evolve::HarnessCandidate {
+            suggested_name: format!("skill-{slug}"),
+            kind: alx_evolve::HarnessKind::Temporal,
+            trigger: Trigger::Event("SessionStop".to_string()),
+            objective: format!("aplicar la skill '{skill}' paso a paso en esta unidad"),
+            doc: format!("Harness de ejecución de skill: los pasos se reinyectan cada prompt, el guard de Stop exige marcarlos y se retira con skill-harness-done. Pasos: {}", steps.join(" | ")),
+        };
+        if reg.add_candidate(cand, now_ms()).is_none() {
+            return format!("skill-harness: no pude crear el harness para '{skill}'");
+        }
+        if let Err(e) = reg.save_to(&dir) {
+            return format!("skill-harness: no persistí el registry: {e}");
+        }
+    }
+    // steps.json (preserva done flags si ya existía)
+    let path = steps_path_for(&id);
+    let mut done: Vec<bool> = vec![false; steps.len()];
+    if let Ok(old) = std::fs::read_to_string(&path) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&old) {
+            if let Some(arr) = v["steps"].as_array() {
+                for (i, s) in arr.iter().enumerate().take(done.len()) {
+                    done[i] = s["done"].as_bool().unwrap_or(false);
+                }
+            }
+        }
+    }
+    let steps_json: Vec<serde_json::Value> = steps
+        .iter()
+        .zip(&done)
+        .map(|(t, d)| serde_json::json!({"text": t, "done": d}))
+        .collect();
+    let payload = serde_json::json!({
+        "id": id, "skill": skill,
+        "session": std::env::var("ALX_SESSION_ID").unwrap_or_default(),
+        "steps": steps_json,
+    });
+    let _ = std::fs::create_dir_all(dir.join("active"));
+    let _ = std::fs::write(&path, serde_json::to_string_pretty(&payload).unwrap_or_default());
+    format!("⚡ skill-harness '{skill}' activo ({id}) con {} pasos — se reinyecta cada prompt", steps.len())
+}
+
+/// Marca el paso n (1-indexed) de un harness de skill como hecho.
+pub fn harness_step(id: &str, n: usize) -> String {
+    let path = steps_path_for(id);
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return format!("✗ no hay steps.json para {id} (¿existe el skill-harness?)");
+    };
+    let mut v: serde_json::Value = serde_json::from_str(&text).unwrap_or_default();
+    let idx = n.saturating_sub(1);
+    if v["steps"][idx].is_null() {
+        return format!("✗ paso {n} fuera de rango ({} pasos)", v["steps"].as_array().map(|a| a.len()).unwrap_or(0));
+    }
+    v["steps"][idx]["done"] = serde_json::json!(true);
+    let _ = std::fs::write(&path, serde_json::to_string_pretty(&v).unwrap_or_default());
+    let pendientes = v["steps"].as_array().map(|a| a.iter().filter(|s| !s["done"].as_bool().unwrap_or(false)).count()).unwrap_or(0);
+    if pendientes == 0 {
+        format!("✓ paso {n} hecho — TODOS los pasos de {id} completados: ciérralo con `alx skill-harness-done {id}`")
+    } else {
+        format!("✓ paso {n} hecho — quedan {pendientes}")
+    }
+}
+
+/// Retira el harness de una skill (fin de unidad): archive + borrar steps.
+pub fn skill_harness_done(id: &str) -> String {
+    let key = if id.starts_with("hx-") { id.to_string() } else { format!("hx-{id}") };
+    let dir = harness_dir();
+    let mut reg = HarnessRegistry::load_from(&dir);
+    match reg.by_id_mut(&key) {
+        Some(h) => {
+            h.retire_if_goal_met();
+            if h.state != alx_evolve::HarnessState::Retired {
+                h.record_use();
+            }
+        }
+        None => return format!("✗ harness {key} no existe"),
+    }
+    if let Err(e) = reg.save_to(&dir) {
+        return format!("✗ no persistí el registry: {e}");
+    }
+    let _ = std::fs::remove_file(steps_path_for(&key));
+    format!("✓ {key} retirado (la skill se archivó con la unidad; el watcher lo consolida)")
+}
+
+/// Dirs de registry de harnesses DEDUPLICADOS (global + proyecto actual).
+fn harness_registry_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = vec![harness_dir(), repo_root().join("harnesses")];
+    dirs.dedup();
+    dirs
+}
+
+/// Checklists de skills activas para reinyectar en CADA prompt.
+pub fn active_skill_checklists() -> String {
+    let mut out = String::new();
+    let dirs = harness_registry_dirs();
+    let mut seen = std::collections::HashSet::new();
+    for d in dirs {
+        let active = d.join("active");
+        let Ok(rd) = std::fs::read_dir(&active) else { continue };
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.extension().map(|x| x != "json").unwrap_or(true) || !p.to_string_lossy().contains("steps") {
+                continue;
+            }
+            if !seen.insert(p.clone()) { continue; }
+            if let Ok(text) = std::fs::read_to_string(&p) {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+                    let id = v["id"].as_str().unwrap_or("?");
+                    let skill = v["skill"].as_str().unwrap_or("?");
+                    let steps = v["steps"].as_array().cloned().unwrap_or_default();
+                    if steps.is_empty() { continue; }
+                    out.push_str(&format!("\n⚡ SKILL ACTIVA: {skill} ({id}) — sigue sus pasos, márcalos al avanzar:\n"));
+                    for (i, s) in steps.iter().enumerate() {
+                        let mark = if s["done"].as_bool().unwrap_or(false) { "☑" } else { "☐" };
+                        out.push_str(&format!("  {mark} {}. {}\n", i + 1, s["text"].as_str().unwrap_or("")));
+                    }
+                    out.push_str(&format!("  → `alx harness-step {id} <n>` · al terminar: `alx skill-harness-done {id}`\n"));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Guard de skills para Stop: si se activó una skill en ESTA sesión y no se
+/// ha marcado ningún paso con iter>0, bloquea (exit 2) con el checklist.
+pub fn skill_check() -> (String, i32) {
+    let dirs = harness_registry_dirs();
+    let session = std::env::var("ALX_SESSION_ID").unwrap_or_default();
+    let mut bloqueos = Vec::new();
+    let mut avisos = Vec::new();
+    for d in dirs {
+        let Ok(rd) = std::fs::read_dir(d.join("active")) else { continue };
+        for e in rd.flatten() {
+            let p = e.path();
+            if !p.to_string_lossy().contains("steps") || p.extension().map(|x| x != "json").unwrap_or(true) {
+                continue;
+            }
+            if let Ok(text) = std::fs::read_to_string(&p) {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+                    let id = v["id"].as_str().unwrap_or("?").to_string();
+                    let skill = v["skill"].as_str().unwrap_or("?").to_string();
+                    let created_here = v["session"].as_str().map(|s| !session.is_empty() && s == session).unwrap_or(false);
+                    let steps = v["steps"].as_array().cloned().unwrap_or_default();
+                    let done = steps.iter().filter(|s| s["done"].as_bool().unwrap_or(false)).count();
+                    if steps.is_empty() || done == steps.len() { continue; }
+                    if created_here && done == 0 {
+                        bloqueos.push(format!("skill '{skill}' activa ({id}) con 0/{len} pasos marcados — marca con `alx harness-step {id} <n>` o ciérrala con `alx skill-harness-done {id}` si ya no aplica", len = steps.len()));
+                    } else {
+                        avisos.push(format!("{id}: {}/{} pasos", done, steps.len()));
+                    }
+                }
+            }
+        }
+    }
+    if !bloqueos.is_empty() {
+        (format!("SKILL-GUARD: activaste skills y no ejecutaste sus pasos. {}", bloqueos.join(" · ")), 2)
+    } else if !avisos.is_empty() {
+        (format!("skill-check: en curso → {}", avisos.join(" · ")), 0)
+    } else {
+        (String::new(), 0)
+    }
+}
 fn parse_phase(name: &str) -> PhaseId {
     match name.to_ascii_lowercase().as_str() {
         "ingest" => PhaseId::Ingest,

@@ -1,63 +1,158 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
-  <rect width="960" height="520" fill="#0f1420"/>
-  <text x="480" y="38" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="bold" fill="#e8ecf4">ALEXANDRIA — System architecture</text>
-
-  <!-- col 1: Claude Code -->
-  <rect x="40" y="80" width="200" height="120" rx="10" fill="#1c2434" stroke="#e8b64c" stroke-width="1.5"/>
-  <text x="140" y="110" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#e8ecf4">Claude Code</text>
-  <text x="140" y="132" text-anchor="middle" font-family="sans-serif" font-size="10.5" fill="#8892a6">hooks · statusline · MCP</text>
-  <text x="140" y="150" text-anchor="middle" font-family="sans-serif" font-size="10.5" fill="#8892a6">themes · skills · plugins</text>
-  <text x="140" y="168" text-anchor="middle" font-family="monospace" font-size="10" fill="#4a9eff">alx setup → ⚡</text>
-  <line x1="60" y1="185" x2="100" y2="185" stroke="#e8b64c" stroke-width="0.6" opacity="0.4"/>
-
-  <!-- col 2: Engine -->
-  <rect x="380" y="50" width="220" height="420" rx="12" fill="#1c2434" stroke="#4a9eff" stroke-width="1.5"/>
-  <text x="490" y="80" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#e8ecf4">Engine (16 crates)</text>
-  <g font-family="monospace" font-size="11" fill="#e8ecf4">
-    <rect x="400" y="95" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="112" text-anchor="middle">alx-gate · verifies</text>
-    <rect x="400" y="127" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="144" text-anchor="middle">alx-critic · critiques</text>
-    <rect x="400" y="159" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="176" text-anchor="middle">alx-task · decomposes</text>
-    <rect x="400" y="191" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="208" text-anchor="middle">alx-harness · stages</text>
-    <rect x="400" y="223" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="240" text-anchor="middle">alx-governor · cost</text>
-    <rect x="400" y="255" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="272" text-anchor="middle">alx-memory · recalls</text>
-    <rect x="400" y="287" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="304" text-anchor="middle">alx-mcp · protocol</text>
-    <rect x="400" y="319" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="336" text-anchor="middle">alx-bench · measures</text>
-    <rect x="400" y="351" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="368" text-anchor="middle">alx-night · autonomous</text>
-    <rect x="400" y="383" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="400" text-anchor="middle">alx-evolve · learns</text>
-    <rect x="400" y="415" width="180" height="26" rx="6" fill="#0f1420"/><text x="490" y="432" text-anchor="middle">alx-audit · doctor</text>
-  </g>
-  <text x="490" y="458" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#8892a6">207 tests · clippy-clean</text>
-
-  <!-- col 3: LLM chain -->
-  <rect x="720" y="80" width="200" height="200" rx="10" fill="#1c2434" stroke="#2ecc71" stroke-width="1.5"/>
-  <text x="820" y="110" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#e8ecf4">Model chain</text>
-  <g font-family="monospace" font-size="11">
-    <text x="820" y="140" text-anchor="middle" fill="#e8ecf4">headroom :8788</text>
-    <text x="820" y="160" text-anchor="middle" fill="#8892a6">compress</text>
-    <text x="820" y="186" text-anchor="middle" fill="#e8ecf4">cc-model-mask :3460</text>
-    <text x="820" y="206" text-anchor="middle" fill="#8892a6">route model</text>
-    <text x="820" y="232" text-anchor="middle" fill="#e8ecf4">routatic :3456</text>
-    <text x="820" y="252" text-anchor="middle" fill="#8892a6">deepseek-v4-flash</text>
-    <text x="820" y="272" text-anchor="middle" fill="#e8b64c" font-size="10">model-agnostic</text>
-  </g>
-
-  <!-- arrows CC → engine -->
-  <path d="M240 130 C 300 130, 320 150, 380 160" stroke="#e8b64c" stroke-width="2" fill="none" marker-end="url(#arr)"/>
-  <text x="300" y="118" text-anchor="middle" font-size="10" fill="#8892a6" font-family="sans-serif">hooks / MCP</text>
-  <path d="M240 165 C 300 200, 320 250, 380 270" stroke="#e8b64c" stroke-width="2" fill="none" opacity="0.7"/>
-  <text x="295" y="218" text-anchor="middle" font-size="10" fill="#8892a6" font-family="sans-serif">statusline</text>
-
-  <!-- arrows engine → chain -->
-  <path d="M600 200 C 650 200, 670 180, 720 170" stroke="#2ecc71" stroke-width="2" fill="none" marker-end="url(#arr)"/>
-  <text x="655" y="192" text-anchor="middle" font-size="10" fill="#8892a6" font-family="sans-serif">LLM calls</text>
-
-  <!-- verify loop -->
-  <path d="M600 280 C 650 340, 650 380, 600 430 M490 470 L 490 460" stroke="#e05252" stroke-width="1.5" fill="none" stroke-dasharray="5 4"/>
-  <text x="700" y="400" text-anchor="middle" font-size="10" fill="#e05252" font-family="sans-serif">verify → critique → improve (R24)</text>
-
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="700" viewBox="0 0 1240 700">
   <defs>
-    <marker id="arr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-      <path d="M0 0 L10 4 L0 8 Z" fill="#e8b64c"/>
+    <radialGradient id="bgGlow" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#182338"/>
+      <stop offset="100%" stop-color="#0b0f1a"/>
+    </radialGradient>
+    <linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2336"/>
+      <stop offset="100%" stop-color="#141b2b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5d78e"/>
+      <stop offset="100%" stop-color="#e8b64c"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0 L0 0 0 32" fill="none" stroke="#26314b" stroke-width="0.4" opacity="0.35"/>
+    </pattern>
+    <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0 0 L9 3.5 L0 7 Z" fill="#e8b64c"/>
+    </marker>
+    <marker id="arrg" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0 0 L9 3.5 L0 7 Z" fill="#3ddc84"/>
     </marker>
   </defs>
+  <rect width="1240" height="700" fill="url(#bgGlow)"/>
+  <rect width="1240" height="700" fill="url(#grid)"/>
+  <text x="620" y="44" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#eceff7" letter-spacing="2">ALEXANDRIA</text>
+  <text x="620" y="64" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10" fill="#8a94ab" letter-spacing="4">MOTOR DE DESARROLLO IA AUTÓNOMO · 17 CRATES · 221 TESTS</text>
+
+  <!-- ── Claude Code ── -->
+  <rect x="50" y="96" width="280" height="250" rx="14" fill="url(#pgrad)" stroke="#26314b" stroke-width="1"/>
+  <rect x="50" y="96" width="280" height="3" rx="1.5" fill="#e8b64c" opacity="0.9"/>
+  <text x="68" y="126" font-family="'Segoe UI', system-ui, sans-serif" font-size="14.5" font-weight="600" fill="#eceff7">Claude Code</text>
+  <g>
+    <rect x="70" y="140" width="240" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="190.0" y="156" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx hook &lt;evento&gt;</text>
+  <text x="190.0" y="163" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#e8b64c">dispatcher phalanx (misión·memoria·docmin)</text>
+    <rect x="70" y="178" width="240" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="190.0" y="194" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">MCP alexandria</text>
+  <text x="190.0" y="201" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#3ddc84">11 tools REALES · lsp.check</text>
+    <rect x="70" y="216" width="240" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="190.0" y="232" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">hooks CC</text>
+  <text x="190.0" y="239" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#4a9eff">iterate · guards · activity</text>
+    <rect x="70" y="254" width="240" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="190.0" y="270" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">skills · plugins · themes</text>
+  <text x="190.0" y="277" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">sol/luna · atg wrapper</text>
+  </g>
+
+  <!-- ── Engine ── -->
+  <rect x="410" y="96" width="350" height="420" rx="14" fill="url(#pgrad)" stroke="#26314b" stroke-width="1"/>
+  <rect x="410" y="96" width="350" height="3" rx="1.5" fill="#4a9eff" opacity="0.9"/>
+  <text x="428" y="126" font-family="'Segoe UI', system-ui, sans-serif" font-size="14.5" font-weight="600" fill="#eceff7">Motor — phalanx/config.toml</text>
+  <rect x="430" y="128" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="508.0" y="144" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-gate</text>
+  <text x="508.0" y="151" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">verifica + LSP</text>
+    <rect x="598" y="128" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="676.0" y="144" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-critic</text>
+  <text x="676.0" y="151" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">critica</text>
+    <rect x="430" y="162" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="508.0" y="178" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-task</text>
+  <text x="508.0" y="185" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">decompone</text>
+    <rect x="598" y="162" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="676.0" y="178" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-harness</text>
+  <text x="676.0" y="185" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">fases</text>
+    <rect x="430" y="196" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="508.0" y="212" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-governor</text>
+  <text x="508.0" y="219" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">coste + entropía</text>
+    <rect x="598" y="196" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="676.0" y="212" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-memory</text>
+  <text x="676.0" y="219" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">recalls</text>
+    <rect x="430" y="230" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="508.0" y="246" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-mcp</text>
+  <text x="508.0" y="253" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">protocolo</text>
+    <rect x="598" y="230" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="676.0" y="246" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-bench</text>
+  <text x="676.0" y="253" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">mide</text>
+    <rect x="430" y="264" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="508.0" y="280" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-night</text>
+  <text x="508.0" y="287" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">autónomo nocturno</text>
+    <rect x="598" y="264" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="676.0" y="280" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-evolve</text>
+  <text x="676.0" y="287" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">aprende</text>
+    <rect x="430" y="298" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="508.0" y="314" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-audit</text>
+  <text x="508.0" y="321" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">doctor</text>
+    <rect x="598" y="298" width="156" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="676.0" y="314" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-agents</text>
+  <text x="676.0" y="321" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">spawn</text>
+  <text x="585" y="390" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="9.5" fill="#8a94ab">221 tests · clippy 0 · evoluciona solo</text>
+  <g>
+    <rect x="430" y="408" width="310" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="585.0" y="424" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx evolve — watcher de harnesses</text>
+  <text x="585.0" y="431" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#e8b64c">promueve/retira con uso real</text>
+    <rect x="430" y="444" width="310" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="585.0" y="460" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">LSP real — rust-analyzer · pyright · tsserver</text>
+  <text x="585.0" y="467" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#3ddc84">handshake + diagnostics como evidencia</text>
+  </g>
+
+  <!-- ── Cadena ── -->
+  <rect x="880" y="96" width="310" height="250" rx="14" fill="url(#pgrad)" stroke="#26314b" stroke-width="1"/>
+  <rect x="880" y="96" width="310" height="3" rx="1.5" fill="#3ddc84" opacity="0.9"/>
+  <text x="898" y="126" font-family="'Segoe UI', system-ui, sans-serif" font-size="14.5" font-weight="600" fill="#eceff7">Cadena de modelos</text>
+  <g>
+    <rect x="900" y="140" width="270" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="1035.0" y="156" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">headroom :8788</text>
+  <text x="1035.0" y="163" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#eceff7">compresión de contexto</text>
+    <rect x="900" y="178" width="270" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="1035.0" y="194" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">routa-gateway :3460</text>
+  <text x="1035.0" y="201" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#eceff7">máscara [1m] + gobernador de entropía</text>
+    <rect x="900" y="216" width="270" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="1035.0" y="232" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">routatic :3456</text>
+  <text x="1035.0" y="239" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#eceff7">PROVIDER · failover automático</text>
+    <rect x="900" y="254" width="270" height="30" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="1035.0" y="270" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">omniroute :20128</text>
+  <text x="1035.0" y="277" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">fallback multi-proveedor</text>
+  </g>
+  <text x="1035" y="322" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="9.5" fill="#e8b64c">modelo vivo desde config · cero hardcode</text>
+
+  <!-- ── Flujo session loop ── -->
+  <rect x="880" y="380" width="310" height="136" rx="14" fill="url(#pgrad)" stroke="#26314b" stroke-width="1"/>
+  <rect x="880" y="380" width="310" height="3" rx="1.5" fill="#e8b64c" opacity="0.9"/>
+  <text x="898" y="410" font-family="'Segoe UI', system-ui, sans-serif" font-size="14.5" font-weight="600" fill="#eceff7">Ciclo en la sesión</text>
+  <g font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10" fill="#eceff7">
+    <text x="900" y="428">1. harness-new  →  ⚡ hot reload</text>
+    <text x="900" y="450">2. dispatcher reinyecta el listado vivo</text>
+    <text x="900" y="472">3. VERIFICA → CRITICA → MEJORA</text>
+    <text x="900" y="494" fill="#3ddc84">4. evolve promueve con evidencia</text>
+  </g>
+
+  <!-- ── Night infra ── -->
+  <rect x="50" y="380" width="280" height="136" rx="14" fill="url(#pgrad)" stroke="#26314b" stroke-width="1"/>
+  <rect x="50" y="380" width="280" height="3" rx="1.5" fill="#e0526e" opacity="0.9"/>
+  <text x="68" y="410" font-family="'Segoe UI', system-ui, sans-serif" font-size="14.5" font-weight="600" fill="#eceff7">Infra</text>
+  <g>
+    <rect x="70" y="424" width="240" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="190.0" y="440" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">alx-night.timer 02:00</text>
+  <text x="190.0" y="447" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#eceff7">informe + backlog autónomo</text>
+    <rect x="70" y="460" width="240" height="28" rx="7" fill="#0b0f1a" stroke="#26314b" stroke-width="1"/>
+  <text x="190.0" y="476" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10.5" fill="#eceff7">ledger + telemetría</text>
+  <text x="190.0" y="483" text-anchor="middle" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="8.5" fill="#8a94ab">coste real por llamada</text>
+  </g>
+
+  <!-- flechas -->
+  <path d="M330 180 L406 180" stroke="#e8b64c" stroke-width="1.8" opacity="1.0" marker-end="url(#arr)" fill="none"/>
+  <text x="368.0" y="172.0" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="9.5" fill="#8a94ab">hooks</text>
+  <path d="M406 240 L330 240" stroke="#3ddc84" stroke-width="1.8" opacity="0.9" marker-end="url(#arr)" fill="none"/>
+  <text x="368.0" y="232.0" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="9.5" fill="#8a94ab">tools MCP</text>
+  <path d="M760 180 L876 180" stroke="#3ddc84" stroke-width="1.8" opacity="1.0" marker-end="url(#arr)" fill="none"/>
+  <text x="818.0" y="172.0" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="9.5" fill="#8a94ab">LLM</text>
+  <path d="M560 96 L560 74" stroke="#4a9eff" stroke-width="1.8" opacity="1.0" marker-end="url(#arr)" fill="none"/>
+  <text x="575" y="78" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" fill="#8a94ab">config-driven: cambiar TOML = cambiar el sistema</text>
+  <path d="M330 430 C 380 430, 380 500, 410 500" stroke="#e0526e" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arr)" opacity="0.8"/>
+  <text x="368" y="516" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" fill="#e0526e">night</text>
 </svg>

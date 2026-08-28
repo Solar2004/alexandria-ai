@@ -7,6 +7,7 @@ set -euo pipefail
 
 # Ruta absoluta: systemd user no incluye ~/.local/bin en el PATH.
 ALX=/home/artorias/.local/bin/alx
+export PATH="/home/artorias/.local/bin:$PATH"   # routa y demás del informe
 REPORT="/home/artorias/Projectos/AlexanderTheGreat/plan/night-report.md"
 
 {

@@ -2722,6 +2722,60 @@ pub fn run_setup() -> String {
         ok(settings_written)
     ));
 
+    // 3b. Dispatcher de hooks PHALANX en el settings global (merge idempotente):
+    //     UserPromptSubmit → `alx hook user-prompt-submit` (misión + hot reload),
+    //     PostToolUse → `alx hook post-tool-use` (memoria + doc-min + evolve).
+    let dispatcher = |hooks: &mut serde_json::Value, event: &str, cmd: &str, timeout: u64| -> bool {
+        let entry = serde_json::json!({ "type": "command", "command": cmd, "timeout": timeout });
+        if let Some(groups) = hooks[event].as_array() {
+            for g in groups {
+                if let Some(hs) = g["hooks"].as_array() {
+                    if hs.iter().any(|h| h["command"] == entry["command"]) {
+                        return false; // ya registrado
+                    }
+                }
+            }
+        }
+        if hooks[event].is_null() {
+            hooks[event] = serde_json::json!([]);
+        }
+        if let Some(groups) = hooks[event].as_array_mut() {
+            groups.push(serde_json::json!({ "hooks": [entry] }));
+        }
+        true
+    };
+    let mut dispatcher_written = false;
+    if let Ok(text) = std::fs::read_to_string(&settings_path) {
+        if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(&text) {
+            if v.get("hooks").map(|h| !h.is_object()).unwrap_or(true) {
+                v["hooks"] = serde_json::json!({});
+            }
+            let mut changed = dispatcher(
+                &mut v["hooks"],
+                "UserPromptSubmit",
+                &format!("{alx} hook user-prompt-submit"),
+                15,
+            );
+            changed |= dispatcher(
+                &mut v["hooks"],
+                "PostToolUse",
+                &format!("{alx} hook post-tool-use"),
+                20,
+            );
+            if changed {
+                if let Ok(new_text) = serde_json::to_string_pretty(&v) {
+                    dispatcher_written = std::fs::write(&settings_path, new_text).is_ok();
+                }
+            } else {
+                dispatcher_written = true;
+            }
+        }
+    }
+    out.push_str(&format!(
+        "hooks phalanx dispatcher (user-prompt-submit/post-tool-use): {}\n",
+        ok(dispatcher_written)
+    ));
+
     // 4. MCP server 'alexandria' en ~/.claude.json (merge)
     let mcp_path = format!("{home}/.claude.json");
     let mut mcp_ok = false;
@@ -3060,6 +3114,525 @@ pub fn render_phalanx_status() -> String {
     out
 }
 
+// ─── PHALANX hooks: ejecutor REAL de phalanx/hooks/*.toml ───────────────────
+// Antes los 10 hooks TOML eran config muerta: declaraban comandos a binarios
+// inexistentes y nada los ejecutaba. Ahora `alx hook <evento>` los carga del
+// disco, ordena Pre→Async→Post, ejecuta con timeout/retry reales
+// (alx_gate::run_command) e inyecta el stdout como additionalContext en CC.
+
+/// Raíz del repo (alexandria/crates/alx-cli → ../../..).
+pub fn repo_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
+}
+
+/// Dir de estado del motor (alexandria/state).
+pub fn state_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state")
+}
+
+/// Alias CC (con guiones) → nombre del evento en el bus phalanx.
+pub fn phalanx_event_name(cc_event: &str) -> &str {
+    match cc_event {
+        "user-prompt-submit" => "UserPromptSubmit",
+        "pre-tool-use" => "ToolPre",
+        "post-tool-use" => "ToolPost",
+        "session-start" => "SessionStart",
+        "session-stop" => "SessionStop",
+        "stop" => "Stop",
+        "phase-passed" => "PhasePassed",
+        "phase-failed" => "PhaseFailed",
+        "micro-task-ready" => "MicroTaskReady",
+        other => other,
+    }
+}
+
+/// Carga los hooks PHALANX (phalanx/hooks/*.toml) como datos puros.
+fn load_phalanx_hooks() -> Vec<alx_hooks::Hook> {
+    let dir = repo_root().join("phalanx/hooks");
+    let mut hooks = Vec::new();
+    if let Ok(rd) = std::fs::read_dir(&dir) {
+        for entry in rd.flatten() {
+            let p = entry.path();
+            if p.extension().map(|x| x != "toml").unwrap_or(true) {
+                continue;
+            }
+            if let Ok(text) = std::fs::read_to_string(&p) {
+                if let Ok(h) = toml::from_str::<alx_hooks::Hook>(&text) {
+                    hooks.push(h);
+                }
+            }
+        }
+    }
+    hooks
+}
+
+/// Sustituye `${VAR}` por el valor del mapa (vacío si falta la variable).
+fn substitute_vars(cmd: &str, vars: &std::collections::HashMap<String, String>) -> String {
+    let mut out = cmd.to_string();
+    for (k, v) in vars {
+        out = out.replace(&format!("${{{k}}}"), v);
+    }
+    out
+}
+
+/// Payload del hook: env ALX_HOOK_PAYLOAD (lo pone el dispatcher) o stdin.
+fn hook_payload() -> String {
+    if let Ok(p) = std::env::var("ALX_HOOK_PAYLOAD") {
+        if !p.is_empty() {
+            return p;
+        }
+    }
+    use std::io::Read;
+    let mut t = String::new();
+    let _ = std::io::stdin().read_to_string(&mut t);
+    t
+}
+
+/// Extrae las variables de hook del stdin de Claude Code (JSON) + entorno.
+fn hook_vars_from_stdin(stdin_text: &str) -> std::collections::HashMap<String, String> {
+    let mut vars = std::collections::HashMap::new();
+    vars.insert(
+        "ALX_SESSION_ID".into(),
+        std::env::var("ALX_SESSION_ID").unwrap_or_default(),
+    );
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(stdin_text) {
+        let tool = v["tool_name"].as_str().unwrap_or("");
+        if !tool.is_empty() {
+            vars.insert("ALX_TOOL".into(), tool.to_string());
+        }
+        let file = v["tool_input"]["file_path"]
+            .as_str()
+            .or(v["tool_response"]["filePath"].as_str())
+            .unwrap_or("");
+        if !file.is_empty() {
+            vars.insert("ALX_FILE".into(), file.to_string());
+        }
+        let prompt = v["prompt"].as_str().unwrap_or("");
+        if !prompt.is_empty() {
+            vars.insert("ALX_PROMPT".into(), prompt.to_string());
+        }
+    }
+    if let Ok(phase) = std::env::var("ALX_PHASE") {
+        vars.insert("ALX_PHASE".into(), phase);
+    }
+    if let Ok(task) = std::env::var("ALX_TASK_ID") {
+        vars.insert("ALX_TASK_ID".into(), task);
+    }
+    vars
+}
+
+/// Resultado de despachar un evento phalanx (testable, sin IO).
+pub struct PhalanxOutcome {
+    /// Informe de ejecución (para stderr/log).
+    pub report: String,
+    /// Stdout de hooks para additionalContext (UserPromptSubmit/SessionStart).
+    pub context: Vec<String>,
+    /// Un hook Pre+lock falló: la cadena aborta.
+    pub blocked: bool,
+}
+
+/// Núcleo del dispatcher: carga hooks del evento, los ejecuta en orden
+/// Pre→Async→Post con timeout y retry reales.
+pub fn phalanx_dispatch(
+    event: &str,
+    vars: &std::collections::HashMap<String, String>,
+) -> PhalanxOutcome {
+    let mut hooks: Vec<alx_hooks::Hook> = load_phalanx_hooks()
+        .into_iter()
+        .filter(|h| h.enabled && h.event == event)
+        .collect();
+    hooks.sort_by_key(|h| h.priority);
+    let mut report = String::new();
+    let mut context = Vec::new();
+    let mut blocked = false;
+    if hooks.is_empty() {
+        report.push_str(&format!("(sin hooks para {event})\n"));
+    }
+    for h in &hooks {
+        let cmd = substitute_vars(&h.command, vars);
+        let mut exit = -1;
+        let mut head = String::new();
+        for _attempt in 0..=h.retry {
+            let out = alx_gate::run_command(&cmd, h.timeout_ms);
+            exit = out.exit_code;
+            head = out.stdout_head;
+            if exit == 0 {
+                break;
+            }
+        }
+        report.push_str(&format!("hook {}: exit {exit}\n", h.id));
+        if exit == 0 && !head.trim().is_empty() {
+            context.push(head.trim().to_string());
+        }
+        if h.priority == alx_hooks::HookPriority::Pre && h.lock && exit != 0 {
+            blocked = true;
+            report
+                .push_str(&format!("hook {} (Pre+lock) falló → cadena abortada\n", h.id));
+            break;
+        }
+    }
+    PhalanxOutcome { report, context, blocked }
+}
+
+/// `alx hook <evento>` — ejecuta los hooks phalanx del evento y, en
+/// UserPromptSubmit/SessionStart, emite el JSON de additionalContext de CC.
+/// Antes de ejecutar, aplica el HOT RELOAD de harnesses (ver abajo).
+pub fn run_phalanx_event(cc_event: &str) -> i32 {
+    use std::io::Read;
+    let event = phalanx_event_name(cc_event).to_string();
+    let mut stdin_text = String::new();
+    let _ = std::io::stdin().read_to_string(&mut stdin_text);
+    // Los hooks hijos reciben el payload por env: el stdin del dispatcher ya
+    // se consumió aquí, y los subcomandos (memory-capture, classify...) lo
+    // leen de ALX_HOOK_PAYLOAD primero, stdin como fallback.
+    std::env::set_var("ALX_HOOK_PAYLOAD", &stdin_text);
+    let vars = hook_vars_from_stdin(&stdin_text);
+
+    let mut outcome = phalanx_dispatch(&event, &vars);
+
+    // Hot reload: si el registry de harnesses cambió en disco, la nota entra
+    // en el contexto de la MISMA sesión (sin reiniciar Claude Code).
+    if let Some(nota) = harness_hot_reload_note() {
+        outcome.context.push(nota);
+    }
+
+    // LSP opt-in: con ALX_LSP=1, el fichero editado (ToolPost) se verifica con
+    // diagnostics LSP reales y el resultado va al informe (stderr/log).
+    if event == "ToolPost" {
+        if let Some(file) = vars.get("ALX_FILE") {
+            if !file.is_empty() && std::env::var("ALX_LSP").as_deref() == Ok("1") {
+                let (msg, code) = run_lsp_check(std::slice::from_ref(file));
+                outcome.report.push_str(&format!("lsp(opt-in): exit {code}\n{msg}\n"));
+            }
+        }
+    }
+
+    eprint!("{}", outcome.report);
+    if outcome.blocked {
+        return 2;
+    }
+    if !outcome.context.is_empty()
+        && (event == "UserPromptSubmit" || event == "SessionStart")
+    {
+        let payload = serde_json::json!({
+            "hookSpecificOutput": {
+                "hookEventName": event,
+                "additionalContext": outcome.context.join("\n\n"),
+            }
+        });
+        println!("{payload}");
+    }
+    0
+}
+
+/// Mtime del último cambio en los registries de harnesses (global + proyecto).
+/// Guarda la marca en state/harness-watch.json; si cambió desde la última
+/// pasada, devuelve una nota de recarga con el listado vivo.
+fn harness_hot_reload_note() -> Option<String> {
+    let mut dirs = vec![repo_root().join("harnesses")];
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Some(proj) = find_project_alexandria(Some(&cwd)) {
+            dirs.push(proj.parent().map(|p| p.join(".alexandria/harnesses")).unwrap_or(proj));
+        }
+    }
+    let mut latest: u64 = 0;
+    let mut n_harnesses = 0usize;
+    for d in &dirs {
+        let f = d.join("active/harnesses.jsonl");
+        if let Ok(md) = std::fs::metadata(&f) {
+            if let Ok(m) = md.modified() {
+                if let Ok(dur) = m.duration_since(std::time::UNIX_EPOCH) {
+                    latest = latest.max(dur.as_millis() as u64);
+                }
+            }
+        }
+        n_harnesses += HarnessRegistry::count_in(d);
+    }
+    if latest == 0 {
+        return None;
+    }
+    let watch_path = state_dir().join("harness-watch.json");
+    let last_seen: u64 = std::fs::read_to_string(&watch_path)
+        .ok()
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+        .and_then(|v| v["mtime"].as_u64())
+        .unwrap_or(0);
+    let _ = std::fs::create_dir_all(state_dir());
+    let _ = std::fs::write(
+        &watch_path,
+        serde_json::to_string(&serde_json::json!({"mtime": latest})).unwrap_or_default(),
+    );
+    if last_seen == 0 || latest <= last_seen {
+        return None;
+    }
+    let mut nota = format!(
+        "⚡ Harnesses RELOAD en caliente: {} vivo(s) (cambio en disco detectado).",
+        n_harnesses
+    );
+    let mut reg = HarnessRegistry::load_from(&dirs[0]);
+    for d in dirs.iter().skip(1) {
+        for h in HarnessRegistry::load_from(d).all() {
+            if reg.by_id(&h.id).is_none() {
+                reg.add(h.clone());
+            }
+        }
+    }
+    for h in reg.all().iter().filter(|h| h.state != alx_evolve::HarnessState::Retired) {
+        nota.push_str(&format!("\n  - {} [{}]: {}", h.id, format!("{:?}", h.kind).to_lowercase(), h.objective));
+    }
+    Some(nota)
+}
+
+// ─── Subcomandos reales para los hooks phalanx ─────────────────────────────
+
+/// `alx mission` — imprime la memoria maestra + reglas globales.
+pub fn mission_print() -> String {
+    let mut out = String::from("MEMORIA MAESTRA (plan/MISSION.md) — releyela antes de decidir:\n");
+    match std::fs::read_to_string(repo_root().join("plan/MISSION.md")) {
+        Ok(md) => out.push_str(md.trim()),
+        Err(e) => out.push_str(&format!("(MISSION.md no leída: {e})")),
+    }
+    out.push_str("\n\nREGLAS GLOBALES: caveman (técnico, sin relleno) · evidencia real en cada afirmación · itera VERIFICA→CRITICA→MEJORA.");
+    out
+}
+
+/// Carga el RecallStore persistido (state/recalls.json).
+pub fn load_recalls_store() -> RecallStore {
+    let path = state_dir().join("recalls.json");
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default()
+}
+
+/// Persiste el RecallStore (state/recalls.json).
+fn save_recalls_store(store: &RecallStore) -> std::io::Result<()> {
+    let _ = std::fs::create_dir_all(state_dir());
+    let json = serde_json::to_string_pretty(store)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    std::fs::write(state_dir().join("recalls.json"), json)
+}
+
+/// Guarda una lección en la memoria (comprime caveman + dedup por texto).
+/// Devuelve el id del recall efectivo.
+pub fn recall_save_lesson(text: &str) -> Result<String, String> {
+    let mut store = load_recalls_store();
+    let now = now_ms();
+    let recall = Recall {
+        id: format!("rc-{now}"),
+        text: caveman_compress(text),
+        source: RecallSource::Tool,
+        tags: vec!["auto".to_string()],
+        weight: 1,
+        created: now,
+    };
+    let id = store.add(recall);
+    save_recalls_store(&store).map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+/// Detecta si el payload del hook trae un aprendizaje real (error, fix, ✗).
+fn lesson_from_hook_payload(stdin_text: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(stdin_text).ok()?;
+    let tool = v["tool_name"].as_str().unwrap_or("");
+    let salida = v["tool_response"]["stdout"]
+        .as_str()
+        .or(v["tool_response"]["content"].as_str())
+        .unwrap_or("");
+    let errores = ["error", "panic", "failed", "✗", "mismatch", "cannot find"];
+    let hay_error = errores.iter().any(|e| salida.to_lowercase().contains(e));
+    if !hay_error {
+        return None;
+    }
+    // Frase caveman: tool + primer trozo de la salida con el error.
+    let trozo: String = salida
+        .lines()
+        .find(|l| errores.iter().any(|e| l.to_lowercase().contains(e)))
+        .unwrap_or("")
+        .trim()
+        .chars()
+        .take(160)
+        .collect();
+    if trozo.is_empty() {
+        return None;
+    }
+    Some(format!("{tool}: {trozo} — lección: reproducelo y arreglo documentado"))
+}
+
+/// `alx memory-capture` — lee el payload del hook PostToolUse; si trae
+/// aprendizaje (error/fix), lo comprime caveman y lo persiste como recall.
+pub fn memory_capture_from_stdin() -> (String, i32) {
+    let stdin_text = hook_payload();
+    match lesson_from_hook_payload(&stdin_text) {
+        Some(lesson) => match recall_save_lesson(&lesson) {
+            Ok(id) => (format!("✓ recall {id}: {}", caveman_compress(&lesson)), 0),
+            Err(e) => (format!("memory-capture: no persistió: {e}"), 0),
+        },
+        None => (String::new(), 0), // sin aprendizaje → silencio (hook async)
+    }
+}
+
+/// `alx evolve-detect` — lee el payload del hook; registra operaciones
+/// repetidas y las convierte en candidatos a harness (≥2 repeticiones).
+pub fn evolve_detect_from_stdin() -> (String, i32) {
+    let stdin_text = hook_payload();
+    let v: serde_json::Value = serde_json::from_str(&stdin_text).unwrap_or_default();
+    let tool = v["tool_name"].as_str().unwrap_or("tool");
+    let input = serde_json::to_string(&v["tool_input"]).unwrap_or_default();
+    let work_text = format!("{tool} {input}");
+
+    // Historial para contar repeticiones.
+    let hist_path = state_dir().join("harness-candidates.log");
+    let _ = std::fs::create_dir_all(state_dir());
+    let mut hist = std::fs::read_to_string(&hist_path).unwrap_or_default();
+    hist.push_str(&work_text.replace('\n', " "));
+    hist.push('\n');
+    let repeticiones = hist.lines().filter(|l| *l == hist.lines().last().unwrap_or("")).count();
+    let _ = std::fs::write(&hist_path, &hist);
+    if repeticiones < 2 {
+        return (String::new(), 0); // aún sin patrón
+    }
+    let dir = harness_dir();
+    let mut reg = HarnessRegistry::load_from(&dir);
+    let candidatos = detect_candidates(&work_text);
+    for c in candidatos {
+        if reg.add_candidate(c.clone(), now_ms()).is_some() {
+            match reg.save_to(&dir) {
+                Ok(()) => {
+                    return (
+                        format!("⚡ patrón recurrente ({repeticiones}x) → candidato a harness: {}\n  Confírmalo con `alx harness-new {} --objective ... --doc ...`", c.suggested_name, c.suggested_name),
+                        0,
+                    );
+                }
+                Err(e) => return (format!("evolve-detect: no persistió: {e}"), 0),
+            }
+        }
+    }
+    (String::new(), 0)
+}
+
+/// `alx docmin <file>` — regla doc-min REAL: el fichero documentado o exit 1.
+pub fn docmin_check(file: &str) -> (String, i32) {
+    let path = std::path::Path::new(file);
+    if !path.is_file() {
+        return (format!("doc-min: ✗ {file} no existe"), 1);
+    }
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => return (format!("doc-min: ✗ no leíble: {e}"), 1),
+    };
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let documentado = match ext {
+        "rs" => text.contains("//!") || text.contains("///"),
+        "ts" | "js" | "tsx" | "jsx" => text.contains("/**") || text.contains("// "),
+        "py" => text.contains("\"\"\"") || text.contains("# "),
+        "md" | "toml" | "json" | "sh" | "bash" => text.contains("# ") || text.contains("## "),
+        _ => true, // extensión desconocida: no exigimos formato
+    };
+    if documentado {
+        (format!("doc-min: ✓ {file}"), 0)
+    } else {
+        (format!("doc-min: ✗ {file} sin documentación mínima (comentario de qué resuelve)"), 1)
+    }
+}
+
+/// `alx classify` — lee el payload del hook PreToolUse y clasifica dificultad
+/// → tier de modelo + ruta de red (governor real, no binario inexistente).
+pub fn classify_from_stdin() -> (String, i32) {
+    let stdin_text = hook_payload();
+    let v: serde_json::Value = serde_json::from_str(&stdin_text).unwrap_or_default();
+    let tool = v["tool_name"].as_str().unwrap_or("");
+    let input = serde_json::to_string(&v["tool_input"]).unwrap_or_default();
+    let prompt_text = if input.is_empty() || input == "null" {
+        tool.to_string()
+    } else {
+        format!("{tool} {input}")
+    };
+    let tier = classify_prompt_text(&prompt_text);
+    let tier_name = format!("{tier:?}");
+    let _ = std::fs::create_dir_all(state_dir());
+    let _ = std::fs::write(state_dir().join("last-tier.txt"), &tier_name);
+    (format!("governor: {tool} → tier {tier_name}"), 0)
+}
+
+// ─── LSP real: doctor + diagnostics (alx-gate::lsp) ─────────────────────────
+
+/// Config [lsp] de phalanx/config.toml (enabled, timeout_ms). Defaults vivos.
+fn lsp_config() -> (bool, u64) {
+    let path = repo_root().join("phalanx/config.toml");
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        if let Ok(v) = toml::from_str::<toml::Value>(&text) {
+            let enabled = v.get("lsp").and_then(|l| l.get("enabled")).and_then(|e| e.as_bool()).unwrap_or(true);
+            let timeout = v.get("lsp").and_then(|l| l.get("timeout_ms")).and_then(|t| t.as_integer()).unwrap_or(30_000) as u64;
+            return (enabled, timeout);
+        }
+    }
+    (true, 30_000)
+}
+
+/// `alx lsp [--live]` — doctor LSP: servers detectados, versión y (con --live)
+/// handshake initialize REAL contra cada uno.
+pub fn run_lsp_doctor(live: bool) -> String {
+    let (enabled, timeout) = lsp_config();
+    let mut out = String::from("## LSP — servers del sistema\n");
+    if !enabled {
+        out.push_str("config phalanx [lsp] enabled=false — LSP apagado.\n");
+        return out;
+    }
+    let servers = alx_gate::lsp::detect_servers();
+    out.push_str(&format!("{:<28} {:<9} {}\n", "server", "estado", "versión"));
+    for d in &servers {
+        out.push_str(&format!(
+            "{:<28} {:<9} {}\n",
+            d.spec.binary,
+            if d.available { "✓" } else { "—" },
+            d.version
+        ));
+    }
+    if !live {
+        out.push_str("(handshake real: `alx lsp --live`)\n");
+        return out;
+    }
+    out.push_str("\nHandshake initialize REAL (stdio JSON-RPC):\n");
+    for d in servers.iter().filter(|d| d.available) {
+        match alx_gate::lsp::initialize_handshake(&d.spec, ".", timeout) {
+            Ok(info) => out.push_str(&format!("  ✓ {} → {info}\n", d.spec.binary)),
+            Err(e) => out.push_str(&format!("  ✗ {} → {e}\n", d.spec.binary)),
+        }
+    }
+    out
+}
+
+/// `alx lsp check <files>` — diagnostics LSP reales; exit 1 si hay errores.
+pub fn run_lsp_check(files: &[String]) -> (String, i32) {
+    let (enabled, timeout) = lsp_config();
+    if !enabled {
+        return ("lsp: apagado en phalanx/config.toml [lsp]".to_string(), 0);
+    }
+    if files.is_empty() {
+        return ("uso: alx lsp check <ficheros…>".to_string(), 2);
+    }
+    let servers = alx_gate::lsp::detect_servers();
+    let root = std::env::current_dir()
+        .map(|d| d.to_string_lossy().to_string())
+        .unwrap_or_else(|_| ".".to_string());
+    match alx_gate::lsp::verify_lsp(&servers, &root, files, timeout) {
+        Ok(ev) => {
+            let mut out = format!(
+                "lsp-check: {} (errors: {}, warnings: {})\n",
+                if ev.passed { "✓ PASA" } else { "✗ FALLA" },
+                ev.metrics.get("errors").unwrap_or(&0.0),
+                ev.metrics.get("warnings").unwrap_or(&0.0),
+            );
+            if !ev.stdout_head.is_empty() {
+                out.push_str(&ev.stdout_head);
+            }
+            (out, if ev.passed { 0 } else { 1 })
+        }
+        Err(e) => (format!("lsp-check: ✗ {e}"), 1),
+    }
+}
+
 /// Dogfood: ejecuta el pipeline y escribe el informe como artefacto real del
 /// repo (`out_dir/<slug>.md`). `real` usa la cadena LLM con critic + ledger.
 pub fn feature_run(title: &str, real: bool, out_dir: &str) -> String {
@@ -3083,19 +3656,20 @@ pub fn feature_run(title: &str, real: bool, out_dir: &str) -> String {
 }
 
 /// Sirve el protocolo MCP JSON-RPC por stdio: responde `initialize` /
-/// `tools/list` / `tools/call`. `tools/call` ejecuta la tool REAL del motor
-/// cuando existe (phalanx.status, cost, metrics, agents...).
+/// `tools/list` / `tools/call`. `tools/call` ejecuta la tool REAL del motor —
+/// TODAS las del catálogo tienen implementación real (`execute_mcp_tool`);
+/// una tool desconocida devuelve error honesto, nunca un stub `ok:`.
 pub fn serve_mcp_stdio() -> i32 {
     use std::io::BufRead;
     let catalog = ToolCatalog::alexandria_default();
     for line in std::io::stdin().lock().lines().map_while(Result::ok) {
-        if let Some(resp) = handle_line(&catalog, &line) {
-            if line.contains("\"tools/call\"") {
-                if let Some(real) = mcp_real_tool(&line) {
-                    println!("{real}");
-                    continue;
-                }
+        if line.contains("\"tools/call\"") {
+            if let Some(real) = mcp_real_tool(&line) {
+                println!("{real}");
+                continue;
             }
+        }
+        if let Some(resp) = handle_line(&catalog, &line) {
             println!("{resp}");
         }
     }
@@ -3103,12 +3677,31 @@ pub fn serve_mcp_stdio() -> i32 {
 }
 
 /// Ejecuta una tool REAL del motor para un `tools/call` MCP.
+/// `None` = la línea no es un `tools/call` (delegar en `handle_line`).
 fn mcp_real_tool(line: &str) -> Option<String> {
     let v: serde_json::Value = serde_json::from_str(line).ok()?;
-    let name = v["params"]["name"].as_str()?;
-    let out = match name {
+    if v["method"].as_str()? != "tools/call" {
+        return None;
+    }
+    let name = v["params"]["name"].as_str()?.to_string();
+    let args = v["params"]
+        .get("arguments")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+    let id = v["id"].to_string();
+    let out = execute_mcp_tool(&name, &args);
+    let text = serde_json::to_string(&out).ok()?;
+    Some(format!(
+        r#"{{"jsonrpc":"2.0","id":{id},"result":{{"content":[{{"type":"text","text":{text}}}]}}}}"#
+    ))
+}
+
+/// Ejecución REAL de las tools MCP del motor — todas las del catálogo.
+pub fn execute_mcp_tool(name: &str, args: &serde_json::Value) -> String {
+    match name {
         "phalanx.status" => render_phalanx_status(),
         "governor.cost_report" => render_cost_report(),
+        "bench.run" => format!("{}\n\n{}", render_benchmark(), render_metrics()),
         "task.list" => {
             let tasks = load_tasks_from_jsonl();
             if tasks.is_empty() {
@@ -3121,16 +3714,95 @@ fn mcp_real_tool(line: &str) -> Option<String> {
                     .join("\n")
             }
         }
-        "bench.run" => render_metrics(),
-        "agent.list" => render_agents(),
-        "iterate.status" => render_iterate_state(),
-        _ => return None,
-    };
-    let id = v["id"].to_string();
-    let text = serde_json::to_string(&out).ok()?;
-    Some(format!(
-        r#"{{"jsonrpc":"2.0","id":{id},"result":{{"content":[{{"type":"text","text":{text}}}]}}}}"#
-    ))
+        "task.create" => {
+            let title = args["title"]
+                .as_str()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if title.is_empty() {
+                return "✗ task.create requiere {\"title\": \"...\"}".to_string();
+            }
+            let now = now_ms();
+            let phase = parse_phase(args["phase"].as_str().unwrap_or("Build"));
+            let task = Task::new(format!("t-{now}"), title.clone(), phase, 15_000, now);
+            match persist_task_to_jsonl(&task) {
+                Ok(()) => format!("✓ tarea creada: {} ({title})", task.id),
+                Err(e) => format!("✗ no pude persistir la tarea: {e}"),
+            }
+        }
+        "memory.recall" => {
+            let n = args["n"].as_u64().unwrap_or(8).clamp(1, 50) as usize;
+            let store = load_recalls_store();
+            let mut recs = store.top_n_by_weight(n);
+            if recs.is_empty() {
+                "(memoría vacía: usa memory.save o deja que memory-capture capture)".to_string()
+            } else {
+                recs.sort_by_key(|r| std::cmp::Reverse(r.weight));
+                recs.iter()
+                    .map(|r| format!("[{w}] {t}", w = r.weight, t = r.text))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
+        }
+        "memory.save" => {
+            let text = args["text"].as_str().unwrap_or("").trim().to_string();
+            if text.is_empty() {
+                return "✗ memory.save requiere {\"text\": \"...\"}".to_string();
+            }
+            match recall_save_lesson(&text) {
+                Ok(id) => format!("✓ lección guardada ({id}): {}", caveman_compress(&text)),
+                Err(e) => format!("✗ no pude guardar la lección: {e}"),
+            }
+        }
+        "harness.run" => run_evolve_cycle(),
+        "agent.spawn" => {
+            let name = args["name"].as_str().unwrap_or("");
+            let task = args["task"].as_str().unwrap_or("");
+            if name.is_empty() || task.is_empty() {
+                return "✗ agent.spawn requiere {\"name\", \"task\"}".to_string();
+            }
+            spawn_agent(name, task)
+        }
+        "gate.run" => {
+            let cmd = args["command"]
+                .as_str()
+                .unwrap_or("cargo build --quiet")
+                .to_string();
+            let ev = alx_gate::gate_passed(&cmd, 120_000, 0);
+            format!(
+                "gate `{cmd}`: {}\nsalida:\n{}",
+                if ev.passed { "✓ PASA" } else { "✗ FALLA" },
+                ev.stdout_head
+            )
+        }
+        "lsp.check" => {
+            let files: Vec<String> = args["files"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|f| f.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+            if files.is_empty() {
+                return "✗ lsp.check requiere {\"files\": [\"a.rs\"]}".to_string();
+            }
+            let (out, _code) = run_lsp_check(&files);
+            out
+        }
+        _ => format!("✗ tool '{name}' no existe en el catálogo del motor"),
+    }
+}
+
+/// Parsea un nombre de fase (case-insensitive) a `PhaseId`; default Build.
+fn parse_phase(name: &str) -> PhaseId {
+    match name.to_ascii_lowercase().as_str() {
+        "ingest" => PhaseId::Ingest,
+        "spec" => PhaseId::Spec,
+        "plan" => PhaseId::Plan,
+        "test" => PhaseId::Test,
+        "review" => PhaseId::Review,
+        "docs" => PhaseId::Docs,
+        "ship" => PhaseId::Ship,
+        _ => PhaseId::Build,
+    }
 }
 
 /// Persiste una tarea en state/tasks.jsonl (append).
@@ -3248,8 +3920,90 @@ pub fn render_doctor() -> String {
             format!("Harness evolutivo {} con objetivo: {}.", h.name, h.objective),
         ));
     }
+    // Skills REALES (antes el doctor reportaba 0): integration/skills,
+    // skills del proyecto (.alexandria/skills) y skills globales del usuario.
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let mut skills_dirs: Vec<(std::path::PathBuf, &str)> = vec![
+        (root.join("integration/skills"), "repo"),
+        (root.join("skills"), "repo"),
+    ];
+    if let Ok(home) = std::env::var("HOME") {
+        skills_dirs.push((std::path::PathBuf::from(&home).join(".claude/skills"), "global"));
+    }
+    if let Some(proj) = find_project_alexandria(None) {
+        skills_dirs.push((proj.join("skills"), "proyecto"));
+    }
+    for (dir, source) in &skills_dirs {
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for entry in rd.flatten() {
+                let skill_md = entry.path().join("SKILL.md");
+                if entry.path().is_dir() && skill_md.is_file() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    index.add_dedup(AuditItem::new(
+                        format!("skill-{name}"),
+                        name.clone(),
+                        ItemKind::Skill,
+                        skill_md.display().to_string(),
+                        *source,
+                        format!("Skill {name} ({source}) con SKILL.md real."),
+                    ));
+                }
+            }
+        }
+    }
+    // Agentes REALES del repo (agents/*.md).
+    let agents_dir = root.join("agents");
+    if let Ok(rd) = std::fs::read_dir(&agents_dir) {
+        for entry in rd.flatten() {
+            let p = entry.path();
+            if p.extension().map(|x| x == "md").unwrap_or(false) {
+                let name = p
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                index.add(AuditItem::new(
+                    format!("agent-{name}"),
+                    name.clone(),
+                    ItemKind::Agent,
+                    p.display().to_string(),
+                    "repo",
+                    format!("Agente especialista {name} del registry del repo."),
+                ));
+            }
+        }
+    }
+    // Servidores MCP REALES configurados en ~/.claude.json.
+    if let Ok(home) = std::env::var("HOME") {
+        let mcp_path = std::path::PathBuf::from(&home).join(".claude.json");
+        if let Ok(text) = std::fs::read_to_string(&mcp_path) {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) {
+                if let Some(servers) = v["mcpServers"].as_object() {
+                    for (name, cfg) in servers {
+                        let cmd = cfg["command"].as_str().unwrap_or("?");
+                        index.add(AuditItem::new(
+                            format!("mcp-{name}"),
+                            name.clone(),
+                            ItemKind::McpServer,
+                            format!("~/.claude.json → {cmd}"),
+                            "claude-config",
+                            format!("Servidor MCP '{name}' registrado en Claude Code."),
+                        ));
+                    }
+                }
+            }
+        }
+    }
     let mut out = format!("## Doctor ALEXANDRIA\nTotal items: {}\n", index.count());
     out.push_str(&alx_audit::Doctor::doctor_report(&index));
+    // LSP servers disponibles (discovery barato: binario + versión, sin spawn).
+    let servers = alx_gate::lsp::detect_servers();
+    let n_ok = servers.iter().filter(|d| d.available).count();
+    out.push_str(&format!("\n## LSP\nServers disponibles: {n_ok}/{}\n", servers.len()));
+    for d in &servers {
+        if d.available {
+            out.push_str(&format!("  ✓ {} ({}) → {}\n", d.spec.binary, d.spec.language, d.version));
+        }
+    }
     out
 }
 

@@ -13,6 +13,11 @@
             "type": "command",
             "command": "/home/artorias/Projectos/AlexanderTheGreat/harnesses/iterate/iterate.sh",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "/home/artorias/.local/bin/alx hook user-prompt-submit",
+            "timeout": 15
           }
         ]
       },
@@ -58,6 +63,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/.local/bin/alx hook post-tool-use",
+            "timeout": 20
+          }
+        ],
+        "matcher": "*"
       },
       {
         "matcher": "Skill",
@@ -119,6 +134,15 @@
           {
             "type": "command",
             "command": "/home/artorias/Projectos/AlexanderTheGreat/.claude/hooks/activity-tracker.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/artorias/Projectos/AlexanderTheGreat/harnesses/hooks/system-usage-guard.sh",
             "timeout": 10
           }
         ]

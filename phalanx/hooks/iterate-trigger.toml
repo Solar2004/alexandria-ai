@@ -1,10 +1,13 @@
 # Doc-min: la AI itera sola (loop R24) hasta resolver la tarea.
+# Conectado: `alx iterate --next` es real (state.toml por sesión).
+# NOTA: en Claude Code el ciclo Stop ya lo cubren auto-continue.sh + iterate.sh
+# (harnesses/iterate/); este hook queda para el bus interno del motor.
 id = "iterate.trigger"
 event = "Stop"
 priority = "Async"
-command = "alx-evolve iterate --max 20 --read-state IterationState --emit IterateRequest"
+command = "alx iterate --next"
 timeout_ms = 5000
 lock = false
 retry = 1
 enabled = true
-description = "Fuerza la iteración R24: lee/actualiza IterationState y emite IterateRequest con el feedback acumulado (responde también a TaskDone)."
+description = "Fuerza la iteración R24: lee/actualiza IterationState y emite IterateRequest con el feedback acumulado."

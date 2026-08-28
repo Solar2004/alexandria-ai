@@ -1,8 +1,10 @@
 # Doc-min: el auto-recordarse — captura aprendizaje para no repetirlo.
+# Conectado: `alx hook post-tool-use` lo ejecuta; `alx memory-capture` es real
+# (comprime caveman + persiste en state/recalls.json, legible por MCP memory.recall).
 id = "memory.capture"
-event = "PostToolUse"
-priority = "Async"
-command = "alx-memory capture --source event --format caveman --store recalls.jsonl"
+event = "ToolPost"
+priority = "Post"
+command = "alx memory-capture"
 timeout_ms = 5000
 lock = false
 retry = 2

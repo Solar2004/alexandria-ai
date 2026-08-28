@@ -7,6 +7,18 @@ pub fn default_input_schema() -> serde_json::Value {
     serde_json::json!({"type": "object", "properties": {}})
 }
 
+/// Construye un `input_schema` objeto con propiedades string obligatorias.
+fn schema_with(required: &[&str]) -> serde_json::Value {
+    let mut props = serde_json::Map::new();
+    for name in required {
+        props.insert(
+            (*name).to_string(),
+            serde_json::json!({"type": "string", "description": name}),
+        );
+    }
+    serde_json::json!({"type": "object", "properties": props, "required": required})
+}
+
 /// Una tool MCP expuesta por el servidor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -59,22 +71,73 @@ impl ToolCatalog {
         self.by_name(name).is_some()
     }
 
-    /// Catálogo Fase 1: tools de ejemplo de los namespaces del plan 07 §2.
+    /// Catálogo de tools del motor — todas con ejecución REAL en alx-cli.
     pub fn alexandria_default() -> Self {
         let mut catalog = Self::new();
-        for (name, description) in [
-            ("task.list", "Lista las tareas del DAG de la fase actual."),
-            ("task.create", "Crea una nueva tarea en el DAG."),
-            ("harness.run", "Ejecuta el harness en una fase del pipeline."),
-            ("agent.spawn", "Lanza un agente especialista."),
-            ("memory.recall", "Recupera recuerdos relevantes de la memoria."),
-            ("governor.cost_report", "Reporte de coste y presupuesto de la tarea."),
-            ("gate.run", "Corre las compuertas de verificación."),
-            ("bench.run", "Ejecuta un benchmark."),
-            ("phalanx.status", "Estado del sistema phalanx."),
-        ] {
-            catalog.register(Tool::new(name, description));
-        }
+        let mut with_schema = |name: &str, description: &str, schema: serde_json::Value| {
+            let mut t = Tool::new(name, description);
+            t.input_schema = schema;
+            catalog.register(t);
+        };
+        with_schema("task.list", "Lista las tareas persistidas (state/tasks.jsonl).", default_input_schema());
+        with_schema(
+            "task.create",
+            "Crea y persiste una tarea nueva (state/tasks.jsonl).",
+            schema_with(&["title"]),
+        );
+        with_schema(
+            "memory.recall",
+            "Recupera los recuerdos más relevantes de la memoria (por peso).",
+            serde_json::json!({
+                "type": "object",
+                "properties": {"n": {"type": "integer", "description": "cuántos recalls (default 8)"}}
+            }),
+        );
+        with_schema(
+            "memory.save",
+            "Guarda una lección/aprendizaje en la memoria (comprime caveman y persiste).",
+            schema_with(&["text"]),
+        );
+        with_schema(
+            "harness.run",
+            "Ciclo del watcher evolutivo: recarga harnesses del disco, promueve/retira.",
+            default_input_schema(),
+        );
+        with_schema(
+            "agent.spawn",
+            "Lanza un agente especialista real contra la cadena.",
+            schema_with(&["name", "task"]),
+        );
+        with_schema(
+            "governor.cost_report",
+            "Reporte de coste real desde el ledger persistido.",
+            default_input_schema(),
+        );
+        with_schema(
+            "gate.run",
+            "Compuerta de verificación real: corre un comando y devuelve evidencia.",
+            serde_json::json!({
+                "type": "object",
+                "properties": {"command": {"type": "string", "description": "comando a verificar (default: build del motor)"}}
+            }),
+        );
+        with_schema(
+            "bench.run",
+            "Resumen de benchmarks ejecutados + métricas por crate.",
+            default_input_schema(),
+        );
+        with_schema("phalanx.status", "Estado del sistema phalanx (config + hooks).", default_input_schema());
+        with_schema(
+            "lsp.check",
+            "Diagnostics LSP REALES (rust-analyzer/tsserver/pyright) sobre ficheros.",
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "files": {"type": "array", "items": {"type": "string"}, "description": "ficheros a verificar"}
+                },
+                "required": ["files"]
+            }),
+        );
         catalog
     }
 }
@@ -84,9 +147,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_catalog_has_nine_tools() {
+    fn default_catalog_has_eleven_tools() {
         let catalog = ToolCatalog::alexandria_default();
-        assert_eq!(catalog.list().len(), 9);
+        assert_eq!(catalog.list().len(), 11);
+    }
+
+    #[test]
+    fn parameterized_tools_declare_required_args() {
+        let catalog = ToolCatalog::alexandria_default();
+        let create = catalog.by_name("task.create").expect("task.create registrada");
+        assert_eq!(create.input_schema["required"], serde_json::json!(["title"]));
+        let save = catalog.by_name("memory.save").expect("memory.save registrada");
+        assert_eq!(save.input_schema["required"], serde_json::json!(["text"]));
     }
 
     #[test]

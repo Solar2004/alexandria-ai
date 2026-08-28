@@ -1,10 +1,14 @@
 # Doc-min: crítica de calidad sobre el output antes de avanzar de fase.
+# DESHABILITADO con honestidad: no existe binario `alx-critic` standalone.
+# La crítica real corre dentro de `alx polish <file>` (critic + rúbrica) y en
+# el pipeline (`alx feature --real` usa criticize_real). Re-habilitar cuando
+# exista subcomando `alx critic` que acepte el output por stdin.
 id = "critic.run"
 event = "PhasePassed"
 priority = "Pre"
-command = "alx-critic run --phase ${PHASE} --max-iterations 3 --escalate-after 2"
+command = "alx-critic run --phase ${ALX_PHASE} --max-iterations 3 --escalate-after 2"
 timeout_ms = 15000
 lock = false
 retry = 1
-enabled = true
+enabled = false
 description = "Corre el crítico sobre el output de la fase recién aprobada; si falla, escala tras las rondas configuradas."

@@ -9,6 +9,8 @@
 //! normalmente — fallo de spawn, comando no encontrado (el shell responde
 //! 127), muerto por señal, o timeout (proceso matado).
 
+pub mod lsp;
+
 use alx_core::types::{Evidence, EvidenceKind};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

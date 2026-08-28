@@ -10,15 +10,16 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
-    agents_run_parallel, agents_show, check_network, feature_run, harness_list, harness_new,
-    harness_use, iterate_next, log_command,
-    load_tasks_from_jsonl, persist_task_to_jsonl, render_agents, render_bench_all, render_benchmark,
+    agents_run_parallel, agents_show, check_network, classify_from_stdin, docmin_check,
+    evolve_detect_from_stdin, feature_run, harness_list, harness_new, harness_use,
+    iterate_next, log_command, load_tasks_from_jsonl, memory_capture_from_stdin, mission_print,
+    persist_task_to_jsonl, render_agents, render_bench_all, render_benchmark,
     render_bench_bigcode, render_bench_codecontests, render_bench_humaneval, render_build,
-    render_cost_report, render_doctor, render_quality,
+    render_cost_report, render_doctor, render_quality, run_lsp_doctor,
     render_iterate_state, render_metrics, render_network, render_night_report,
     render_phalanx_status, render_real_run, render_report, render_run,
-    render_tui, render_weekly, run_evolve_cycle, run_pipeline, run_pipeline_real, run_setup,
-    run_update, serve_mcp_stdio, spawn_agent, verify_build,
+    render_tui, render_weekly, run_evolve_cycle, run_lsp_check, run_phalanx_event, run_pipeline,
+    run_pipeline_real, run_setup, run_update, serve_mcp_stdio, spawn_agent, verify_build,
     AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
@@ -205,6 +206,36 @@ enum Command {
     },
     /// Configura e verifica toda la integración con Claude Code (statusline, MCP, hooks).
     Setup,
+    /// Ejecuta los hooks PHALANX reales (phalanx/hooks/*.toml) del evento CC.
+    /// En user-prompt-submit/session-start inyecta el stdout como contexto.
+    Hook {
+        /// Evento: user-prompt-submit | pre-tool-use | post-tool-use | session-start | stop.
+        event: String,
+    },
+    /// Imprime la memoria maestra (MISSION.md) + reglas globales.
+    Mission,
+    /// Captura aprendizaje del payload del hook (stdin) → recall caveman.
+    MemoryCapture,
+    /// Detecta operaciones repetidas (stdin) → candidato a harness evolutivo.
+    EvolveDetect,
+    /// Regla doc-min real sobre un fichero: documentado (exit 0) o no (exit 1).
+    Docmin {
+        /// Fichero a verificar.
+        file: String,
+    },
+    /// Clasifica el payload del hook (stdin) → tier de modelo del governor.
+    Classify,
+    /// Doctor LSP: servers detectados + versión; `--live` hace handshake real.
+    Lsp {
+        /// Handshake initialize REAL contra cada server detectado.
+        #[arg(long)]
+        live: bool,
+    },
+    /// Diagnostics LSP reales sobre ficheros (rust-analyzer/tsserver/pyright).
+    LspCheck {
+        /// Ficheros a verificar.
+        files: Vec<String>,
+    },
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -402,6 +433,46 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Setup) => {
             println!("{}", run_setup());
+        }
+        Some(Command::Hook { event }) => {
+            return ExitCode::from(run_phalanx_event(&event).clamp(0, 255) as u8);
+        }
+        Some(Command::Mission) => {
+            println!("{}", mission_print());
+        }
+        Some(Command::MemoryCapture) => {
+            let (msg, code) = memory_capture_from_stdin();
+            if !msg.is_empty() {
+                println!("{msg}");
+            }
+            return ExitCode::from(code as u8);
+        }
+        Some(Command::EvolveDetect) => {
+            let (msg, code) = evolve_detect_from_stdin();
+            if !msg.is_empty() {
+                println!("{msg}");
+            }
+            return ExitCode::from(code as u8);
+        }
+        Some(Command::Docmin { file }) => {
+            let (msg, code) = docmin_check(&file);
+            println!("{msg}");
+            return ExitCode::from(code as u8);
+        }
+        Some(Command::Classify) => {
+            let (msg, code) = classify_from_stdin();
+            println!("{msg}");
+            return ExitCode::from(code as u8);
+        }
+        Some(Command::Lsp { live }) => {
+            println!("{}", run_lsp_doctor(live));
+        }
+        Some(Command::LspCheck { files }) => {
+            let (msg, code) = run_lsp_check(&files);
+            println!("{msg}");
+            if code != 0 {
+                return ExitCode::from(code as u8);
+            }
         }
         Some(Command::Update) => {
             println!("{}", run_update());

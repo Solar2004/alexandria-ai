@@ -2,6 +2,71 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## Ciclo 12 — todo lo desconectado, CONECTADO + LSP real + harness hot reload (2026-08-28)
+
+### Lo que estaba muerto y ahora funciona (verificado en vivo)
+
+- **MCP sin stubs**: `tools/call` devolvía `ok: <name>` mintiendo para TODAS
+  las tools. Ahora las 11 tools del catálogo ejecutan de verdad:
+  `task.create` persiste, `memory.save/recall` (RecallStore en
+  `state/recalls.json`), `harness.run` (watcher), `agent.spawn`, `gate.run`,
+  `lsp.check`, y las que ya eran reales. Tool inexistente → error honesto.
+- **phalanx/hooks/*.toml ejecutados de verdad**: los 10 hooks eran config
+  muerta (llamaban a binarios `alx-hooks`/`alx-memory`/... inexistentes y
+  NADIE los ejecutaba). Nuevo dispatcher `alx hook <evento>`: carga los TOML,
+  ordena Pre→Async→Post, ejecuta con timeout/retry reales y bloquea (exit 2)
+  si un Pre+lock falla. Los TOMLs ahora apuntan a subcomandos REALES
+  (`alx mission`, `alx memory-capture`, `alx evolve-detect`, `alx docmin`,
+  `alx classify`, `alx build`, `alx iterate --next`, `alx agents-run`);
+  critic-run y bench-sample quedan disabled con razón documentada.
+- **Subcomandos nuevos**: `alx hook <evento>` (dispatcher), `alx mission`,
+  `alx memory-capture` (error→recall caveman persistido), `alx evolve-detect`
+  (≥2 repeticiones → candidato a harness), `alx docmin <file>` (regla real,
+  exit 1 sin docs), `alx classify` (governor tier real), `alx lsp`,
+  `alx lsp-check <files>`.
+- **Doctor honesto**: 28 items → 343 (Skill 49, Agent 265, Plugin 16, Hook 10,
+  McpServer, Harness). Antes reportaba 0 skills/agentes/mcps con 265 agentes
+  en el repo.
+- **phalanx/config.toml alineado**: apuntaba a `~/.alexandria/state` (no
+  existía); ahora las rutas reales del motor (`alexandria/state/...`).
+- **night-run.sh**: PATH con `~/.local/bin` — `routa` ya aparece en el informe
+  nocturno.
+
+### LSP real (antes solo un comentario en alx-gate)
+
+- `alx-gate::lsp`: framing JSON-RPC Content-Length a mano, discovery de
+  servers (rust-analyzer, typescript-language-server, pyright, clangd),
+  handshake `initialize` REAL por stdio, y diagnostics (pull
+  `textDocument/diagnostic` con polling estable + push
+  `publishDiagnostics`, dedup).
+- Verificado en vivo: handshake 4/4 ✓ (rust-analyzer 1.95, tsserver 5.3,
+  pyright, clangd 22.1); diagnostics reales con exit 1 en fichero roto
+  (pyright y rust-analyzer detectan el error de tipos).
+- Integrado en 4 sitios: `alx lsp [--live]`, `alx lsp-check <files>` (gate
+  con Evidence LintReport), MCP `lsp.check`, y opt-in en el dispatcher
+  (`ALX_LSP=1` verifica el fichero editado en cada ToolPost).
+- Config-driven: `[lsp]` en phalanx/config.toml (enabled, timeout_ms).
+
+### Harness Hot Reload (auto-mejora en la MISMA sesión)
+
+- El dispatcher vigila el mtime de `harnesses/active/harnesses.jsonl` (global)
+  y `.alexandria/harnesses/active/` (proyecto). Si el agente crea un harness
+  con `alx harness-new` a mitad de sesión, el siguiente prompt se lleva
+  inyectado: "⚡ Harnesses RELOAD en caliente" + el listado vivo con el nuevo.
+  VERIFICADO: harness creado → siguiente user-prompt-submit lo lista.
+- Sin reiniciar Claude Code. Session/project scope según dónde viva el
+  registry (harness_dir ya resuelve .alexandria del proyecto).
+
+### Registro en Claude Code
+
+- Dispatcher registrado en UserPromptSubmit y PostToolUse: en la plantilla del
+  repo (config/claude-settings.json), en el settings global por `alx setup`
+  (merge idempotente) y en el proyecto (.claude/settings.json).
+
+### Estado
+
+- **221 tests · 0 fallos · clippy 0 warnings** (antes 212).
+
 ## Ciclo 11 — harness de benchmark con detección de estancamiento + documentación completa (2026-08-26)
 
 - **R28 en el harness de benchmark**: si el MISMO test falla 2x seguidas, el

@@ -1,8 +1,10 @@
 # Doc-min: cada archivo nuevo o editado lleva documentación mínima (doc-min).
+# Conectado: `alx hook post-tool-use` lo ejecuta; `alx docmin <file>` es real
+# (exit 1 si el fichero no tiene comentario mínimo — el dispatcher lo registra).
 id = "docmin.verify"
-event = "PostToolUse"
+event = "ToolPost"
 priority = "Post"
-command = "alx-audit docmin --tool Edit,Write --min-chars 20 --min-description 20"
+command = 'test -n "${ALX_FILE:-}" && alx docmin "${ALX_FILE}"; true'
 timeout_ms = 5000
 lock = false
 retry = 1

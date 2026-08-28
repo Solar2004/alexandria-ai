@@ -21,6 +21,7 @@ alx-agents = { path = "../alx-agents" }
 alx-audit = { path = "../alx-audit" }
 alx-evolve = { path = "../alx-evolve" }
 alx-mcp = { path = "../alx-mcp" }
+alx-hooks = { path = "../alx-hooks" }
 alx-memory = { path = "../alx-memory" }
 alx-night = { path = "../alx-night" }
 clap = { version = "4", features = ["derive"] }

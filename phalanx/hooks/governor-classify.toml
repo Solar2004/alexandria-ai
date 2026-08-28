@@ -1,8 +1,10 @@
 # Doc-min: controla el coste clasificando la dificultad antes de actuar.
+# Conectado: `alx hook pre-tool-use` lo ejecuta; `alx classify` es real
+# (alx-governor::classify_prompt_text → tier; deja marca en state/last-tier.txt).
 id = "governor.classify"
-event = "PreToolUse"
+event = "ToolPre"
 priority = "Pre"
-command = "alx-governor classify --difficulty auto --tier default --route chain"
+command = "alx classify"
 timeout_ms = 2000
 lock = false
 retry = 1

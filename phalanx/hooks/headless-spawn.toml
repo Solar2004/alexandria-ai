@@ -1,8 +1,10 @@
 # Doc-min: micro-tareas listas se ejecutan en sesiones headless, en paralelo.
+# Conectado: `alx agents-run <task>` es real (3 agentes en paralelo, ciclo 2).
+# Evento interno del bus (MicroTaskReady): lo dispara el motor, no Claude Code.
 id = "headless.spawn"
 event = "MicroTaskReady"
 priority = "Async"
-command = "alx-night spawn --headless --task ${TASK_ID} --mode session --threads 6"
+command = "alx agents-run ${ALX_TASK_ID}"
 timeout_ms = 10000
 lock = false
 retry = 2

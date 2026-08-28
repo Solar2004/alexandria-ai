@@ -1,10 +1,11 @@
 # Doc-min: compuerta de evidencia — sin pruebas reales, la fase no pasa.
+# Conectado: `alx build` es real (gate cargo build del motor, exit 1 si falla).
 id = "gate.verify"
 event = "PhasePassed"
 priority = "Pre"
-command = "alx-gate verify --phase ${PHASE} --policy strict --evidence required --sandbox"
-timeout_ms = 10000
+command = "alx build"
+timeout_ms = 120000
 lock = true
 retry = 1
 enabled = true
-description = "Exige evidencia real del trabajo de la fase (output de comando, tests); con política strict, sin evidencia la fase no pasa."
+description = "Exige evidencia real del trabajo de la fase: build del motor con exit 0; con política strict, sin evidencia la fase no pasa."

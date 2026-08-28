@@ -14,8 +14,9 @@ compression = "caveman"              # regla global de habla
 caveman_level = "ultra"
 
 [engine]
-state_dir = "~/.alexandria/state"
-event_log = "~/.alexandria/state/events.log"
+# Rutas REALES del motor (el estado vive en alexandria/state del repo):
+state_dir = "alexandria/state"
+event_log = "alexandria/state/events.log"
 max_threads = 6
 model_mask = true                    # reusa cc-model-mask
 
@@ -32,12 +33,12 @@ routes = [
 fallback = "http://127.0.0.1:20128"   # omniroute: SOLO si routatic cae (no es cadena principal)
 
 [memory]
-store = "~/.alexandria/state/recalls.jsonl"
+store = "alexandria/state/recalls.json"   # RecallStore JSON (memory-capture/MCP)
 max_inject_tokens = 2000
 cadence_days = 30
 
 [task]
-store = "~/.alexandria/state/tasks.jsonl"
+store = "alexandria/state/tasks.jsonl"
 plans_dir = "phalanx/plans"
 
 [harness]
@@ -47,6 +48,12 @@ retries = 2
 [gate]
 sandbox = true
 policy = "strict"                    # warnings = fail
+
+[lsp]
+# LSP REAL: discovery + handshake + diagnostics (rust-analyzer/tsserver/pyright).
+# `alx lsp --live` verifica el handshake; `alx lsp check <files>` da diagnostics.
+enabled = true
+timeout_ms = 30000                   # presupuesto por server/fichero
 
 [critic]
 max_iterations = 3                   # rondas de crítica sobre el output de una fase

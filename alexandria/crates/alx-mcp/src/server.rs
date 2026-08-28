@@ -132,7 +132,7 @@ mod tests {
         let response = handle_line(&catalog(), r#"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#)
             .expect("respuesta esperada");
         let v = parse(&response);
-        assert_eq!(v["result"]["tools"].as_array().map(Vec::len), Some(9));
+        assert_eq!(v["result"]["tools"].as_array().map(Vec::len), Some(11));
         assert_eq!(v["result"]["tools"][0]["name"], "task.list");
         assert_eq!(v["id"], "a");
     }

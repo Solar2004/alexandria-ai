@@ -1,10 +1,14 @@
 # Doc-min: métricas de cada operación para el informe y los umbrales.
+# DESHABILITADO con honestidad: el muestreo por operación YA lo hace en Claude
+# Code el hook real `.claude/hooks/activity-tracker.sh` (state/commands.log);
+# correr `alx-bench sample` aquí duplicaría telemetría. Los agregados viven en
+# `alx metrics` / `alx weekly`.
 id = "bench.sample"
-event = "PostToolUse"
+event = "ToolPost"
 priority = "Async"
-command = "alx-bench sample --metric time,tokens,exit --phase ${PHASE}"
+command = "alx-bench sample --metric time,tokens,exit --phase ${ALX_PHASE}"
 timeout_ms = 3000
 lock = false
 retry = 2
-enabled = true
+enabled = false
 description = "Mide las métricas de la operación (tiempo, tokens, éxito) para el informe nocturno y los umbrales de performance."

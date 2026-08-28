@@ -366,3 +366,30 @@ Wire: `atg` auto-detecta el proxy (`/health`) — si está vivo, TODO pasa por
 E2E verificado con mocks (sano + roto): failover real, máscara en JSON y
 stream, traducción doble, breakers por circuito, ledger por intento.
 Workspace: 234 tests · 0 fallos · clippy 0.
+
+## TUI unificada — `alx tui` (ciclo 12)
+
+Dashboard ratatui de 7 pestañas, todo sondeo es GET local o lectura de
+fichero de estado (nunca POST de generación):
+
+1. **Panel** — resumen ejecutivo: servicios vivos, máscara del proxy,
+   gobernador, iteración R24 (gauge), última actividad y skills en
+   ejecución con sus pasos done/total.
+2. **Red** — salud de los 5 servicios (alx-proxy, routatic, gateway,
+   headroom, omniroute) con latencia + telemetría del gobernador.
+3. **Proxy** — proveedores (protocolo/tier/keys/modelos), circuitos del
+   breaker y los últimos 14 intentos del ledger (más nuevo arriba).
+4. **Agentes** — sesiones vivas agrupadas de `state/activity.jsonl`
+   (último evento, nº de eventos, cwd, "hace Xm") + mailbox A2A.
+5. **Harnesses** — registry global + proyecto (`.alexandria/`) con kind,
+   estado, usos y pasos de skill-harness (done/total).
+6. **Tareas** — DAG con estado, fase y presupuesto gastado/total.
+7. **Recalls** — memoria comprimida, top 16 por peso.
+
+Teclas: `1-7`/`Tab` pestaña · `r` refresca ya · `q`/`Esc` sale.
+Auto-refresh: HTTP cada 3 s, ficheros cada 1 s. Resolución de rutas en
+tiempo de ejecución (cwd → cwd/alexandria → ruta de compilación), así que
+funciona desde cualquier proyecto con `alx init`.
+
+Verificado en emulador real (tmux): las 7 pestañas renderizan, navegación
+de teclas OK, sin panic.

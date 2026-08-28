@@ -1669,6 +1669,99 @@ pub fn harness_use(id: &str) -> String {
     }
 }
 
+/// Refine explícito del Continual Harness (Prime Agent): actualiza objetivo,
+/// doc, trigger o kind de un harness existente. El harness NO se recrea (se
+/// conservan usos/estado) — es el equivalente a editar la regla aprendida.
+pub fn harness_update(
+    id: &str,
+    objective: Option<&str>,
+    doc: Option<&str>,
+    kind: Option<&str>,
+    trigger: Option<&str>,
+) -> String {
+    use alx_evolve::Trigger;
+    let dir = harness_dir();
+    let mut reg = alx_evolve::HarnessRegistry::load_from(&dir);
+    let key = if id.starts_with("hx-") { id.to_string() } else { format!("hx-{id}") };
+    let Some(h) = reg.by_id_mut(&key) else {
+        return format!("✗ harness '{key}' no encontrado (`alx harness-list`)");
+    };
+    let mut cambios: Vec<&str> = Vec::new();
+    if let Some(o) = objective {
+        if o.trim().is_empty() {
+            return "✗ objective vacío".to_string();
+        }
+        h.objective = o.trim().to_string();
+        cambios.push("objetivo");
+    }
+    if let Some(d) = doc {
+        if d.trim().chars().count() < 20 {
+            return format!(
+                "✗ doc-min: la doc necesita >=20 chars (tienes {}) — qué, por qué, cuándo",
+                d.trim().chars().count()
+            );
+        }
+        h.doc = d.trim().to_string();
+        cambios.push("doc");
+    }
+    if let Some(t) = trigger {
+        h.trigger = if let Some(fase) = t.strip_prefix("phase:") {
+            Trigger::Phase(fase.to_string())
+        } else if let Some(ev) = t.strip_prefix("event:") {
+            Trigger::Event(ev.to_string())
+        } else {
+            Trigger::Manual
+        };
+        cambios.push("trigger");
+    }
+    let mut nota = String::new();
+    if let Some(k) = kind {
+        match k.to_ascii_lowercase().as_str() {
+            "permanent" | "permanente" => {
+                h.promote(0);
+                cambios.push("kind=permanent");
+                nota = " · promovido a permanente".to_string();
+            }
+            "temporal" => {
+                h.kind = alx_evolve::HarnessKind::Temporal;
+                cambios.push("kind=temporal");
+            }
+            otro => return format!("✗ kind inválido '{otro}' (temporal|permanent)"),
+        }
+    }
+    if cambios.is_empty() {
+        return "✗ nada que actualizar: pasa --objective/--doc/--kind/--trigger".to_string();
+    }
+    match reg.save_to(&dir) {
+        Ok(()) => format!(
+            "✓ {key} actualizado ({}){nota} — se reinyecta recargado en el próximo prompt (hot reload)",
+            cambios.join(", ")
+        ),
+        Err(e) => format!("✗ persistencia: {e}"),
+    }
+}
+
+/// Elimina un harness del registry explícitamente (CRUD Continual Harness).
+pub fn harness_rm(id: &str) -> String {
+    let dir = harness_dir();
+    let mut reg = alx_evolve::HarnessRegistry::load_from(&dir);
+    let key = if id.starts_with("hx-") { id.to_string() } else { format!("hx-{id}") };
+    if reg.by_id(&key).is_none() {
+        return format!("✗ harness '{key}' no encontrado (`alx harness-list`)");
+    }
+    if !reg.remove(&key) {
+        return format!("✗ no pude eliminar '{key}'");
+    }
+    match reg.save_to(&dir) {
+        Ok(()) => {
+            // si era un skill-harness, su checklist también muere con él
+            let _ = std::fs::remove_file(dir.join("active").join(format!("{key}.steps.json")));
+            format!("✓ {key} eliminado del registry (usos y estado se pierden)")
+        }
+        Err(e) => format!("✗ persistencia: {e}"),
+    }
+}
+
 // ═══════════════════════════ POLISH (pulido dosificado) ═══════════════════
 //
 // La idea (usuario, 2026-08-25): no iterar N veces "a ciegas". El sistema
@@ -3872,13 +3965,20 @@ pub fn extract_skill_steps(md: &str) -> Vec<String> {
 
 /// Busca el SKILL.md de una skill en las fuentes conocidas.
 pub fn find_skill_md(name: &str) -> Option<std::path::PathBuf> {
+    let root = repo_root();
     let mut candidates = vec![
         std::env::current_dir().ok()?.join(".claude/skills").join(name).join("SKILL.md"),
         std::env::current_dir().ok()?.join(".alexandria/skills").join(name).join("SKILL.md"),
-        repo_root().join(".claude/skills").join(name).join("SKILL.md"),
-        repo_root().join("integration/skills").join(name).join("SKILL.md"),
-        repo_root().join("skills").join(name).join("SKILL.md"),
+        root.join(".claude/skills").join(name).join("SKILL.md"),
+        root.join("integration/skills").join(name).join("SKILL.md"),
+        root.join("skills").join(name).join("SKILL.md"),
     ];
+    // plugins/<cualquiera>/skills/<nombre>/SKILL.md
+    if let Ok(rd) = std::fs::read_dir(root.join("plugins")) {
+        for p in rd.flatten() {
+            candidates.push(p.path().join("skills").join(name).join("SKILL.md"));
+        }
+    }
     if let Ok(home) = std::env::var("HOME") {
         candidates.push(std::path::PathBuf::from(home).join(".claude/skills").join(name).join("SKILL.md"));
     }
@@ -3887,6 +3987,285 @@ pub fn find_skill_md(name: &str) -> Option<std::path::PathBuf> {
 
 fn steps_path_for(harness_id: &str) -> std::path::PathBuf {
     harness_dir().join("active").join(format!("{harness_id}.steps.json"))
+}
+
+// ═══════════════════ SKILLS-SYNC (cobertura total de activación) ═══════════════════
+//
+// El hook skill-activation-prompt solo sugiere skills listadas en
+// .claude/skills/skill-rules.json — sin entrada, la skill es invisible para
+// la activación por prompt y el ciclo skill-harness no llega a dispararse.
+// skills-sync genera entradas desde TODAS las fuentes de SKILL.md,
+// preservando las entradas manuales (nunca se sobreescriben).
+
+/// Fuentes de skills en orden de prioridad (la primera que tenga el nombre gana).
+fn skill_source_dirs() -> Vec<std::path::PathBuf> {
+    let mut v = Vec::new();
+    if let Ok(cwd) = std::env::current_dir() {
+        v.push(cwd.join(".claude/skills"));
+        v.push(cwd.join(".alexandria/skills"));
+    }
+    let root = repo_root();
+    for rel in [".claude/skills", "integration/skills", "skills"] {
+        v.push(root.join(rel));
+    }
+    // plugins/<cualquiera>/skills/<nombre>/SKILL.md
+    if let Ok(rd) = std::fs::read_dir(root.join("plugins")) {
+        for p in rd.flatten() {
+            let s = p.path().join("skills");
+            if s.is_dir() {
+                v.push(s);
+            }
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        v.push(std::path::PathBuf::from(home).join(".claude/skills"));
+    }
+    v
+}
+
+/// Extrae (name, description) del frontmatter YAML de un SKILL.md.
+fn parse_skill_frontmatter(md: &str) -> (String, String) {
+    let mut name = String::new();
+    let mut desc = String::new();
+    let mut lines = md.lines();
+    if lines.next() == Some("---") {
+        for line in lines {
+            if line.trim() == "---" {
+                break;
+            }
+            if let Some(v) = line.strip_prefix("name:") {
+                name = v.trim().trim_matches(['"', '\'']).to_string();
+            } else if let Some(v) = line.strip_prefix("description:") {
+                desc = v.trim().trim_matches(['"', '\'']).to_string();
+            }
+        }
+    }
+    (name, desc)
+}
+
+const SYNC_STOPWORDS: &[&str] = &[
+    "the", "and", "with", "for", "from", "this", "that", "your", "you", "into", "when", "how",
+    "why", "what", "use", "using", "via", "que", "los", "las", "una", "con", "para", "como",
+    "del", "por", "sin", "mas", "todo", "esta", "este", "hace", "usar", "cuando", "desde",
+    "cada", "antes", "sobre", "entre", "ejecuta", "crea",
+];
+
+fn sync_keywords(name: &str, desc: &str) -> Vec<String> {
+    let mut kws: Vec<String> = Vec::new();
+    let push = |s: String, kws: &mut Vec<String>| {
+        let s = s.to_lowercase();
+        if s.len() >= 3 && !SYNC_STOPWORDS.contains(&s.as_str()) && !kws.contains(&s) {
+            kws.push(s);
+        }
+    };
+    // tokens del nombre de la skill (identidad principal)
+    for t in name.split(['-', '_', ' ']) {
+        push(t.to_string(), &mut kws);
+    }
+    // palabras significativas de la descripción
+    let lim = kws.len() + 5;
+    for w in desc.split(|c: char| !c.is_ascii_alphanumeric()) {
+        if kws.len() >= lim {
+            break;
+        }
+        push(w.to_string(), &mut kws);
+    }
+    kws.truncate(8);
+    kws
+}
+
+/// `alx skills-sync` — regenera skill-rules.json desde todas las fuentes de
+/// SKILL.md (proyecto, repo, plugins, ~/.claude/skills). Las entradas manuales
+/// existentes NUNCA se tocan; solo se añaden las que faltan.
+pub fn skills_sync() -> String {
+    let rules_path = repo_root().join(".claude/skills/skill-rules.json");
+    let mut rules: serde_json::Value = std::fs::read_to_string(&rules_path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or(serde_json::json!({"version": "1.0", "settings": {"skill_activation_mode": "hybrid", "conservativeness": "balanced", "ai_can_arm_blocks": false}, "skills": {}}));
+    let Some(skills) = rules["skills"].as_object_mut() else {
+        return "✗ skill-rules.json: 'skills' no es un objeto".to_string();
+    };
+    let mut vistas: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut anadidas = 0usize;
+    let mut fuentes_scanned = 0usize;
+    for src in skill_source_dirs() {
+        let Ok(rd) = std::fs::read_dir(&src) else { continue };
+        fuentes_scanned += 1;
+        for dir in rd.flatten() {
+            let md_path = dir.path().join("SKILL.md");
+            if !md_path.is_file() {
+                continue;
+            }
+            let dir_name = dir.file_name().to_string_lossy().to_string();
+            if !vistas.insert(dir_name.clone()) {
+                continue; // ya resuelto por una fuente de mayor prioridad
+            }
+            let (name, desc) = parse_skill_frontmatter(&std::fs::read_to_string(&md_path).unwrap_or_default());
+            let nombre = if name.is_empty() { dir_name.clone() } else { name };
+            if skills.contains_key(&nombre) {
+                continue; // entrada manual o previa: no se toca
+            }
+            let descripcion = if desc.is_empty() {
+                format!("Skill '{nombre}' (sin descripción en SKILL.md)")
+            } else {
+                desc
+            };
+            let kws = sync_keywords(&nombre, &descripcion);
+            skills.insert(
+                nombre.clone(),
+                serde_json::json!({
+                    "type": "domain",
+                    "enforcement": "suggest",
+                    "priority": "low",
+                    "description": descripcion,
+                    "promptTriggers": {"keywords": kws, "intentPatterns": []}
+                }),
+            );
+            anadidas += 1;
+        }
+    }
+    let total = skills.len();
+    match serde_json::to_string_pretty(&rules)
+        .ok()
+        .and_then(|t| std::fs::write(&rules_path, t + "\n").ok())
+    {
+        Some(()) => format!(
+            "✓ skills-sync: {total} skills en el mapa de activación (+{anadidas} nuevas, entradas manuales preservadas) · fuentes escaneadas: {fuentes_scanned}"
+        ),
+        None => "✗ no pude escribir skill-rules.json".to_string(),
+    }
+}
+
+// ═══════════════════ SKILL-RUN (skills como módulos ejecutables) ═══════════════════
+//
+// Prime Agent: el harness no se lee, se ejecuta y deja evidencia. Las skills
+// con scripts/ (idea-refine, audits, generadores) corren como comandos
+// `alx skill-run` y su resultado queda como Recall (evidencia persistida).
+
+/// `alx skill-run <skill> <script> [args...]` — ejecuta scripts/<script> de la
+/// skill y persiste evidencia (rc) como Recall. Interpreta .sh/.py por
+/// extensión; el resto se ejecuta directo (requiere bit ejecutable).
+pub fn skill_run(skill: &str, script: &str, args: &[String]) -> String {
+    let Some(md_path) = find_skill_md(skill) else {
+        return format!(
+            "✗ skill '{skill}' no encontrada (fuentes: .claude/skills, ~/.claude/skills, .alexandria/skills, plugins/*/skills)"
+        );
+    };
+    let dir = md_path.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
+    let candidatos = [dir.join("scripts").join(script), dir.join(script)];
+    let Some(path) = candidatos.into_iter().find(|p| p.is_file()) else {
+        let mut disponibles: Vec<String> = Vec::new();
+        for base in [dir.join("scripts"), dir.clone()] {
+            if let Ok(rd) = std::fs::read_dir(&base) {
+                for e in rd.flatten() {
+                    let n = e.file_name().to_string_lossy().to_string();
+                    if n != "SKILL.md" && !n.starts_with('.') {
+                        disponibles.push(n);
+                    }
+                }
+            }
+        }
+        disponibles.dedup();
+        return format!(
+            "✗ script '{script}' no está en la skill '{skill}'. Disponibles: {}",
+            if disponibles.is_empty() { "(ninguno — la skill no tiene scripts)".to_string() } else { disponibles.join(", ") }
+        );
+    };
+    let run = if path.extension().is_some_and(|e| e == "sh" || e == "bash") {
+        std::process::Command::new("bash").arg(&path).args(args).output()
+    } else if path.extension().is_some_and(|e| e == "py") {
+        std::process::Command::new("python3").arg(&path).args(args).output()
+    } else {
+        std::process::Command::new(&path).args(args).output()
+    };
+    let Ok(out) = run else {
+        return format!("✗ no pude ejecutar {}", path.display());
+    };
+    let rc = out.status.code().unwrap_or(-1);
+    // evidencia persistida: la ejecución real quedó registrada
+    let mut store = load_recalls_store();
+    store.add(Recall {
+        id: format!("r-sr-{}", store.all().len() + 1),
+        text: format!("skill-run {skill}/{script} terminó con rc={rc}"),
+        source: RecallSource::Tool,
+        tags: vec!["evidence".to_string()],
+        weight: 1,
+        created: now_ms(),
+    });
+    let _ = save_recalls_store(&store);
+    let recortar = |s: &str| -> String {
+        let lineas: Vec<&str> = s.lines().collect();
+        if lineas.len() > 60 {
+            format!("{}\n… ({} líneas recortadas)", lineas[..60].join("\n"), lineas.len() - 60)
+        } else if lineas.is_empty() {
+            "(sin output)".to_string()
+        } else {
+            lineas.join("\n")
+        }
+    };
+    let stdout_s = String::from_utf8_lossy(&out.stdout).to_string();
+    let stderr_s = String::from_utf8_lossy(&out.stderr).to_string();
+    let mut res = format!("── skill-run {skill}/{script} · rc={rc} · evidencia → recalls.json\n{}", recortar(&stdout_s));
+    if !stderr_s.trim().is_empty() {
+        res.push_str(&format!("\n── stderr\n{}", recortar(&stderr_s)));
+    }
+    res
+}
+
+// ═══════════════════ MAIL A2A (buzón entre sesiones paralelas) ═══════════════════
+//
+// Familia nuclear de sesiones: agentes-run paralelos se pasan resultados sin
+// compartir contexto. Buzón por fichero: state/mailbox/<sesión>.jsonl.
+
+fn mail_path_for(who: &str) -> std::path::PathBuf {
+    let slug: String = who
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .collect();
+    state_dir().join("mailbox").join(format!("{slug}.jsonl"))
+}
+
+/// `alx mail send <sesión> <mensaje>` — deja un mensaje en el buzón de otra sesión.
+pub fn mail_send(to: &str, msg: &str) -> String {
+    if msg.trim().is_empty() {
+        return "✗ mensaje vacío".to_string();
+    }
+    let from = std::env::var("ALX_SESSION_ID").unwrap_or_else(|_| "main".into());
+    let _ = std::fs::create_dir_all(state_dir().join("mailbox"));
+    let entry = serde_json::json!({"from": from, "msg": msg.trim(), "ts": now_ms()});
+    use std::io::Write;
+    let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(mail_path_for(to))
+    else {
+        return "✗ no pude abrir el buzón destino".to_string();
+    };
+    writeln!(f, "{entry}").ok();
+    format!("✓ entregado en el buzón de '{to}' — lo leerá con `alx mail read`")
+}
+
+/// `alx mail read [--clear]` — lee el buzón de ESTA sesión (ALX_SESSION_ID).
+pub fn mail_read(clear: bool) -> String {
+    let me = std::env::var("ALX_SESSION_ID").unwrap_or_else(|_| "main".into());
+    let path = mail_path_for(&me);
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return format!("buzón vacío (sesión '{me}')");
+    };
+    let mut out = format!("## Buzón A2A — sesión '{me}'\n");
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+            out.push_str(&format!(
+                "- [{}] {}: {}\n",
+                v["ts"].as_u64().unwrap_or(0),
+                v["from"].as_str().unwrap_or("?"),
+                v["msg"].as_str().unwrap_or("")
+            ));
+        }
+    }
+    if clear {
+        let _ = std::fs::remove_file(&path);
+        out.push_str("(buzón limpiado)\n");
+    }
+    out
 }
 
 /// Crea (o reutiliza) el harness temporal de una skill con sus pasos.

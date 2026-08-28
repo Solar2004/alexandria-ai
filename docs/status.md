@@ -295,3 +295,33 @@ flowchart LR
 - **Iteración es la norma** (R24): el sistema se pule solo.
 - **Harnesses evolutivos**: temporales por defecto, permanentes con evidencia, doc-min obligatoria.
 - **Barato y rápido**: compresión caveman, tier por dificultad, ledger de coste.
+
+## Continual Harness (Prime Agent, 2026-08-28)
+
+Replicación de los mecanismos del Prime Agent de Prime Intellect sobre la base
+Alexandria:
+
+- **CRUD completo de harnesses**: `alx harness-new` (crear) · `alx
+  harness-update <id> --objective/--doc/--trigger/--kind` (refine sin perder
+  usos/estado) · `alx harness-rm <id>` (retiro explícito, muere también su
+  checklist de skill) · `alx harness-use` (evidencia) · hot reload reinyecta
+  cada cambio en el próximo prompt.
+- **Skills con cobertura total**: `alx skills-sync` regenera
+  `.claude/skills/skill-rules.json` desde TODAS las fuentes de SKILL.md
+  (proyecto, repo, plugins, ~/.claude) — 8 → 85 skills en el mapa de
+  activación, entradas manuales nunca tocadas. Sin entrada, la skill es
+  invisible para el hook skill-activation-prompt.
+- **Skills ejecutables**: `alx skill-run <skill> <script> [args]` corre el
+  script (sh/py/auto) con evidencia persistida en recalls.json (rc real, no
+  "debería funcionar").
+- **Gate autónomo**: `atg --auto --gate "cargo test"` — el hook de Stop
+  ejecuta el gate antes de cerrar cada unidad; si falla, bloquea con las
+  últimas 40 líneas; si el workspace no cambió desde el último pase, se salta
+  (firma sha256 de git status+HEAD en state/gate-state.json).
+- **Mail A2A**: `alx mail send <sesión> <msg>` / `alx mail read [--clear]` —
+  buzón state/mailbox/<sesión>.jsonl para sesiones paralelas sin contexto
+  compartido (familia nuclear).
+
+Pendiente del análisis Prime Agent: refine de subagentes minando el ledger
+(reescribir prompts de agents/ con evidencia de qué variante resolvió más
+rápido).

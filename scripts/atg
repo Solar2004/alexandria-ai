@@ -7,6 +7,8 @@
 #    atg --dangerously-skip-permissions → AUTÓNOMO: lee la misión, elige
 #                     trabajo del backlog y ejecuta el ciclo R24 solo
 #    atg --auto     → autónomo explícito (igual, sin skip-permissions)
+#    atg --auto --gate "cargo test" → autónomo + gate: el Stop se bloquea
+#                     hasta que el comando verifique (skip si no cambió nada)
 #    atg --no-fallback → solo modelo default con reintentos (sin fallback a hy3/kimi)
 #    atg --raw      → claude directo a routatic (sin headroom)
 #    atg --free     → claude vía OmniRoute (fallback gratuito)
@@ -17,6 +19,7 @@ set -euo pipefail
 
 ATGHOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="cc"
+GATE_CMD=""
 HEADROOM=/home/artorias/.local/bin/headroom
 
 # ---------- ALEXANDRIA: si alx está instalado, delega estado/red en él ----------
@@ -129,6 +132,7 @@ while [[ $# -gt 0 ]]; do
     --bare)  MODE=bare;  shift ;;
     --clean) MODE=clean; shift ;;
     --auto)  MODE=auto;  shift ;;   # arranque autónomo explícito
+    --gate)  GATE_CMD="${2:-}"; MODE=auto; shift 2 ;;  # autónomo + gate de Stop (Prime Agent)
     --no-fallback) export ROUTA_NO_FALLBACK=1; shift ;;  # solo modelo default con reintentos
     --help|-h)
       sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -166,10 +170,16 @@ FLUJO OBLIGATORIO (no te saltes pasos):
 6. DIVISIÓN EN AGENTES: si la tarea es grande o multi-dominio, divide y spawnea subagentes con Task (cada uno con su skill y contexto mínimo) — no hagas todo inline.
 7. HARNESSES POR PROYECTO: si detectas un patrón recurrente, un bloqueo que se repite, o una regla que el proyecto debe recordar (ej: “siempre verificar X antes de commit”), FORMALÍZALO: alx harness-new <slug> --objective \"...\" --doc \"...\" --kind temporal --trigger phase:Build. Los harnesses viven en .alexandria/ (por proyecto) y evolucionan solos con alx evolve. Usa alx patterns --apply para minar bloqueos recurrentes.
 8. MCP: usa las tools del motor vía MCP (alx mcp) cuando necesites estado real: phalanx.status, governor.cost_report, memory.recall, task.list.
-9. EVOLVE: al terminar, valora si lo aprendido merece harness permanente (alx harness-new --kind permanent) o si el watcher lo promoverá solo.
+9. EVOLVE: al terminar, valora si lo aprendido merece harness permanente (alx harness-new --kind permanent) o si el watcher lo promoverá solo. Si la regla ya existe pero quedó vaga/rota, REFÍNALA en vez de duplicar: alx harness-update <id> --objective/--doc/--trigger (--kind permanent para consolidar).
 10. IMPLEMENTA → VERIFICA (tests/build reales, nunca 'debería funcionar') → CRITICA → MEJORA → commit atómico.
 
 Repite hasta completar target_iter o agotar el backlog. NO preguntes al usuario salvo bloqueo duro que exija decisión humana."
+    # Gate autónomo (Prime Agent): el hook de Stop verifica con ALX_GATE_CMD.
+    if [[ -n "${GATE_CMD:-}" ]]; then
+      KICKOFF="${KICKOFF}
+
+GATE AUTÓNOMO (no negociable): antes de dar por terminada cualquier unidad de trabajo, el gate '$GATE_CMD' debe pasar. El hook de Stop lo ejecuta por ti: si falla te bloquea con el output acotado; si el workspace no cambió desde el último pase, se salta la re-verificación."
+    fi
     set -- "$KICKOFF" "$@"
   fi
 fi
@@ -190,6 +200,7 @@ case "$MODE" in
     exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude -c "$@"
     ;;
   cc|auto)
+    if [[ -n "$GATE_CMD" ]]; then export ALX_GATE_CMD="$GATE_CMD"; fi
     exec env HOME=/home/artorias DISABLE_AUTOUPDATER=1 HEADROOM_BEACON=off ANTHROPIC_AUTH_TOKEN=unused "$HEADROOM" wrap claude --1m --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
     ;;
 esac

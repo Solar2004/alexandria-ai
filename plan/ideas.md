@@ -25,7 +25,18 @@ Crear mas ideas asi de buenas en el worflow gigante que crearemos
 ## Ideas del análisis Prime Agent (2026-08-28)
 
 - **update/delete explícitos de harness**: `alx harness-update <id> --objective/--doc/--trigger` — CRUD completo estilo Continual Harness.
+  **[IMPLEMENTADO — 2026-08-28]** `alx harness-update` (conserva usos/estado,
+  hot reload reinyecta) + `alx harness-rm` (retiro explícito en alx-evolve).
 - **refine para subagentes**: minar el ledger + sessions para reescribir los prompts de los agentes de agents/ con evidencia (qué variante resolvió más rápido).
 - **gate configurable en kickoff**: `atg --auto --gate "cargo test"` — el gate corre antes de cerrar cada unidad; si falla, output acotado de vuelta al agente (estilo Prime Agent autonomous-gate, incl. skip si el workspace no cambió).
+  **[IMPLEMENTADO — 2026-08-28]** ALX_GATE_CMD en system-usage-guard.sh (hook
+  Stop): falla → block con últimas 40 líneas; sin cambios en workspace → skip
+  (firma sha256 en state/gate-state.json). KICKOFF anexa las instrucciones.
 - **A2A por fichero**: buzón `state/mailbox-<session>.jsonl` para que agents-run paralelos se pasen resultados (familia nuclear de sesiones).
+  **[IMPLEMENTADO — 2026-08-28]** `alx mail send <sesión> <msg>` + `alx mail
+  read [--clear]` sobre state/mailbox/<sesión>.jsonl.
 - **Skills como módulos ejecutables**: los scripts/ de cada skill exportables como comandos `alx skill-run <skill> <script>` con evidencia automática.
+  **[IMPLEMENTADO — 2026-08-28]** `alx skill-run` (sh/py/auto) con evidencia
+  en recalls.json. BONUS: `alx skills-sync` — cobertura total del mapa de
+  activación (8 → 85 skills, manuales preservados; sin entrada la skill es
+  invisible para skill-activation-prompt).

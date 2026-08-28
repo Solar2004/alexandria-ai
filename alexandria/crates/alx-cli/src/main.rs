@@ -11,19 +11,37 @@ use clap::{CommandFactory, Parser, Subcommand};
 
 use alx_cli::{
     agents_run_parallel, agents_show, check_network, classify_from_stdin, docmin_check,
-    evolve_detect_from_stdin, feature_run, harness_list, harness_new, harness_use,
-    iterate_next, log_command, load_tasks_from_jsonl, memory_capture_from_stdin, mission_print,
-    persist_task_to_jsonl, render_agents, render_bench_all, render_benchmark,
-    render_bench_bigcode, render_bench_codecontests, render_bench_humaneval, render_build,
-    render_cost_report, render_doctor, render_quality, run_lsp_doctor,
-    render_iterate_state, render_metrics, render_network, render_night_report,
-    render_phalanx_status, render_real_run, render_report, render_run,
-    render_tui, render_weekly, run_evolve_cycle, run_lsp_check, run_phalanx_event, run_pipeline,
-    run_pipeline_real, run_setup, run_update, serve_mcp_stdio, spawn_agent, verify_build,
-    AppState,
+    evolve_detect_from_stdin, feature_run, harness_list, harness_new, harness_rm, harness_update,
+    harness_use, iterate_next, log_command, load_tasks_from_jsonl,
+    memory_capture_from_stdin, mission_print, persist_task_to_jsonl, render_agents,
+    render_bench_all, render_benchmark, render_bench_bigcode, render_bench_codecontests,
+    render_bench_humaneval, render_build, render_cost_report, render_doctor, render_quality,
+    run_lsp_doctor, render_iterate_state, render_metrics, render_network, render_night_report,
+    render_phalanx_status, render_real_run, render_report, render_run, render_tui,
+    render_weekly, run_evolve_cycle, run_lsp_check, run_phalanx_event, run_pipeline,
+    run_pipeline_real, run_setup, run_update, serve_mcp_stdio, skills_sync,
+    spawn_agent, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
+
+/// Subcomandos del buzón A2A.
+#[derive(Debug, Subcommand)]
+enum MailCmd {
+    /// Envía un mensaje al buzón de otra sesión.
+    Send {
+        /// Sesión destino (ALX_SESSION_ID del receptor, ej: "agent-build-1").
+        to: String,
+        /// Mensaje (resultado, aviso, bloqueo).
+        msg: String,
+    },
+    /// Lee el buzón de ESTA sesión (ALX_SESSION_ID).
+    Read {
+        /// Vacía el buzón tras leer.
+        #[arg(long)]
+        clear: bool,
+    },
+}
 
 /// ALEXANDRIA — motor de desarrollo IA autónomo.
 #[derive(Parser)]
@@ -147,6 +165,30 @@ enum Command {
         /// Id del harness (hx-<slug>) o nombre.
         id: String,
     },
+    /// Refine del Continual Harness: actualiza objetivo/doc/trigger/kind.
+    HarnessUpdate {
+        /// Id del harness (hx-<slug>) o nombre.
+        id: String,
+        /// Nuevo objetivo verificable.
+        #[arg(long)]
+        objective: Option<String>,
+        /// Nueva doc-min (>=20 chars).
+        #[arg(long)]
+        doc: Option<String>,
+        /// temporal | permanent.
+        #[arg(long)]
+        kind: Option<String>,
+        /// manual | phase:<Fase> | event:<Evento>.
+        #[arg(long)]
+        trigger: Option<String>,
+    },
+    /// Elimina un harness del registry explícitamente.
+    HarnessRm {
+        /// Id del harness (hx-<slug>) o nombre.
+        id: String,
+    },
+    /// Regenera skill-rules.json desde TODAS las fuentes de SKILL.md (preserva manuales).
+    SkillsSync,
     /// Doctor del ecosistema ALEXANDRIA (crates, hooks, harnesses).
     Doctor,
     /// Cost-report del governor desde el ledger persistido.
@@ -255,6 +297,21 @@ enum Command {
     },
     /// Guard de skills para Stop: pasos marcados o bloquea (exit 2).
     SkillCheck,
+    /// Ejecuta un script de una skill como módulo ejecutable, con evidencia.
+    SkillRun {
+        /// Nombre de la skill.
+        skill: String,
+        /// Nombre del script (relativo a scripts/ o a la raíz de la skill).
+        script: String,
+        /// Argumentos para el script.
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Buzón A2A entre sesiones paralelas (state/mailbox/).
+    Mail {
+        #[command(subcommand)]
+        cmd: MailCmd,
+    },
     /// Gestiona tareas del DAG (en memoria).
     Task {
         #[command(subcommand)]
@@ -381,6 +438,18 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::HarnessUse { id }) => {
             println!("{}", harness_use(&id));
+        }
+        Some(Command::HarnessUpdate { id, objective, doc, kind, trigger }) => {
+            println!(
+                "{}",
+                harness_update(&id, objective.as_deref(), doc.as_deref(), kind.as_deref(), trigger.as_deref())
+            );
+        }
+        Some(Command::HarnessRm { id }) => {
+            println!("{}", harness_rm(&id));
+        }
+        Some(Command::SkillsSync) => {
+            println!("{}", skills_sync());
         }
         Some(Command::Doctor) => {
             println!("{}", render_doctor());
@@ -509,6 +578,13 @@ fn run(cli: Cli) -> ExitCode {
             }
             return ExitCode::from(code as u8);
         }
+        Some(Command::SkillRun { skill, script, args }) => {
+            println!("{}", alx_cli::skill_run(&skill, &script, &args));
+        }
+        Some(Command::Mail { cmd }) => match cmd {
+            MailCmd::Send { to, msg } => println!("{}", alx_cli::mail_send(&to, &msg)),
+            MailCmd::Read { clear } => println!("{}", alx_cli::mail_read(clear)),
+        },
         Some(Command::Update) => {
             println!("{}", run_update());
         }

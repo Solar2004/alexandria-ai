@@ -22,6 +22,31 @@ case "$IN" in
   *"Continuemos con el proximo ciclo"*) exit 0 ;;
 esac
 
+# 0. GATE autónomo (Prime Agent, plan/ideas.md): si ALX_GATE_CMD está definido
+#    (atg --auto --gate "cargo test"), el Stop no pasa hasta que el gate
+#    verifique. Skip si el workspace no cambió desde el último pase.
+if [ -n "${ALX_GATE_CMD:-}" ]; then
+  REPO="/home/artorias/Projectos/AlexanderTheGreat"
+  GSTATE="$REPO/alexandria/state/gate-state.json"
+  SIG=$( (git -C "$REPO" status --porcelain 2>/dev/null | head -200; git -C "$REPO" rev-parse HEAD 2>/dev/null) | sha256sum | cut -d' ' -f1)
+  LAST=$(python3 -c "import json;print(json.load(open('$GSTATE')).get('sig',''))" 2>/dev/null || echo "")
+  if [ "$SIG" != "$LAST" ]; then
+    GOUT=""
+    timeout 300 bash -c "$ALX_GATE_CMD" >/tmp/alx-gate-out.log 2>&1
+    GRC=$?
+    if [ "$GRC" -eq 0 ]; then
+      printf '{"sig":"%s","cmd":%s}' "$SIG" "$(python3 -c "import json,os;print(json.dumps(os.environ['ALX_GATE_CMD']))")" > "$GSTATE" 2>/dev/null || true
+    else
+      GOUT=$(tail -40 /tmp/alx-gate-out.log 2>/dev/null)
+      MSG="GATE FAIL — '$ALX_GATE_CMD' no pasa (rc=$GRC). Corrige y vuelve a intentar cerrar: el hook de Stop re-verifica. Output (últimas 40 líneas):
+$GOUT"
+      MSG_JSON=$(printf '%s' "$MSG" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+      printf '{"decision":"block","reason":%s}\n' "$MSG_JSON"
+      exit 0
+    fi
+  fi
+fi
+
 FALTAS=()
 # 1. Tasks: ¿existe al menos una task persistida?
 TASKS="/home/artorias/Projectos/AlexanderTheGreat/alexandria/state/tasks.jsonl"

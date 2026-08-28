@@ -183,6 +183,15 @@ impl HarnessRegistry {
         self.harnesses.iter_mut().find(|h| h.id == id)
     }
 
+    /// Elimina un harness del registry por id (devuelve true si existía).
+    /// CRUD explícito del Continual Harness (Prime Agent): el refine incluye
+    /// poder retirar lo que ya no sirve, no solo dejar que caduque.
+    pub fn remove(&mut self, id: &str) -> bool {
+        let before = self.harnesses.len();
+        self.harnesses.retain(|h| h.id != id);
+        self.harnesses.len() < before
+    }
+
     /// Watcher de objetivos: retira temporales que cumplieron. Devuelve los
     /// ids retirados.
     pub fn run_watcher(&mut self, goal_met: &dyn Fn(&Harness) -> bool) -> Vec<String> {

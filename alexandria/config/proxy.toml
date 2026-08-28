@@ -1,0 +1,72 @@
+# alx-proxy — EL proxy de Alexandria (único punto de entrada de Claude Code).
+#
+# Un puerto (8797) habla Anthropic (/v1/messages) y OpenAI (/v1/chat/completions),
+# enmascara el modelo, rota keys y modelos, y enruta por dificultad de la tarea
+# (clasificador del governor; el cliente puede forzar con X-Alx-Tier: fast|medium|heavy).
+#
+# Instalación: copia este fichero a ~/.config/alexandria/proxy.toml y rellena
+# las keys con `env:VAR` (nunca el secreto en disco).
+
+[proxy]
+port = 8797
+# Lo que ve el cliente (máscara): CC compacta con esta ventana.
+visible_model = "claude-opus-4-6[1m]"
+# Semáforo global hacia upstream + timeout de cola (entropía).
+max_concurrency = 6
+queue_timeout_s = 120
+
+[routing]
+# dumb = true desactiva el clasificador por tarea (todo en orden declarado).
+dumb = false
+
+# ─── Proveedor local (default): la cadena routatic/opencode-go que ya existe ───
+[[providers]]
+name = "routatic"
+protocol = "anthropic"          # habla /v1/messages
+base_url = "http://127.0.0.1:3456"
+api_keys = []                   # sin auth en local
+models = ["deepseek-v4-flash", "hy3", "kimi-k2.7-code", "glm-5"]
+tier = 0                        # barato/siempre disponible
+weight = 10
+
+# ─── Ejemplos de suscripciones (descomenta y pon tu env var) ───
+
+# Anthropic directo (Claude subscription vía token de sesión o API key):
+# [[providers]]
+# name = "anthropic"
+# protocol = "anthropic"
+# base_url = "https://api.anthropic.com"
+# api_keys = ["env:ANTHROPIC_API_KEY"]
+# models = ["claude-sonnet-4-5", "claude-opus-4-6"]
+# tier = 3
+# weight = 5
+
+# OpenAI (Codex subscription / API key):
+# [[providers]]
+# name = "openai"
+# protocol = "openai"
+# base_url = "https://api.openai.com"
+# api_keys = ["env:OPENAI_API_KEY"]
+# models = ["gpt-5.2-codex", "gpt-5-mini"]
+# tier = 3
+# weight = 5
+
+# OpenRouter (agrega decenas de proveedores con UNA key):
+# [[providers]]
+# name = "openrouter"
+# protocol = "openai"
+# base_url = "https://openrouter.ai/api/v1"
+# api_keys = ["env:OPENROUTER_API_KEY", "env:OPENROUTER_API_KEY_2"]  # pool → rotación
+# models = ["deepseek/deepseek-chat-v4", "moonshotai/kimi-k2", "z-ai/glm-5"]
+# tier = 1
+# weight = 7
+
+# MiniMax (compat OpenAI):
+# [[providers]]
+# name = "minimax"
+# protocol = "openai"
+# base_url = "https://api.minimax.io/v1"
+# api_keys = ["env:MINIMAX_API_KEY"]
+# models = ["MiniMax-M2"]
+# tier = 2
+# weight = 6

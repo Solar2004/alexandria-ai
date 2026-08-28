@@ -184,23 +184,36 @@ GATE AUTÓNOMO (no negociable): antes de dar por terminada cualquier unidad de t
   fi
 fi
 
+# alx-proxy :8797 — EL proxy de Alexandria (enmascara modelo, pool de keys,
+# rotación, routing por tarea). Si está vivo, TODO pasa por él; si no, cae a
+# la cadena routatic :3456 de siempre (aviso por stderr).
+alx_proxy_up() { curl -sf -m 1 http://127.0.0.1:8797/health >/dev/null 2>&1; }
+if alx_proxy_up; then
+  ALX_BASE="http://127.0.0.1:8797"
+  echo "atg: vía alx-proxy :8797 (máscara + pool + routing)" >&2
+else
+  ALX_BASE="http://127.0.0.1:3456"
+  echo "atg: alx-proxy caído — vía routatic :3456 (arranca: systemctl --user start alx-proxy)" >&2
+fi
+
 case "$MODE" in
   free)
     # OmniRoute en :20128 (traduce Anthropic ↔ OpenAI; fallback multi-provider)
     exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:20128 claude "$@"
     ;;
   raw)
-    exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude "$@"
+    exec env HOME=/home/artorias ANTHROPIC_BASE_URL="$ALX_BASE" claude "$@"
     ;;
   bare)
     exec env HOME=/home/artorias claude --bare "$@"
     ;;
   clean)
     # pantalla 100% limpia: -c retoma la sesión del dir o crea sin cabecera
-    exec env HOME=/home/artorias ANTHROPIC_BASE_URL=http://127.0.0.1:3456 claude -c "$@"
+    exec env HOME=/home/artorias ANTHROPIC_BASE_URL="$ALX_BASE" claude -c "$@"
     ;;
   cc|auto)
     if [[ -n "$GATE_CMD" ]]; then export ALX_GATE_CMD="$GATE_CMD"; fi
-    exec env HOME=/home/artorias DISABLE_AUTOUPDATER=1 HEADROOM_BEACON=off ANTHROPIC_AUTH_TOKEN=unused "$HEADROOM" wrap claude --1m --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
+    # headroom upstream → alx-proxy si está vivo (1 sola cadena: CC→headroom→alx-proxy)
+    exec env HOME=/home/artorias ANTHROPIC_BASE_URL="$ALX_BASE" DISABLE_AUTOUPDATER=1 HEADROOM_BEACON=off ANTHROPIC_AUTH_TOKEN=unused "$HEADROOM" wrap claude --1m --no-proxy --port 8788 --code-memory none --no-mcp -- "$@"
     ;;
 esac

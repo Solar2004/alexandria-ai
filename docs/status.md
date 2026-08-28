@@ -325,3 +325,44 @@ Alexandria:
 Pendiente del análisis Prime Agent: refine de subagentes minando el ledger
 (reescribir prompts de agents/ con evidencia de qué variante resolvió más
 rápido).
+
+## alx-proxy — el ÚNICO proxy (ciclo 12)
+
+Crate `alx-proxy` (binario `alx-proxy`, servicio systemd de usuario en
+:8797). Un puerto habla los DOS protocolos: `/v1/messages` (Anthropic) y
+`/v1/chat/completions` (OpenAI), traduciendo en ambas direcciones según el
+protocolo del proveedor elegido.
+
+- **Máscara de modelo**: el cliente siempre ve `claude-opus-4-6[1m]`
+  (config `[proxy].visible_model`); upstream va el modelo real — en JSON y
+  en el primer chunk del stream. Verificado en vivo: pedido con máscara →
+  routatic respondió `deepseek-v4-flash` → cliente vio la máscara.
+- **Pool de api-keys** por proveedor con rotación round-robin; forma
+  `env:VAR` para no meter secretos en disco.
+- **Rotación de modelos** por proveedor y **failover entre proveedores**
+  ante 429/5xx, con circuit-breaker por (proveedor, modelo): 3 fallos →
+  abierto 120 s; éxito resetea.
+- **Routing por tarea**: `classify_prompt_text` del governor decide el tier
+  (riesgo → premium, mecánico → cheap); el cliente fuerza con header
+  `X-Alx-Tier: fast|medium|heavy`. Candidatos ordenados por cercanía de
+  tier, peso y desempate round-robin solo dentro del grupo empatado.
+- **Entropía**: semáforo global de concurrencia (`max_concurrency`) con
+  timeout de cola; si se llena → 429 honesto.
+- **Ledger**: cada intento en `~/.local/state/alexandria/proxy-ledger.jsonl`
+  (feeds de weekly: gasto/errores por proveedor).
+- **count_tokens local** (4 chars/token) sin gastar upstream.
+- **Streaming**: mismo protocolo → passthrough SSE con máscara del primer
+  chunk; cross-protocol → upstream no-stream + SSE sintético del protocolo
+  del cliente (texto completo en un delta; v1 honesto).
+
+Config: `$ALX_PROXY_CONFIG` → `~/.config/alexandria/proxy.toml` →
+`alexandria/config/proxy.toml` (default: routatic local, sin keys). Ejemplos
+de suscripciones (Anthropic, OpenAI/Codex, OpenRouter, MiniMax) comentados
+en el propio fichero.
+
+Wire: `atg` auto-detecta el proxy (`/health`) — si está vivo, TODO pasa por
+:8797 (raw/clean/cc); si no, avisa y cae a routatic :3456 como siempre.
+
+E2E verificado con mocks (sano + roto): failover real, máscara en JSON y
+stream, traducción doble, breakers por circuito, ledger por intento.
+Workspace: 234 tests · 0 fallos · clippy 0.

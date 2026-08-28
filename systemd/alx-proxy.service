@@ -1,0 +1,17 @@
+[Unit]
+Description=alx-proxy — proxy único de Alexandria (Anthropic+OpenAI, pool de keys, routing por tarea)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/alx-proxy
+Restart=on-failure
+RestartSec=3
+# Ruta del ledger de intentos (feeds de weekly):
+Environment=ALX_PROXY_LEDGER=%h/.local/state/alexandria/proxy-ledger.jsonl
+# Config: por defecto ~/.config/alexandria/proxy.toml; sobreescribe aquí si quieres:
+#Environment=ALX_PROXY_CONFIG=%h/.config/alexandria/proxy.toml
+
+[Install]
+WantedBy=default.target

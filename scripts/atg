@@ -159,10 +159,15 @@ if [[ "${MODE}" != "bare" && "${MODE}" != "clean" ]]; then
 
 FLUJO OBLIGATORIO (no te saltes pasos):
 1. PLAN: descompon la tarea en micro-tareas verificables (usa alx feature o TodoWrite).
-2. SKILLS: si la tarea requiere conocimiento especializado (frontend, 3D, testing, infra...) y no tienes la skill en .alexandria/skills/ o ~/.claude/skills/, BÚSCALA ANTES DE CODIFICAR: alx skills-fetch --search \"<tema>\" (ordena por estrellas), puntúala con alx skills-score <dir> y alx skills-challenge <dir>, y si es funcional (INSTALAR/PROBAR) instálala con alx skills-fetch owner/repo. Si el proyecto no tiene .alexandria/, ejecuta alx init primero.
-3. PLUGINS: activa los instalados que apliquen (/caveman para commits terse, /ecc para harness, /superpowers para brainstorm si hace falta).
-4. DIVISIÓN EN AGENTES: si la tarea es grande o multi-dominio, divide y spawnea subagentes con Task (cada uno con su skill y contexto mínimo) — no hagas todo inline.
-5. IMPLEMENTA → VERIFICA (tests/build reales, nunca 'debería funcionar') → CRITICA → MEJORA → commit atómico.
+2. TASKS Y MEMORIA: registra la unidad como task (alx task add) y consulta memoria relevante (alx mcp → memory.recall) antes de codificar; al terminar guarda lección en .alexandria/lessons.md.
+3. AGENTE: el hook agent-dispatch ya te sugirió el subagente ideal para tu prompt (mira el contexto adicional) — usa Task con ese agente. Si no hubo sugerencia, elige tú el más adecuado de agents/ o agents-volt/.
+4. SKILLS: si la tarea requiere conocimiento especializado (frontend, 3D, testing, infra...) y no tienes la skill en .alexandria/skills/ o ~/.claude/skills/, BÚSCALA ANTES DE CODIFICAR: alx skills-fetch --search \"<tema>\" (ordena por estrellas), puntúala con alx skills-score <dir> y alx skills-challenge <dir>, y si es funcional (INSTALAR/PROBAR) instálala con alx skills-fetch owner/repo. Si el proyecto no tiene .alexandria/, ejecuta alx init primero.
+5. PLUGINS: activa los instalados que apliquen (/caveman para commits terse, /ecc para harness, /superpowers para brainstorm si hace falta).
+6. DIVISIÓN EN AGENTES: si la tarea es grande o multi-dominio, divide y spawnea subagentes con Task (cada uno con su skill y contexto mínimo) — no hagas todo inline.
+7. HARNESSES POR PROYECTO: si detectas un patrón recurrente, un bloqueo que se repite, o una regla que el proyecto debe recordar (ej: “siempre verificar X antes de commit”), FORMALÍZALO: alx harness-new <slug> --objective \"...\" --doc \"...\" --kind temporal --trigger phase:Build. Los harnesses viven en .alexandria/ (por proyecto) y evolucionan solos con alx evolve. Usa alx patterns --apply para minar bloqueos recurrentes.
+8. MCP: usa las tools del motor vía MCP (alx mcp) cuando necesites estado real: phalanx.status, governor.cost_report, memory.recall, task.list.
+9. EVOLVE: al terminar, valora si lo aprendido merece harness permanente (alx harness-new --kind permanent) o si el watcher lo promoverá solo.
+10. IMPLEMENTA → VERIFICA (tests/build reales, nunca 'debería funcionar') → CRITICA → MEJORA → commit atómico.
 
 Repite hasta completar target_iter o agotar el backlog. NO preguntes al usuario salvo bloqueo duro que exija decisión humana."
     set -- "$KICKOFF" "$@"

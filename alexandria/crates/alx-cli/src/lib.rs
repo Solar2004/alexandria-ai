@@ -5419,9 +5419,10 @@ mod tests {
     }
 
     #[test]
-    fn check_network_returns_four_endpoints() {
+    fn check_network_returns_five_endpoints() {
         let statuses = check_network();
-        assert_eq!(statuses.len(), 4);
+        assert_eq!(statuses.len(), 5);
+        assert!(statuses.iter().any(|s| s.name.contains("alx-proxy")));
         assert!(statuses.iter().any(|s| s.name.contains("routatic")));
         assert!(statuses.iter().any(|s| s.name.contains("omniroute")));
     }

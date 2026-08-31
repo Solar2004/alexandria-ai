@@ -16,6 +16,8 @@
 //! Teclas: 1-7/Tab pestaña · q/Esc salir · r refrescar ahora.
 //! Auto-refresh: HTTP cada 3 s, ficheros cada 1 s (ambos baratos).
 
+pub mod theme;
+
 use std::collections::BTreeMap;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
@@ -29,6 +31,11 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Gauge, Paragraph, Row, Table, Tabs};
 use ratatui::Terminal;
+
+use crate::theme::{
+    border_primary, border_secondary, info_value, state_color, table_header, tab_active, title_style,
+    PROGRESS,
+};
 
 // ─────────────────────────────────────────── rutas
 
@@ -470,10 +477,9 @@ fn last_activity() -> String {
 }
 
 // ─────────────────────────────────────────── estilos
-
-fn ok_style(ok: bool) -> Style {
-    Style::default().fg(if ok { Color::Green } else { Color::Red })
-}
+// Estado y acentos vienen de theme.rs; ok_style se reexporta localmente para
+// que las pestañas existentes no cambien de firma.
+use theme::ok_style;
 
 const TABS: [&str; 7] = ["1 Panel", "2 Red", "3 Proxy", "4 Agentes", "5 Harnesses", "6 Tareas", "7 Recalls"];
 
@@ -538,11 +544,11 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<
             let modelo = load_model_real();
             f.render_widget(
                 Paragraph::new(Line::from(vec![
+                    Span::styled(" ALEXANDRIA ", title_style()),
                     Span::styled(
-                        " ALEXANDRIA ",
-                        Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        format!(" modelo real: {modelo} · tick {tick} "),
+                        info_value(),
                     ),
-                    Span::raw(format!(" modelo real: {modelo} · tick {tick} ")),
                 ])),
                 root[0],
             );
@@ -555,8 +561,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<
             f.render_widget(
                 Tabs::new(titles)
                     .select(tab)
-                    .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-                    .block(Block::default().borders(Borders::ALL)),
+                    .highlight_style(tab_active())
+                    .block(Block::default().borders(Borders::ALL).border_style(border_secondary())),
                 root[1],
             );
 
@@ -642,7 +648,12 @@ fn draw_panel(f: &mut ratatui::Frame, area: ratatui::layout::Rect, s: PanelSnaps
         )),
     ];
     f.render_widget(
-        Paragraph::new(lineas).block(Block::default().title(" Resumen ").borders(Borders::ALL)),
+        Paragraph::new(lineas).block(
+            Block::default()
+                .title(" Resumen ")
+                .borders(Borders::ALL)
+                .border_style(border_primary()),
+        ),
         left[0],
     );
 
@@ -659,8 +670,8 @@ fn draw_panel(f: &mut ratatui::Frame, area: ratatui::layout::Rect, s: PanelSnaps
         .collect();
     f.render_widget(
         Table::new(rows, [Constraint::Length(2), Constraint::Length(12), Constraint::Length(8)])
-            .header(Row::new(vec!["", "servicio", "lat"]).style(Style::default().add_modifier(Modifier::BOLD)))
-            .block(Block::default().title(" Red ").borders(Borders::ALL)),
+            .header(Row::new(vec!["", "servicio", "lat"]).style(table_header()))
+            .block(Block::default().title(" Red ").borders(Borders::ALL).border_style(border_primary())),
         left[1],
     );
 
@@ -673,14 +684,14 @@ fn draw_panel(f: &mut ratatui::Frame, area: ratatui::layout::Rect, s: PanelSnaps
         .split(right[0]);
     f.render_widget(
         Gauge::default()
-            .gauge_style(Style::default().fg(Color::Yellow))
+            .gauge_style(Style::default().fg(PROGRESS))
             .percent(pct)
             .label(format!("iter {iter}/{max} (R24)")),
         inner[0],
     );
     f.render_widget(
         Paragraph::new(format!("última actividad:\n{}", last_activity()))
-            .block(Block::default().title(" Actividad ").borders(Borders::ALL)),
+            .block(Block::default().title(" Actividad ").borders(Borders::ALL).border_style(border_secondary())),
         inner[1],
     );
 
@@ -703,7 +714,7 @@ fn draw_panel(f: &mut ratatui::Frame, area: ratatui::layout::Rect, s: PanelSnaps
         } else {
             skills
         })
-        .block(Block::default().title(" Skills en ejecución ").borders(Borders::ALL)),
+        .block(Block::default().title(" Skills en ejecución ").borders(Borders::ALL).border_style(border_secondary())),
         right[1],
     );
 }
@@ -737,25 +748,29 @@ fn draw_red(f: &mut ratatui::Frame, area: ratatui::layout::Rect, net: &[NetRow],
             ],
         )
         .header(
-            Row::new(vec!["", "servicio", "http", "latencia", "url"])
-                .style(Style::default().add_modifier(Modifier::BOLD)),
+            Row::new(vec!["", "servicio", "http", "latencia", "url"]).style(table_header()),
         )
-        .block(Block::default().title(" Red (GET sin coste) ").borders(Borders::ALL)),
+        .block(Block::default().title(" Red (GET sin coste) ").borders(Borders::ALL).border_style(border_primary())),
         cols[0],
     );
     let lines = vec![
         Line::from(format!("en vuelo      : {}", gov.in_flight)),
         Line::from(format!("servidos      : {}", gov.served)),
-        Line::from(format!("reintentos    : {}", gov.retries)),
-        Line::from(format!("failovers     : {}", gov.failovers)),
-        Line::from(format!("último modelo : {}", gov.last_served_model)),
+        Line::styled(format!("reintentos    : {}", gov.retries), ok_style(gov.retries == 0)),
+        Line::styled(format!("failovers     : {}", gov.failovers), ok_style(gov.failovers == 0)),
+        Line::styled(format!("último modelo : {}", gov.last_served_model), info_value()),
         Line::styled(
             if gov.last_error.is_empty() { "sin errores".into() } else { format!("último error  : {}", gov.last_error) },
             ok_style(gov.last_error.is_empty()),
         ),
     ];
     f.render_widget(
-        Paragraph::new(lines).block(Block::default().title(" Gobernador de entropía ").borders(Borders::ALL)),
+        Paragraph::new(lines).block(
+            Block::default()
+                .title(" Gobernador de entropía ")
+                .borders(Borders::ALL)
+                .border_style(border_secondary()),
+        ),
         cols[1],
     );
 }
@@ -771,7 +786,7 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
             Span::raw("estado       : "),
             Span::styled(if p.ok { "vivo :8797" } else { "CAÍDO" }, ok_style(p.ok)),
         ]),
-        Line::from(format!("máscara      : {}", p.visible_model)),
+        Line::styled(format!("máscara      : {}", p.visible_model), info_value()),
         Line::raw(""),
         Line::styled("proveedores", Style::default().add_modifier(Modifier::BOLD)),
     ];
@@ -791,7 +806,12 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
         }
     }
     f.render_widget(
-        Paragraph::new(lines).block(Block::default().title(" alx-proxy :8797 ").borders(Borders::ALL)),
+        Paragraph::new(lines).block(
+            Block::default()
+                .title(" alx-proxy :8797 ")
+                .borders(Borders::ALL)
+                .border_style(border_primary()),
+        ),
         cols[0],
     );
 
@@ -813,10 +833,14 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
             [Constraint::Length(2), Constraint::Length(11), Constraint::Min(14), Constraint::Length(8)],
         )
         .header(
-            Row::new(vec!["", "proveedor", "modelo real", "ms"])
-                .style(Style::default().add_modifier(Modifier::BOLD)),
+            Row::new(vec!["", "proveedor", "modelo real", "ms"]).style(table_header()),
         )
-        .block(Block::default().title(" Últimos intentos (ledger, más nuevo arriba) ").borders(Borders::ALL)),
+        .block(
+            Block::default()
+                .title(" Últimos intentos (ledger, más nuevo arriba) ")
+                .borders(Borders::ALL)
+                .border_style(border_secondary()),
+        ),
         cols[1],
     );
 }
@@ -850,10 +874,14 @@ fn draw_agentes(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sessions: &
             ],
         )
         .header(
-            Row::new(vec!["visto", "sesión", "eventos", "último evento", "cwd"])
-                .style(Style::default().add_modifier(Modifier::BOLD)),
+            Row::new(vec!["visto", "sesión", "eventos", "último evento", "cwd"]).style(table_header()),
         )
-        .block(Block::default().title(" Sesiones (state/activity.jsonl) ").borders(Borders::ALL)),
+        .block(
+            Block::default()
+                .title(" Sesiones (state/activity.jsonl) ")
+                .borders(Borders::ALL)
+                .border_style(border_primary()),
+        ),
         cols[0],
     );
     let lines: Vec<Line> = if mailbox.is_empty() {
@@ -865,7 +893,8 @@ fn draw_agentes(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sessions: &
             .collect()
     };
     f.render_widget(
-        Paragraph::new(lines).block(Block::default().title(" Mailbox A2A ").borders(Borders::ALL)),
+        Paragraph::new(lines)
+            .block(Block::default().title(" Mailbox A2A ").borders(Borders::ALL).border_style(border_secondary())),
         cols[1],
     );
 }
@@ -908,10 +937,14 @@ fn draw_harnesses(f: &mut ratatui::Frame, area: ratatui::layout::Rect, hs: &[Har
             ],
         )
         .header(
-            Row::new(vec!["scope", "id", "kind", "estado", "usos", "pasos"])
-                .style(Style::default().add_modifier(Modifier::BOLD)),
+            Row::new(vec!["scope", "id", "kind", "estado", "usos", "pasos"]).style(table_header()),
         )
-        .block(Block::default().title(" Harnesses evolutivos (global + proyecto) ").borders(Borders::ALL)),
+        .block(
+            Block::default()
+                .title(" Harnesses evolutivos (global + proyecto) ")
+                .borders(Borders::ALL)
+                .border_style(border_primary()),
+        ),
         area,
     );
 }
@@ -921,12 +954,7 @@ fn draw_tareas(f: &mut ratatui::Frame, area: ratatui::layout::Rect, ts: &[TaskRo
         .iter()
         .map(|t| {
             let pct = if t.total > 0 { (t.spent * 100).checked_div(t.total).unwrap_or(0).min(100) } else { 0 };
-            let color = match t.status.as_str() {
-                "Done" => Color::Green,
-                "InProgress" => Color::Yellow,
-                "Blocked" => Color::Red,
-                _ => Color::Reset,
-            };
+            let color = state_color(t.status.as_str());
             Row::new(vec![
                 Span::raw(t.id.clone()),
                 Span::raw(t.title.clone()),
@@ -948,10 +976,14 @@ fn draw_tareas(f: &mut ratatui::Frame, area: ratatui::layout::Rect, ts: &[TaskRo
             ],
         )
         .header(
-            Row::new(vec!["id", "título", "estado", "fase", "presupuesto"])
-                .style(Style::default().add_modifier(Modifier::BOLD)),
+            Row::new(vec!["id", "título", "estado", "fase", "presupuesto"]).style(table_header()),
         )
-        .block(Block::default().title(" Tareas (state/tasks.jsonl) ").borders(Borders::ALL)),
+        .block(
+            Block::default()
+                .title(" Tareas (state/tasks.jsonl) ")
+                .borders(Borders::ALL)
+                .border_style(border_primary()),
+        ),
         area,
     );
 }
@@ -971,7 +1003,12 @@ fn draw_recalls(f: &mut ratatui::Frame, area: ratatui::layout::Rect, rs: &[(u64,
             .collect()
     };
     f.render_widget(
-        Paragraph::new(lines).block(Block::default().title(" Memoria (recalls.json, top por peso) ").borders(Borders::ALL)),
+        Paragraph::new(lines).block(
+            Block::default()
+                .title(" Memoria (recalls.json, top por peso) ")
+                .borders(Borders::ALL)
+                .border_style(border_secondary()),
+        ),
         area,
     );
 }

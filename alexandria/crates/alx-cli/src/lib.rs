@@ -24,6 +24,9 @@ use alx_mcp::server::handle_line;
 use alx_memory::{compress as caveman_compress, RecallStore};
 use alx_night::{build_report, render as render_night};
 use alx_task::decompose::decompose;
+use alx_ui::{
+    bold, brand, dim, error, example, hint, kv, meta, ok_mark, section, success, value, warn,
+};
 use alx_task::graph::TaskGraph;
 use std::io::IsTerminal;
 use std::time::Instant;
@@ -64,11 +67,19 @@ impl AppState {
 ///
 /// Solo se listan las fases con tareas; la cabecera siempre muestra el total.
 pub fn render_status(app: &AppState) -> String {
-    let mut out = format!("ALEXANDRIA — {} tareas", app.task_count());
+    let mut out = format!(
+        "{} {}",
+        brand("ALEXANDRIA"),
+        kv("tareas", &app.task_count().to_string())
+    );
     for phase in PhaseId::ALL {
         let n = app.tasks().iter().filter(|t| t.phase == phase).count();
         if n > 0 {
-            out.push_str(&format!("\n{}: {} tareas", phase.as_str(), n));
+            out.push_str(&format!(
+                "\n{}: {}",
+                meta(phase.as_str()),
+                value(&format!("{n} tareas"))
+            ));
         }
     }
     out
@@ -106,7 +117,14 @@ pub fn render_status_persisted() -> String {
         .map(|rd| rd.flatten().filter(|e| e.path().extension().map(|x| x == "md").unwrap_or(false)).count())
         .unwrap_or(0);
 
-    format!("ALEXANDRIA — {tasks} tareas, {hooks} hooks, {recalls} recalls, {agents} agentes")
+    format!(
+        "{} — {} {} {} {}",
+        brand("ALEXANDRIA"),
+        kv("tareas", &tasks.to_string()),
+        kv("hooks", &hooks.to_string()),
+        kv("recalls", &recalls.to_string()),
+        kv("agentes", &agents.to_string())
+    )
 }
 
 /// Resultado de una ejecución del pipeline de demo.
@@ -334,18 +352,32 @@ pub fn verify_build() -> alx_core::types::Evidence {
 /// Informe legible del resultado del dogfood build.
 pub fn render_build(evidence: &alx_core::types::Evidence) -> String {
     if evidence.passed {
-        format!(
-            "✓ build OK (exit {})\n{}",
-            evidence.exit_code,
-            evidence.stdout_head.trim()
-        )
-    } else {
-        format!(
-            "✗ build FALLÓ (exit {})\n{}",
-            evidence.exit_code,
-            evidence.stdout_head.trim()
-        )
+        return format!(
+            "{} ({})\n{}",
+            success("✓ build OK"),
+            meta(&format!("exit {}", evidence.exit_code)),
+            meta(evidence.stdout_head.trim())
+        );
     }
+    // Ошибка сборки: выделяем сам факел, контекст и — самое ценное —
+    // подсказку: cargo обычно сам печатает строку с ошибкой.
+    let head = evidence.stdout_head.trim();
+    let err_line = head
+        .lines()
+        .find(|l| l.contains("error"))
+        .unwrap_or("")
+        .trim();
+    let mut out = format!(
+        "{} ({})\n{}",
+        error("✗ build FALLÓ"),
+        meta(&format!("exit {}", evidence.exit_code)),
+        dim(head)
+    );
+    if !err_line.is_empty() {
+        out.push_str(&format!("\n{}", hint(&format!("исправь сначала: {err_line}"))));
+    }
+    out.push_str(&format!("\n{}", hint("читай ПЕРВУЮ ошибку в выводе cargo — остальные обычно её следствие")));
+    out
 }
 
 /// Gate real por fase del harness: qué comando verifica la salida de cada
@@ -4746,17 +4778,25 @@ const SYSTEMD_SERVICES: &[(&str, &str)] = &[
 
 /// `alx services` — lista el estado de los servicios systemd user.
 pub fn render_services() -> String {
-    let mut out = String::from("## Servicios systemd (user)\n");
+    let mut out = String::from(&format!("{}\n", section("Servicios systemd (user)")));
     for (name, desc) in SYSTEMD_SERVICES {
         let probe = alx_gate::run_command(
             &format!("systemctl --user is-active {name} 2>/dev/null"),
             5000,
         );
         let active = probe.stdout_head.trim() == "active";
-        let mark = if active { "✓ running" } else { "✗ inactive" };
-        out.push_str(&format!("{mark}  {name} — {desc}\n"));
+        out.push_str(&format!(
+            "{}  {} — {}\n",
+            ok_mark(active),
+            bold(name),
+            meta(desc)
+        ));
     }
-    out.push_str("\nusa `alx services start <nombre>` para enable --now.\n");
+    out.push_str(&format!(
+        "\n{}\n{}\n",
+        hint("включи упавший сервис: alx services start <имя>"),
+        example(&["alx services start alx-proxy", "alx services start headroom"])
+    ));
     out
 }
 
@@ -4769,16 +4809,30 @@ pub fn services_start(name: &str) -> String {
             .map(|(n, _)| *n)
             .collect::<Vec<_>>()
             .join(", ");
-        return format!("✗ servicio desconocido: {name}\n disponibles: {list}\n");
+        return format!(
+            "{}\n{}\n{}\n",
+            error(&format!("неизвестный сервис: {name}")),
+            meta(&format!("доступные: {list}")),
+            hint("проверь имя — alx services покажет список")
+        );
     }
     let r = alx_gate::run_command(
         &format!("systemctl --user enable --now {name} 2>&1"),
         10_000,
     );
+    if r.exit_code != 0 {
+        return format!(
+            "{}\n{}\n{}\n{}\n",
+            error(&format!("не удалось запустить {name}")),
+            dim(r.stdout_head.trim()),
+            hint("проверь unit-файл: systemctl --user status {name}"),
+            hint("после правки unit-файла не забудь: systemctl --user daemon-reload")
+        );
+    }
     format!(
-        "systemctl --user enable --now {name} → exit {}\n{}",
-        r.exit_code,
-        r.stdout_head.trim()
+        "{}\n{}",
+        success(&format!("{name} запущен (enable --now)")),
+        meta(&format!("exit {}", r.exit_code))
     )
 }
 
@@ -4797,9 +4851,10 @@ pub fn render_cost_report() -> String {
             }
         }
     }
-    let mut out = format!(
-        "## Cost report (governor)\nLlamadas reales: {n}\nTokens: {in_tok} in / {out_tok} out\nCoste estimado total: ${cost:.6}\n"
-    );
+    let mut out = String::from(&format!("{}\n", section("Cost report (governor)")));
+    out.push_str(&format!("{}\n", kv("llamadas reales", &n.to_string())));
+    out.push_str(&format!("{}\n", kv("tokens", &format!("{in_tok} in / {out_tok} out"))));
+    out.push_str(&format!("{}\n", kv("coste total", &format!("${cost:.6}"))));
 
     // Telemetría por día: eventos del pipeline agrupados por día civil.
     let events_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../state/events.log");
@@ -4814,9 +4869,9 @@ pub fn render_cost_report() -> String {
         }
     }
     if !days.is_empty() {
-        out.push_str("\nEventos por día:\n");
+        out.push_str(&format!("\n{}\n", meta("Eventos por día:")));
         for (day, count) in &days {
-            out.push_str(&format!("  día {day}: {count} eventos\n"));
+            out.push_str(&format!("  {} {}\n", meta(&format!("día {day}")), value(&count.to_string())));
         }
     }
     out
@@ -5311,17 +5366,30 @@ pub fn render_network(statuses: &[NetworkStatus]) -> String {
     })
     .unwrap_or_else(|| "?".to_string());
     let mut out = String::from(&format!(
-        "## Red real (governor)\nCadena: headroom:8788 → routa-gateway:3460 → routatic:3456 (PROVIDER) → {modelo_real}\nFallback: omniroute:20128 (solo si routatic cae)\n"
+        "{}\n{}\n{}\n",
+        section("Red real (governor)"),
+        meta(&format!(
+            "Cadena: headroom:8788 → routa-gateway:3460 → routatic:3456 (PROVIDER) → {}",
+            modelo_real
+        )),
+        meta("Fallback: omniroute:20128 (solo si routatic cae)")
     ));
     for s in statuses {
-        let mark = if s.ready { "✓" } else { "✗" };
         out.push_str(&format!(
-            "\n{mark} {} — {} {} (http {})",
-            s.name,
+            "\n{} {} — {} {} ({})",
+            ok_mark(s.ready),
+            bold(s.name.as_str()),
             s.url,
-            if s.ready { "listo" } else { "NO responde" },
-            s.http_code
+            if s.ready { success("listo") } else { error("NO responde") },
+            meta(&format!("http {}", s.http_code))
         ));
+    }
+    let down: Vec<&NetworkStatus> = statuses.iter().filter(|s| !s.ready).collect();
+    if !down.is_empty() {
+        let names = down.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ");
+        out.push_str(&format!("\n\n{}\n", warn(&format!("внимание: не отвечают — {names}"))));
+        out.push_str(&format!("{}\n", hint("подними упавшие: alx services start <имя>")));
+        out.push_str(&hint("диагностика: systemctl --user status <имя>"));
     }
     out
 }
@@ -5341,7 +5409,8 @@ mod tests {
         let app = AppState::new();
         assert_eq!(app.task_count(), 0);
         let text = render_status(&app);
-        assert!(text.contains("ALEXANDRIA — 0 tareas"));
+        assert!(text.contains("ALEXANDRIA"));
+        assert!(text.contains("0"));
         // Sin tareas no hay líneas por fase.
         assert!(!text.contains(": 1 tareas"));
     }
@@ -5352,8 +5421,9 @@ mod tests {
         app.add_task(task("t-1", PhaseId::Build));
         assert_eq!(app.task_count(), 1);
         let text = render_status(&app);
-        assert!(text.contains("ALEXANDRIA — 1 tareas"));
-        assert!(text.contains("Build: 1 tareas"));
+        assert!(text.contains("ALEXANDRIA"));
+        assert!(text.contains("Build"));
+        assert!(text.contains("1 tareas"));
     }
 
     #[test]

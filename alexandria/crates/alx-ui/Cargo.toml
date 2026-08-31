@@ -1,0 +1,7 @@
+[package]
+name = "alx-ui"
+version.workspace = true
+edition.workspace = true
+description = "Sistema compartido de color y estilo ANSI para la salida del CLI alx"
+
+[dependencies]

@@ -24,6 +24,7 @@ alx-mcp = { path = "../alx-mcp" }
 alx-hooks = { path = "../alx-hooks" }
 alx-memory = { path = "../alx-memory" }
 alx-night = { path = "../alx-night" }
+alx-ui = { path = "../alx-ui" }
 clap = { version = "4", features = ["derive"] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }

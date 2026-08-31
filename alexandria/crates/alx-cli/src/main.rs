@@ -17,10 +17,10 @@ use alx_cli::{
     render_bench_all, render_benchmark, render_bench_bigcode, render_bench_codecontests,
     render_bench_humaneval, render_build, render_cost_report, render_doctor, render_quality,
     run_lsp_doctor, render_iterate_state, render_metrics, render_network, render_night_report,
-    render_phalanx_status, render_real_run, render_report, render_run, render_tui,
-    render_weekly, run_evolve_cycle, run_lsp_check, run_phalanx_event, run_pipeline,
-    run_pipeline_real, run_setup, run_update, serve_mcp_stdio, skills_sync,
-    spawn_agent, verify_build, AppState,
+    render_phalanx_status, render_real_run, render_report, render_run, render_services,
+    render_tui, render_weekly, run_evolve_cycle, run_lsp_check, run_phalanx_event,
+    run_pipeline, run_pipeline_real, run_setup, run_update, serve_mcp_stdio, services_start,
+    skills_sync, spawn_agent, verify_build, AppState,
 };
 use alx_core::types::{now_ms, PhaseId, Task};
 use alx_lib::Alexandria;
@@ -191,6 +191,13 @@ enum Command {
     SkillsSync,
     /// Doctor del ecosistema ALEXANDRIA (crates, hooks, harnesses).
     Doctor,
+    /// Lista el estado de los servicios systemd user del governor.
+    Services,
+    /// Arranca (enable --now) un servicio systemd user del governor.
+    ServicesStart {
+        /// Nombre del servicio (alx-proxy, headroom, routa-gateway, routatic, omniroute, alx-night).
+        name: String,
+    },
     /// Cost-report del governor desde el ledger persistido.
     Cost,
     /// Agentes del registry + envelope de spawn (alx-agents).
@@ -453,6 +460,12 @@ fn run(cli: Cli) -> ExitCode {
         }
         Some(Command::Doctor) => {
             println!("{}", render_doctor());
+        }
+        Some(Command::Services) => {
+            println!("{}", render_services());
+        }
+        Some(Command::ServicesStart { name }) => {
+            println!("{}", services_start(&name));
         }
         Some(Command::Cost) => {
             println!("{}", render_cost_report());

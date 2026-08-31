@@ -293,6 +293,7 @@ pub struct NetworkStatus {
 pub fn check_network() -> Vec<NetworkStatus> {
     // Infra real verificada. Orden = cadena canónica.
     let endpoints = [
+        ("alx-proxy (proxy unico)", "http://127.0.0.1:8797", "/health"),
         ("routa-gateway (mascara+entropia)", "http://127.0.0.1:3460", "/health"),
         ("headroom (compresion)", "http://127.0.0.1:8788", "/readyz"),
         ("routatic (PROVIDER)", "http://127.0.0.1:3456", "/v1/models"),
@@ -3041,7 +3042,53 @@ pub fn run_setup() -> String {
         "hooks instalados (harnesses/hooks → .claude/hooks): {hooks_installed}\n"
     ));
 
-    // 11. Categorías opcionales (interactivo — solo si hay terminal).
+    // 11. Servicios systemd user del governor: instalar/arrancar si faltan.
+    //     Hoy el usuario tenía que hacer 'systemctl --user enable --now' a mano
+    //     para cada unidad; setup lo hace por él (idempotente).
+    let systemd_src = format!("{project_dir}/systemd");
+    let mut svc_installed = 0usize;
+    let mut svc_started = 0usize;
+    let mut svc_failed: Vec<String> = Vec::new();
+    for (svc, _desc) in SYSTEMD_SERVICES {
+        let unit_src = format!("{systemd_src}/{svc}.service");
+        let unit_dst_dir = format!("{home}/.config/systemd/user");
+        let unit_dst = format!("{unit_dst_dir}/{svc}.service");
+        if std::path::Path::new(&unit_src).exists() {
+            let _ = std::fs::create_dir_all(&unit_dst_dir);
+            if std::fs::copy(&unit_src, &unit_dst).is_ok() {
+                svc_installed += 1;
+            }
+        }
+        let r = alx_gate::run_command(
+            &format!("systemctl --user enable --now {svc} 2>&1"),
+            10_000,
+        );
+        if r.exit_code == 0 {
+            svc_started += 1;
+        } else {
+            svc_failed.push(svc.to_string());
+        }
+    }
+    if let Ok(text) = std::fs::read_to_string(format!("{systemd_src}/alx-night.timer")) {
+        let _ = text;
+        let timer_dst_dir = format!("{home}/.config/systemd/user");
+        let _ = std::fs::create_dir_all(&timer_dst_dir);
+        let _ = std::fs::copy(
+            format!("{systemd_src}/alx-night.timer"),
+            format!("{timer_dst_dir}/alx-night.timer"),
+        );
+        let _ = alx_gate::run_command("systemctl --user enable --now alx-night.timer 2>&1", 10_000);
+    }
+    out.push_str(&format!(
+        "servicios systemd: {svc_installed} unidades instaladas, {svc_started} activadas{}\n",
+        if svc_failed.is_empty() {
+            String::new()
+        } else {
+            format!(" (fallidas: {})", svc_failed.join(", "))
+        }
+    ));
+
+    // 12. Categorías opcionales (interactivo — solo si hay terminal).
     if std::io::stdin().is_terminal() {
         out.push_str(&setup_ask_categories(home.as_str(), deps_path.as_str()));
     }
@@ -4654,6 +4701,25 @@ pub fn render_doctor() -> String {
             }
         }
     }
+    // Servicios systemd user (infra del governor): sondeo is-active barato.
+    if let Ok(home) = std::env::var("HOME") {
+        let _ = home;
+        for (svc, desc) in SYSTEMD_SERVICES {
+            let probe = alx_gate::run_command(
+                &format!("systemctl --user is-active {svc} 2>/dev/null"),
+                5000,
+            );
+            let active = probe.stdout_head.trim() == "active";
+            index.add(AuditItem::new(
+                format!("service-{svc}"),
+                svc.to_string(),
+                ItemKind::Plugin,
+                format!("systemd/user/{svc}.service"),
+                "systemd",
+                format!("{desc} ({}).", if active { "activo" } else { "inactivo" }),
+            ));
+        }
+    }
     let mut out = format!("## Doctor ALEXANDRIA\nTotal items: {}\n", index.count());
     out.push_str(&alx_audit::Doctor::doctor_report(&index));
     // LSP servers disponibles (discovery barato: binario + versión, sin spawn).
@@ -4666,6 +4732,54 @@ pub fn render_doctor() -> String {
         }
     }
     out
+}
+
+/// Servicios systemd user que componen la infraestructura del governor.
+const SYSTEMD_SERVICES: &[(&str, &str)] = &[
+    ("alx-proxy", "proxy único Alexandria (Anthropic+OpenAI, :8797)"),
+    ("headroom", "context compression proxy (:8788)"),
+    ("routa-gateway", "mask+entropy gateway (:3460)"),
+    ("routatic", "PROVIDER (:3456)"),
+    ("omniroute", "fallback router (:20128)"),
+    ("alx-night", "informe nocturno (service + timer)"),
+];
+
+/// `alx services` — lista el estado de los servicios systemd user.
+pub fn render_services() -> String {
+    let mut out = String::from("## Servicios systemd (user)\n");
+    for (name, desc) in SYSTEMD_SERVICES {
+        let probe = alx_gate::run_command(
+            &format!("systemctl --user is-active {name} 2>/dev/null"),
+            5000,
+        );
+        let active = probe.stdout_head.trim() == "active";
+        let mark = if active { "✓ running" } else { "✗ inactive" };
+        out.push_str(&format!("{mark}  {name} — {desc}\n"));
+    }
+    out.push_str("\nusa `alx services start <nombre>` para enable --now.\n");
+    out
+}
+
+/// `alx services start <nombre>` — enable --now de un servicio systemd user.
+pub fn services_start(name: &str) -> String {
+    let valid = SYSTEMD_SERVICES.iter().any(|(n, _)| *n == name);
+    if !valid {
+        let list = SYSTEMD_SERVICES
+            .iter()
+            .map(|(n, _)| *n)
+            .collect::<Vec<_>>()
+            .join(", ");
+        return format!("✗ servicio desconocido: {name}\n disponibles: {list}\n");
+    }
+    let r = alx_gate::run_command(
+        &format!("systemctl --user enable --now {name} 2>&1"),
+        10_000,
+    );
+    format!(
+        "systemctl --user enable --now {name} → exit {}\n{}",
+        r.exit_code,
+        r.stdout_head.trim()
+    )
 }
 
 /// Cost-report del governor: lee el ledger persistido (state/ledger.jsonl)

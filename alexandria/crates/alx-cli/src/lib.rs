@@ -1407,18 +1407,54 @@ fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()>
 /// `alx setup` — configura e verifica TODA la integración con Claude Code:
 /// binario, statusline powerline, MCP server, hooks. Merge no destructivo.
 /// `alx update` — sistema de auto-actualización: pull + rebuild + reinstall.
+/// Salida descriptiva: versión antes→después, cada paso con detalle y
+/// sugerencia de reparación si algo falla.
 pub fn run_update() -> String {
+    use alx_ui::{error, hint, kv, ok_mark, section, warn};
     let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
     let home = std::env::var("HOME").unwrap_or_default();
-    let mut out = String::from("# alx update\n");
+    let bin_dst = format!("{home}/.local/bin/alx");
+
+    let mut out = String::new();
+    out.push_str(&section("alx update"));
+
+    // versión instalada antes del update
+    let version_before = std::process::Command::new(&bin_dst)
+        .arg("--version")
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|| "desconocida".into());
+    out.push_str(&kv("versión instalada", &version_before));
+
+    // 1) git pull --rebase
+    out.push_str(&format!("\n{} {}\n", ok_mark(true), "git pull --rebase…"));
     let pull = alx_gate::run_command(
         &format!("git -C {} pull --rebase", repo.display()),
         60_000,
     );
-    out.push_str(&format!(
-        "git pull: {}\n",
-        if pull.exit_code == 0 { "✓" } else { "✗ (no cambios o error)" }
-    ));
+    if pull.exit_code == 0 {
+        let summary = pull.stdout_head.trim();
+        if summary.is_empty() {
+            out.push_str(&format!("   {} ya estás en la última versión del repo\n", ok_mark(true)));
+        } else {
+            // primera línea útil del pull (p.ej. "Fast-forward" o resumen de archivos)
+            let first = summary.lines().find(|l| !l.trim().is_empty()).unwrap_or("");
+            out.push_str(&format!("   {} {}\n", ok_mark(true), first));
+        }
+    } else {
+        out.push_str(&format!("{} git pull falló\n", ok_mark(false)));
+        let err_line = pull
+            .stdout_head
+            .lines()
+            .find(|l| l.contains("error") || l.contains("conflict") || l.contains("fatal"))
+            .unwrap_or("(sin detalle)");
+        out.push_str(&format!("{}\n{}\n", error(err_line.trim()), hint("resuelve el conflicto/cambio local y reintenta: alx update")));
+        return out;
+    }
+
+    // 2) cargo build --release
+    out.push_str(&format!("\n{} {}\n", ok_mark(true), "cargo build --release…"));
     let build = alx_gate::run_command(
         &format!(
             "cargo build --release --manifest-path {}/alexandria/Cargo.toml",
@@ -1426,16 +1462,61 @@ pub fn run_update() -> String {
         ),
         300_000,
     );
-    out.push_str(&format!(
-        "build release: {}\n",
-        if build.exit_code == 0 { "✓" } else { "✗" }
-    ));
-    if build.exit_code == 0 {
-        let src = format!("{}/alexandria/target/release/alx", repo.display());
-        let dst = format!("{home}/.local/bin/alx");
-        if std::fs::copy(&src, &dst).is_ok() {
-            out.push_str("✓ binario actualizado → ~/.local/bin/alx\n");
+    if build.exit_code != 0 {
+        out.push_str(&format!("{} build falló\n", ok_mark(false)));
+        let err_line = build
+            .stdout_head
+            .lines()
+            .find(|l| l.contains("error"))
+            .unwrap_or("(sin detalle)");
+        out.push_str(&format!(
+            "{}\n{}\n{}\n",
+            error(err_line.trim()),
+            hint("revisa el código recién pulleado; el binario anterior sigue funcionando"),
+            warn("NO se tocó ~/.local/bin/alx — tu instalación sigue en la versión anterior")
+        ));
+        return out;
+    }
+    out.push_str(&format!("   {} compilación OK\n", ok_mark(true)));
+
+    // 3) reinstall del binario (con backup si el destino está ocupado)
+    let src = format!("{}/alexandria/target/release/alx", repo.display());
+    let copied = std::fs::copy(&src, &bin_dst);
+    let copied = if copied.is_err() {
+        // "Text file busy": el binario está en ejecución → renombra y copia
+        let bak = format!("{bin_dst}.bak");
+        let _ = std::fs::rename(&bin_dst, &bak);
+        let ok2 = std::fs::copy(&src, &bin_dst).is_ok();
+        if ok2 {
+            out.push_str(&format!("   {} binario en uso → respaldo en {bak}\n", ok_mark(true)));
         }
+        ok2
+    } else {
+        true
+    };
+    if !copied {
+        out.push_str(&format!(
+            "{} no se pudo instalar el binario en {bin_dst}\n{}\n",
+            ok_mark(false),
+            hint("cierra sesiones activas de alx (p.ej. alx tui) y reintenta: alx update")
+        ));
+        return out;
+    }
+
+    // 4) versión después
+    let version_after = std::process::Command::new(&bin_dst)
+        .arg("--version")
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|| "?".into());
+    out.push_str(&format!("\n{}\n", section("resultado")));
+    if version_after != version_before {
+        out.push_str(&format!("{} {} → {}\n", ok_mark(true), version_before, version_after));
+        out.push_str(&hint("reinicia sesiones activas de alx (p.ej. alx tui) para usar la nueva versión"));
+        out.push('\n');
+    } else {
+        out.push_str(&format!("{} sin cambio de versión ({version_after}) — ya estabas al día\n", ok_mark(true)));
     }
     out
 }

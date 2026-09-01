@@ -24,12 +24,17 @@ use std::net::TcpStream;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use crossterm::event::{self, Event, KeyCode};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseEvent,
+    MouseEventKind,
+};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Gauge, Paragraph, Row, Table, Tabs};
+use ratatui::widgets::{
+    Block, Borders, Clear, Gauge, Paragraph, Row, Table, Tabs, Wrap,
+};
 use ratatui::Terminal;
 
 use crate::theme::{
@@ -483,12 +488,80 @@ use theme::ok_style;
 
 const TABS: [&str; 7] = ["1 Panel", "2 Red", "3 Proxy", "4 Agentes", "5 Harnesses", "6 Tareas", "7 Recalls"];
 
+// ─────────────────────────────────────────── ui state
+
+/// Estado de interacción compartido entre pestañas.
+#[derive(Default)]
+struct UiState {
+    /// Fila seleccionada por pestaña (índice sobre la tabla visible).
+    selected: [usize; 7],
+    /// Offset de scroll por pestaña (para párrafos largos).
+    scroll: [u16; 7],
+    /// Ayuda contextual visible (tecla ?).
+    show_help: bool,
+    /// Auto-refresh en pausa (tecla espacio).
+    paused: bool,
+    /// Mensaje flash en la status bar (con instante de expiración).
+    flash: Option<(String, Instant)>,
+}
+
+impl UiState {
+    fn sel(&self, tab: usize) -> usize {
+        self.selected[tab]
+    }
+    fn set_sel(&mut self, tab: usize, len: usize, new: usize) {
+        if len == 0 {
+            self.selected[tab] = 0;
+            return;
+        }
+        self.selected[tab] = new.min(len - 1);
+    }
+    fn move_sel(&mut self, tab: usize, len: usize, delta: isize) {
+        if len == 0 {
+            return;
+        }
+        let cur = self.selected[tab] as isize;
+        let next = (cur + delta).clamp(0, len as isize - 1);
+        self.selected[tab] = next as usize;
+    }
+    fn flash_msg(&mut self, msg: impl Into<String>) {
+        self.flash = Some((msg.into(), Instant::now()));
+    }
+}
+
+/// Número de filas seleccionables de la pestaña actual.
+fn row_count(tab: usize, net: &[NetRow], sessions: &[SessionRow], harnesses: &[HarnessRow], tasks: &[TaskRow], recalls: &[(u64, String, String)], proxy: &ProxyView) -> usize {
+    match tab {
+        1 => net.len(),
+        2 => proxy.ledger.len(),
+        3 => sessions.len(),
+        4 => harnesses.len(),
+        5 => tasks.len(),
+        6 => recalls.len(),
+        _ => 0,
+    }
+}
+
+/// Texto de ayuda contextual por pestaña.
+fn help_text(tab: usize) -> &'static str {
+    match tab {
+        0 => "Panel: resumen ejecutivo de la cadena governor.\n\n  r        refrescar ahora\n  espacio  pausar/reanudar auto-refresh\n  ?        esta ayuda\n  1-7/Tab  cambiar de pestaña\n  q/Esc    salir",
+        1 => "Red: salud de los 5 servicios locales (GET barato, sin coste).\n\n  ↑↓/j/k   navegar servicios\n  Enter    ping manual del servicio seleccionado\n  r        refrescar todos\n  espacio  pausar auto-refresh\n  ?        esta ayuda",
+        2 => "Proxy: proveedores, circuitos y ledger de alx-proxy.\n\n  ↑↓/j/k   navegar ledger\n  espacio  pausar auto-refresh\n  ?        esta ayuda",
+        3 => "Agentes: sesiones vivas + mailbox A2A.\n\n  ↑↓/j/k   navegar sesiones\n  m        ver mensajes de la sesión seleccionada\n  ?        esta ayuda",
+        4 => "Harnesses: registry evolutivo (global + proyecto).\n\n  ↑↓/j/k   navegar harnesses\n  Enter    detalle del harness seleccionado\n  ?        esta ayuda",
+        5 => "Tareas: DAG con presupuesto.\n\n  ↑↓/j/k   navegar tareas\n  Enter    detalle de la tarea seleccionada\n  ?        esta ayuda",
+        _ => "Recalls: memoria comprimida, top por peso.\n\n  ↑↓/j/k   navegar recalls\n  PgUp/PgDn scroll rápido\n  ?        esta ayuda",
+    }
+}
+
 // ─────────────────────────────────────────── app
 
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
     let mut tab: usize = 0;
     let mut last_http = Instant::now() - Duration::from_secs(60);
     let mut last_files = Instant::now() - Duration::from_secs(60);
+    let mut ui = UiState::default();
 
     let mut net: Vec<NetRow> = Vec::new();
     let mut gov = GovernorStats::default();
@@ -502,29 +575,127 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<
 
     loop {
         if event::poll(Duration::from_millis(150))? {
-            if let Event::Key(k) = event::read()? {
-                match k.code {
-                    KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+            match event::read()? {
+                Event::Key(k) if k.kind == KeyEventKind::Press => match k.code {
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Esc if !ui.show_help => return Ok(()),
+                    KeyCode::Char('?') => ui.show_help = !ui.show_help,
+                    KeyCode::Esc => ui.show_help = false,
+                    KeyCode::Char(' ') => {
+                        ui.paused = !ui.paused;
+                        ui.flash_msg(if ui.paused { "auto-refresh EN PAUSA (espacio para reanudar)" } else { "auto-refresh reanudado" });
+                    }
                     KeyCode::Char('r') => {
                         last_http -= Duration::from_secs(60);
                         last_files -= Duration::from_secs(60);
+                        ui.flash_msg("refrescando…");
                     }
                     KeyCode::Tab => tab = (tab + 1) % TABS.len(),
+                    KeyCode::BackTab => tab = (tab + TABS.len() - 1) % TABS.len(),
                     KeyCode::Char(c @ '1'..='7') => {
                         tab = c as usize - '1' as usize;
                     }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                        ui.move_sel(tab, len, 1);
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                        ui.move_sel(tab, len, -1);
+                    }
+                    KeyCode::Home | KeyCode::Char('g') => {
+                        let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                        ui.set_sel(tab, len, 0);
+                    }
+                    KeyCode::End | KeyCode::Char('G') => {
+                        let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                        ui.set_sel(tab, len, len.saturating_sub(1));
+                    }
+                    KeyCode::PageDown => {
+                        let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                        ui.move_sel(tab, len, 10);
+                    }
+                    KeyCode::PageUp => {
+                        let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                        ui.move_sel(tab, len, -10);
+                    }
+                    KeyCode::Enter if tab == 1 => {
+                        // ping manual del servicio seleccionado
+                        if let Some(row) = net.get(ui.sel(1)) {
+                            let url = row.url.clone();
+                            let res = http_get_simple(&url, 1500);
+                            match res {
+                                Some((code, ms)) => ui.flash_msg(format!("ping {}: HTTP {} ({}ms)", row.name, code, ms)),
+                                None => ui.flash_msg(format!("ping {}: SIN RESPUESTA", row.name)),
+                            }
+                        }
+                    }
+                    KeyCode::Enter if tab == 4 => {
+                        if let Some(h) = harnesses.get(ui.sel(4)) {
+                            ui.flash_msg(format!("harness {} · {} · usos {}", h.id, h.state, h.uses));
+                        }
+                    }
+                    KeyCode::Enter if tab == 5 => {
+                        if let Some(t) = tasks.get(ui.sel(5)) {
+                            let pct = if t.total > 0 { (t.spent * 100).checked_div(t.total).unwrap_or(0).min(100) } else { 0 };
+                            ui.flash_msg(format!("tarea {} · {} · presupuesto {}/{} ({}%)", t.id, t.status, t.spent, t.total, pct));
+                        }
+                    }
                     _ => {}
+                },
+                Event::Mouse(MouseEvent { kind, column, row: mrow, .. }) => {
+                    let area = terminal.get_frame().area();
+                    match kind {
+                        MouseEventKind::Down(crossterm::event::MouseButton::Left) => {
+                            // click en la barra de pestañas (root[1] = fila 1..3)
+                            if (1..=3).contains(&mrow) && area.width > 0 {
+                                let col = (column as usize).saturating_sub(1);
+                                // calcular en qué pestaña cayó el click
+                                let mut acc = 2usize; // separador inicial "  "
+                                let mut clicked: Option<usize> = None;
+                                for (i, t) in TABS.iter().enumerate() {
+                                    let w = t.len() + 2; // "N Nombre" + separador
+                                    if col >= acc && col < acc + w {
+                                        clicked = Some(i);
+                                        break;
+                                    }
+                                    acc += w;
+                                }
+                                if let Some(i) = clicked {
+                                    tab = i;
+                                }
+                            } else if mrow > 3 {
+                                // click en una fila de tabla: seleccionar
+                                let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                                // la primera fila de datos suele estar en mrow 5 (borde+header)
+                                let data_row = (mrow as usize).saturating_sub(5);
+                                if data_row < len {
+                                    ui.set_sel(tab, len, data_row);
+                                }
+                            }
+                        }
+                        MouseEventKind::ScrollUp => {
+                            let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                            ui.move_sel(tab, len, -1);
+                        }
+                        MouseEventKind::ScrollDown => {
+                            let len = row_count(tab, &net, &sessions, &harnesses, &tasks, &recalls, &proxy);
+                            ui.move_sel(tab, len, 1);
+                        }
+                        _ => {}
+                    }
                 }
+                _ => {}
             }
         }
-        if last_http.elapsed() >= Duration::from_secs(3) {
+        if !ui.paused && last_http.elapsed() >= Duration::from_secs(3) {
             net = poll_net();
             gov = poll_governor();
             proxy = poll_proxy();
             last_http = Instant::now();
             tick += 1;
         }
-        if last_files.elapsed() >= Duration::from_secs(1) {
+        if !ui.paused && last_files.elapsed() >= Duration::from_secs(1) {
             sessions = poll_sessions();
             mailbox = poll_mailbox();
             harnesses = poll_harnesses();
@@ -537,16 +708,22 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<
             let area = f.area();
             let root = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(1), Constraint::Length(3), Constraint::Min(0)])
+                .constraints([
+                    Constraint::Length(1),  // título
+                    Constraint::Length(3),  // pestañas
+                    Constraint::Min(0),     // cuerpo
+                    Constraint::Length(1),  // status bar
+                ])
                 .split(area);
 
-            // línea de título
+            // línea de título (ASCII logo compacto)
             let modelo = load_model_real();
+            let paused_mark = if ui.paused { " ⏸ PAUSA" } else { "" };
             f.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(" ALEXANDRIA ", title_style()),
+                    Span::styled(" ◆ ALEXANDRIA ", title_style()),
                     Span::styled(
-                        format!(" modelo real: {modelo} · tick {tick} "),
+                        format!(" modelo real: {modelo} · tick {tick}{paused_mark} "),
                         info_value(),
                     ),
                 ])),
@@ -573,12 +750,61 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<
                     body,
                     PanelSnapshot { net: &net, gov: &gov, proxy: &proxy, sessions: &sessions, harnesses: &harnesses, tasks: &tasks },
                 ),
-                1 => draw_red(f, body, &net, &gov),
-                2 => draw_proxy(f, body, &proxy),
-                3 => draw_agentes(f, body, &sessions, &mailbox),
-                4 => draw_harnesses(f, body, &harnesses),
-                5 => draw_tareas(f, body, &tasks),
-                _ => draw_recalls(f, body, &recalls),
+                1 => draw_red(f, body, &net, &gov, ui.sel(1)),
+                2 => draw_proxy(f, body, &proxy, ui.sel(2)),
+                3 => draw_agentes(f, body, &sessions, &mailbox, ui.sel(3)),
+                4 => draw_harnesses(f, body, &harnesses, ui.sel(4)),
+                5 => draw_tareas(f, body, &tasks, ui.sel(5)),
+                _ => draw_recalls(f, body, &recalls, ui.sel(6), ui.scroll[6]),
+            }
+
+            // status bar con hints de teclas + flash message
+            let flash = ui.flash.take_if(|(_, t)| t.elapsed() > Duration::from_secs(3));
+            let status_line = if let Some((msg, _)) = flash {
+                Line::from(vec![
+                    Span::styled(" ⚡ ", Style::default().fg(Color::Yellow)),
+                    Span::styled(msg, Style::default().fg(Color::Yellow)),
+                ])
+            } else {
+                Line::from(vec![
+                    Span::styled(" ↑↓/j/k navegar · ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("Enter", Style::default().fg(theme::TEAL)),
+                    Span::styled(" detalle · ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("r", Style::default().fg(theme::TEAL)),
+                    Span::styled(" refrescar · ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("espacio", Style::default().fg(theme::TEAL)),
+                    Span::styled(" pausa · ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("?", Style::default().fg(theme::TEAL)),
+                    Span::styled(" ayuda · ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("q", Style::default().fg(theme::TEAL)),
+                    Span::styled(" salir · ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("🖱 click pestañas/filas · scroll rueda", Style::default().fg(Color::DarkGray)),
+                ])
+            };
+            f.render_widget(Paragraph::new(status_line), root[3]);
+
+            // overlay de ayuda
+            if ui.show_help {
+                let w = area.width.min(64);
+                let h = 14;
+                let popup = Rect {
+                    x: (area.width.saturating_sub(w)) / 2,
+                    y: (area.height.saturating_sub(h)) / 2,
+                    width: w,
+                    height: h,
+                };
+                f.render_widget(Clear, popup);
+                f.render_widget(
+                    Paragraph::new(help_text(tab))
+                        .wrap(Wrap { trim: false })
+                        .block(
+                            Block::default()
+                                .title(" Ayuda (? para cerrar) ")
+                                .borders(Borders::ALL)
+                                .border_style(Style::default().fg(theme::TEAL)),
+                        ),
+                    popup,
+                );
             }
         })?;
     }
@@ -719,21 +945,26 @@ fn draw_panel(f: &mut ratatui::Frame, area: ratatui::layout::Rect, s: PanelSnaps
     );
 }
 
-fn draw_red(f: &mut ratatui::Frame, area: ratatui::layout::Rect, net: &[NetRow], gov: &GovernorStats) {
+fn draw_red(f: &mut ratatui::Frame, area: ratatui::layout::Rect, net: &[NetRow], gov: &GovernorStats, selected: usize) {
     let cols = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
         .split(area);
     let rows: Vec<Row> = net
         .iter()
-        .map(|r| {
-            Row::new(vec![
+        .enumerate()
+        .map(|(i, r)| {
+            let mut row = Row::new(vec![
                 Span::styled(if r.ok { "✓" } else { "✗" }, ok_style(r.ok)),
                 Span::raw(r.name.clone()),
                 Span::raw(r.code.clone()),
                 Span::raw(format!("{}ms", r.ms)),
                 Span::raw(r.url.clone()),
-            ])
+            ]);
+            if i == selected {
+                row = row.style(Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD));
+            }
+            row
         })
         .collect();
     f.render_widget(
@@ -750,7 +981,7 @@ fn draw_red(f: &mut ratatui::Frame, area: ratatui::layout::Rect, net: &[NetRow],
         .header(
             Row::new(vec!["", "servicio", "http", "latencia", "url"]).style(table_header()),
         )
-        .block(Block::default().title(" Red (GET sin coste) ").borders(Borders::ALL).border_style(border_primary())),
+        .block(Block::default().title(format!(" Red (GET sin coste) — fila {}/{} ", selected + 1, net.len())).borders(Borders::ALL).border_style(border_primary())),
         cols[0],
     );
     let lines = vec![
@@ -775,7 +1006,7 @@ fn draw_red(f: &mut ratatui::Frame, area: ratatui::layout::Rect, net: &[NetRow],
     );
 }
 
-fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView) {
+fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView, selected: usize) {
     let cols = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
@@ -818,13 +1049,18 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
     let rows: Vec<Row> = p
         .ledger
         .iter()
-        .map(|(prov, model, ok, ms)| {
-            Row::new(vec![
+        .enumerate()
+        .map(|(i, (prov, model, ok, ms))| {
+            let mut row = Row::new(vec![
                 Span::styled(if *ok { "✓" } else { "✗" }, ok_style(*ok)),
                 Span::raw(prov.clone()),
                 Span::raw(model.clone()),
                 Span::raw(format!("{ms}ms")),
-            ])
+            ]);
+            if i == selected {
+                row = row.style(Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD));
+            }
+            row
         })
         .collect();
     f.render_widget(
@@ -837,7 +1073,7 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
         )
         .block(
             Block::default()
-                .title(" Últimos intentos (ledger, más nuevo arriba) ")
+                .title(format!(" Últimos intentos (ledger) — fila {}/{} ", selected + 1, p.ledger.len()))
                 .borders(Borders::ALL)
                 .border_style(border_secondary()),
         ),
@@ -845,21 +1081,26 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
     );
 }
 
-fn draw_agentes(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sessions: &[SessionRow], mailbox: &[(String, usize)]) {
+fn draw_agentes(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sessions: &[SessionRow], mailbox: &[(String, usize)], selected: usize) {
     let cols = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
         .split(area);
     let rows: Vec<Row> = sessions
         .iter()
-        .map(|s| {
-            Row::new(vec![
+        .enumerate()
+        .map(|(i, s)| {
+            let mut row = Row::new(vec![
                 Span::styled(s.ago.clone(), Style::default().fg(Color::DarkGray)),
                 Span::raw(s.id.clone()),
                 Span::raw(s.events.to_string()),
                 Span::raw(format!("{} {}", s.last_ev, s.last_tool)),
                 Span::raw(s.cwd.clone()),
-            ])
+            ]);
+            if i == selected {
+                row = row.style(Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD));
+            }
+            row
         })
         .collect();
     f.render_widget(
@@ -878,7 +1119,7 @@ fn draw_agentes(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sessions: &
         )
         .block(
             Block::default()
-                .title(" Sesiones (state/activity.jsonl) ")
+                .title(format!(" Sesiones (activity.jsonl) — fila {}/{} ", selected + 1, sessions.len()))
                 .borders(Borders::ALL)
                 .border_style(border_primary()),
         ),
@@ -899,15 +1140,16 @@ fn draw_agentes(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sessions: &
     );
 }
 
-fn draw_harnesses(f: &mut ratatui::Frame, area: ratatui::layout::Rect, hs: &[HarnessRow]) {
+fn draw_harnesses(f: &mut ratatui::Frame, area: ratatui::layout::Rect, hs: &[HarnessRow], selected: usize) {
     let rows: Vec<Row> = hs
         .iter()
-        .map(|h| {
+        .enumerate()
+        .map(|(i, h)| {
             let pasos = h
                 .steps
                 .map(|(d, t)| format!("{d}/{t}"))
                 .unwrap_or_else(|| "—".into());
-            Row::new(vec![
+            let mut row = Row::new(vec![
                 Span::raw(h.scope.clone()),
                 Span::raw(h.id.clone()),
                 Span::raw(h.kind.clone()),
@@ -921,7 +1163,11 @@ fn draw_harnesses(f: &mut ratatui::Frame, area: ratatui::layout::Rect, hs: &[Har
                 ),
                 Span::raw(h.uses.to_string()),
                 Span::raw(pasos),
-            ])
+            ]);
+            if i == selected {
+                row = row.style(Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD));
+            }
+            row
         })
         .collect();
     f.render_widget(
@@ -941,7 +1187,7 @@ fn draw_harnesses(f: &mut ratatui::Frame, area: ratatui::layout::Rect, hs: &[Har
         )
         .block(
             Block::default()
-                .title(" Harnesses evolutivos (global + proyecto) ")
+                .title(format!(" Harnesses evolutivos — fila {}/{} ", selected + 1, hs.len()))
                 .borders(Borders::ALL)
                 .border_style(border_primary()),
         ),
@@ -949,19 +1195,24 @@ fn draw_harnesses(f: &mut ratatui::Frame, area: ratatui::layout::Rect, hs: &[Har
     );
 }
 
-fn draw_tareas(f: &mut ratatui::Frame, area: ratatui::layout::Rect, ts: &[TaskRow]) {
+fn draw_tareas(f: &mut ratatui::Frame, area: ratatui::layout::Rect, ts: &[TaskRow], selected: usize) {
     let rows: Vec<Row> = ts
         .iter()
-        .map(|t| {
+        .enumerate()
+        .map(|(i, t)| {
             let pct = if t.total > 0 { (t.spent * 100).checked_div(t.total).unwrap_or(0).min(100) } else { 0 };
             let color = state_color(t.status.as_str());
-            Row::new(vec![
+            let mut row = Row::new(vec![
                 Span::raw(t.id.clone()),
                 Span::raw(t.title.clone()),
                 Span::styled(t.status.clone(), Style::default().fg(color)),
                 Span::raw(t.phase.clone()),
                 Span::raw(format!("{}/{} ({pct}%)", t.spent, t.total)),
-            ])
+            ]);
+            if i == selected {
+                row = row.style(Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD));
+            }
+            row
         })
         .collect();
     f.render_widget(
@@ -980,7 +1231,7 @@ fn draw_tareas(f: &mut ratatui::Frame, area: ratatui::layout::Rect, ts: &[TaskRo
         )
         .block(
             Block::default()
-                .title(" Tareas (state/tasks.jsonl) ")
+                .title(format!(" Tareas (tasks.jsonl) — fila {}/{} ", selected + 1, ts.len()))
                 .borders(Borders::ALL)
                 .border_style(border_primary()),
         ),
@@ -988,27 +1239,36 @@ fn draw_tareas(f: &mut ratatui::Frame, area: ratatui::layout::Rect, ts: &[TaskRo
     );
 }
 
-fn draw_recalls(f: &mut ratatui::Frame, area: ratatui::layout::Rect, rs: &[(u64, String, String)]) {
-    let lines: Vec<Line> = if rs.is_empty() {
+fn draw_recalls(f: &mut ratatui::Frame, area: ratatui::layout::Rect, rs: &[(u64, String, String)], selected: usize, scroll: u16) {    let lines: Vec<Line> = if rs.is_empty() {
         vec![Line::from("sin recalls (state/recalls.json)")]
     } else {
         rs.iter()
-            .map(|(w, src, text)| {
+            .enumerate()
+            .map(|(i, (w, src, text))| {
+                let mark = if i == selected { "▶" } else { " " };
+                let style = if i == selected {
+                    Style::default().bg(Color::Indexed(236)).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
                 Line::from(vec![
+                    Span::styled(mark, style),
                     Span::styled(format!(" {w:>2} "), Style::default().fg(Color::Yellow)),
                     Span::styled(format!("{src:<6}"), Style::default().fg(Color::DarkGray)),
-                    Span::raw(text.clone()),
+                    Span::styled(text.clone(), style),
                 ])
             })
             .collect()
     };
     f.render_widget(
-        Paragraph::new(lines).block(
-            Block::default()
-                .title(" Memoria (recalls.json, top por peso) ")
-                .borders(Borders::ALL)
-                .border_style(border_secondary()),
-        ),
+        Paragraph::new(lines)
+            .scroll((scroll, 0))
+            .block(
+                Block::default()
+                    .title(format!(" Memoria (recalls) — fila {}/{} ", selected + 1, rs.len()))
+                    .borders(Borders::ALL)
+                    .border_style(border_secondary()),
+            ),
         area,
     );
 }
@@ -1018,11 +1278,19 @@ fn draw_recalls(f: &mut ratatui::Frame, area: ratatui::layout::Rect, rs: &[(u64,
 pub fn main_tui() -> io::Result<()> {
     let mut stdout = io::stdout();
     crossterm::terminal::enable_raw_mode()?;
-    crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+    crossterm::execute!(
+        stdout,
+        crossterm::terminal::EnterAlternateScreen,
+        EnableMouseCapture
+    )?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let res = run_app(&mut terminal);
-    crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen)?;
+    crossterm::execute!(
+        io::stdout(),
+        crossterm::terminal::LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     crossterm::terminal::disable_raw_mode()?;
     res
 }

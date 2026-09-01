@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn version_is_current() {
-        assert_eq!(version(), "0.5.0");
+        assert_eq!(version(), "0.5.1");
     }
 
     #[test]

@@ -74,7 +74,7 @@ pub fn iteration_prompt(state: &IterationState) -> String {
 
 // ---------------------------------------------------------------------------
 // Critic real: evalúa la salida de una fase contra criterios usando la cadena
-// LLM (headroom→mask→routatic→deepseek). Fail-closed: cualquier fallo en la
+// LLM (headroom→token-proxy→muse-spark). Fail-closed: cualquier fallo en la
 // llamada o en el parseo del JSON → approved=false con finding Block.
 // ---------------------------------------------------------------------------
 
@@ -102,7 +102,7 @@ pub struct CriticVerdict {
     pub findings: Vec<Finding>,
 }
 
-/// Endpoint de la cadena LLM real (headroom → mask → routatic → deepseek).
+/// Endpoint de la cadena LLM real (headroom → token-proxy → muse-spark).
 const LLM_URL: &str = "http://127.0.0.1:8788/v1/messages";
 
 /// Construye el prompt que pide al modelo evaluar `output` contra `criteria`.
@@ -162,8 +162,10 @@ pub fn criticize_real(output: &str, criteria: &[&str]) -> CriticVerdict {
     criticize_real_with_tokens(output, criteria, 500)
 }
 
-/// Modelo real activo, leído EN VIVO del config de routatic (fuente única
-/// que actualiza `routa use`). Env ALX_MODEL como override de experimento.
+/// Modelo activo: el alias visible `claude-opus-4-6[1m]`, que token-proxy
+/// traduce al modelo real (muse-spark-1.2-contributor). Env ALX_MODEL como
+/// override de experimento; se conserva lectura del config heredado de
+/// routatic por compatibilidad con máquinas que aún lo tengan.
 fn modelo_real_activo() -> String {
     if let Ok(m) = std::env::var("ALX_MODEL") {
         if !m.trim().is_empty() {

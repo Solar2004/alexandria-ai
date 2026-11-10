@@ -18,19 +18,20 @@ caveman_level = "ultra"
 state_dir = "alexandria/state"
 event_log = "alexandria/state/events.log"
 max_threads = 6
-model_mask = true                    # reusa cc-model-mask
+model_mask = true                    # alias [1m] (lo traduce token-proxy)
 
 [governor]
 default_tier = "T2Medium"
 warn_at_pct = 80
 hard_cap_pct = 100
 routes = [
-  # routatic = PROVIDER (deepseek-v4-flash). headroom comprime, mask enmascara el modelo.
-  { tier = "T1Cheap",  chain = ["http://127.0.0.1:3456"] },                                        # routatic directo
-  { tier = "T2Medium", chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3460", "http://127.0.0.1:3456"] },  # headroom→mask→routatic
-  { tier = "T3Premium",chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3460", "http://127.0.0.1:3456"] },
+  # token-proxy :3456 = PROVIDER (opencode-go → muse-spark). headroom comprime;
+  # la máscara claude-*/[1m] la aplica el propio token-proxy (gateway :3460 retirado).
+  { tier = "T1Cheap",  chain = ["http://127.0.0.1:3456"] },                                        # token-proxy directo
+  { tier = "T2Medium", chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3456"] },  # headroom→token-proxy
+  { tier = "T3Premium",chain = ["http://127.0.0.1:8788", "http://127.0.0.1:3456"] },
 ]
-fallback = "http://127.0.0.1:20128"   # omniroute: SOLO si routatic cae (no es cadena principal)
+fallback = "http://127.0.0.1:20128"   # omniroute: SOLO si token-proxy cae (hoy caído/opcional)
 
 [memory]
 store = "alexandria/state/recalls.json"   # RecallStore JSON (memory-capture/MCP)

@@ -99,7 +99,7 @@ mod tests {
         assert!(alex.hooks.list().is_empty());
         assert!(alex.memories.is_empty());
         assert!(alex.agents.all().is_empty());
-        // Router montado con rutas por defecto: T1 → routatic directo.
+        // Router montado con rutas por defecto: T1 → token-proxy directo.
         assert!(alex.router.route_for(&ModelTier::T1Cheap).is_some());
         assert!(!alex.router.fallback_url().is_empty());
     }

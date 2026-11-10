@@ -23,7 +23,7 @@ phalanx/
 1. `alx run` arranca → lee `config.toml`.
 2. Carga los hooks de `hooks/` (evento, prioridad, lock, retry) y los registra en el bus de eventos de `alx-hooks`.
 3. Carga los clientes MCP de `[mcp.clients]` (los 5 default).
-4. Configura `alx-governor` con las rutas de red (routatic = provider, headroom→mask→routatic para T2/T3, omniroute solo fallback).
+4. Configura `alx-governor` con las rutas de red (token-proxy = provider, headroom→token-proxy para T2/T3, omniroute solo fallback opcional).
 5. Inyecta memoria (`[memory]`) y espera el primer prompt.
 
 ## La regla

@@ -289,7 +289,7 @@ pub fn render_run(result: &RunResult) -> String {
 /// Estado de un endpoint de la red real del governor.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NetworkStatus {
-    /// Nombre del servicio (headroom, routatic, ...).
+    /// Nombre del servicio (headroom, token-proxy, ...).
     pub name: String,
     /// URL del endpoint.
     pub url: String,
@@ -297,11 +297,20 @@ pub struct NetworkStatus {
     pub ready: bool,
     /// Código HTTP devuelto (o stdout capturado).
     pub http_code: String,
+    /// true = mejora opcional (no bloquea la cadena si cae).
+    pub optional: bool,
 }
 
-/// Comprueba la red real del governor (iter 41 → v2 routa): 
-/// `headroom → gateway(:3460) → routatic` (PROVIDER) y fallback omniroute.
+/// Modelo visible canónico: lo que Claude Code pide. token-proxy (:3456) lo
+/// traduce al modelo real (muse-spark-1.2-contributor vía opencode-go).
+pub const MODELO_VISIBLE_DEFAULT: &str = "claude-opus-4-6[1m]";
+
+/// Comprueba la red real del governor (v3 token-proxy):
+/// `headroom(:8788) → token-proxy(:3456)` (PROVIDER, opencode-go).
+/// El gateway :3460 (routa-gateway) está RETIRADO: token-proxy ya enmascara
+/// `claude-*` → modelo real en su config, sin hop intermedio.
 /// Cada endpoint se sondea con un **GET barato** (`/health`, `/readyz`,
+/// `/v1/models`): cero generaciones de pago. La v1 hacía POST con
 /// `/v1/models`): cero generaciones de pago. La v1 hacía POST con
 /// max_tokens=1 que la mask convertía en una generación completa (~308
 /// tokens y ~44 s por ping); con el statusline sondeando cada refresco eso
@@ -310,17 +319,18 @@ pub struct NetworkStatus {
 /// aquí ni siquiera llegan: GET y listo.
 pub fn check_network() -> Vec<NetworkStatus> {
     // Infra real verificada. Orden = cadena canónica.
+    // Núcleo (bloquea): token-proxy + headroom. Opcionales: alx-proxy
+    // (nunca desplegado en esta máquina) y omniroute (fallback muerto).
     let endpoints = [
-        ("alx-proxy (proxy unico)", "http://127.0.0.1:8797", "/health"),
-        ("routa-gateway (mascara+entropia)", "http://127.0.0.1:3460", "/health"),
-        ("headroom (compresion)", "http://127.0.0.1:8788", "/readyz"),
-        ("routatic (PROVIDER)", "http://127.0.0.1:3456", "/v1/models"),
-        ("omniroute (fallback)", "http://127.0.0.1:20128", "/"),
+        ("token-proxy (PROVIDER)", "http://127.0.0.1:3456", "/v1/models", false),
+        ("headroom (compresion)", "http://127.0.0.1:8788", "/readyz", false),
+        ("alx-proxy (proxy unico)", "http://127.0.0.1:8797", "/health", true),
+        ("omniroute (fallback)", "http://127.0.0.1:20128", "/", true),
     ];
 
     endpoints
         .iter()
-        .map(|(name, url, ruta)| {
+        .map(|(name, url, ruta, optional)| {
             let cmd = format!(
                 "curl -s -m 5 -o /dev/null -w \"%{{http_code}}\" {url}{ruta}"
             );
@@ -330,6 +340,7 @@ pub fn check_network() -> Vec<NetworkStatus> {
                 url: url.to_string(),
                 ready: outcome.exit_code == 0,
                 http_code: outcome.stdout_head.trim().to_string(),
+                optional: *optional,
             }
         })
         .collect()
@@ -393,7 +404,7 @@ pub fn gate_for_phase(phase: PhaseId) -> &'static str {
 }
 
 /// Resultado de una ejecución real del pipeline contra la cadena de red
-/// (headroom→gateway→routatic→modelo real del config) con ledger de coste.
+/// (headroom→token-proxy→modelo real) con ledger de coste.
 #[derive(Debug, Clone)]
 pub struct RealRunResult {
     /// Resultado del pipeline (micro-tareas, gates, evidencia).
@@ -517,7 +528,7 @@ pub fn run_pipeline_real(title: &str) -> RealRunResult {
             "t-real",
             &child.title,
             tier,
-            "headroom→mask→routatic",
+            "headroom→token-proxy",
             in_tok,
             out_tok,
             latency_ms,
@@ -822,19 +833,19 @@ pub fn render_quality() -> String {
 fn generate_script(task: &str) -> String {
     // ALX_BENCH_MODEL / ALX_BENCH_URL permiten correr el benchmark con otro
     // modelo u otro hop de la cadena. Ruta canónica: headroom:8788 →
-    // routa-gateway:3460 → routatic:3456. El gateway traduce cualquier alias
-    // claude-*/[1m] al modelo real activo en el config de routatic.
+    // token-proxy:3456. token-proxy traduce cualquier alias
+    // claude-*/[1m] al modelo real (muse-spark vía opencode-go).
     let url = std::env::var("ALX_BENCH_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:8788".to_string());
-    // Sin hardcodeo: el modelo lo dicta el config de routatic en vivo
+    // Sin hardcodeo: el modelo lo dicta modelo_real_activo() en vivo
     // (ALX_BENCH_MODEL sigue disponible como override de experimento).
     let model = modelo_real_activo();
-    // Lección 2026-08-25: deepseek RAZONA aunque le pidas thinking disabled
+    // Lección 2026-08-25: el modelo RAZONA aunque le pidas thinking disabled
     // (llegan bloques thinking igualmente). Con presupuesto pequeño el
     // razonamiento se come los tokens y el texto sale vacío -> 0% en ambos
     // modos. Presupuesto grande SIEMPRE para código; y timeout de proceso >
     // timeout de curl (antes run_command mataba curl a los 35 s).
-    let claude_path = url.contains("3460") || model.contains("claude") || model.contains("opus");
+    let claude_path = model.contains("claude") || model.contains("opus");
     let _ = claude_path;
     let max_tokens: u32 = 4000;
     let body = serde_json::json!({
@@ -2015,13 +2026,13 @@ fn improve_with_llm(artifact: &str, rubric: &Rubric, findings: &[String]) -> Opt
 /// `alx polish <fichero> [--rubric NOMBRE]` — bucle evaluar→mejorar→decidir.
 /// El número de rondas NO es fijo: para cuando hay meseta (delta < min_delta)
 /// o aprobación del crítico; max_rounds solo techa.
-/// Modelo real activo, leído EN VIVO de la fuente única de verdad
-/// (~/.config/routatic-proxy/config.json — el mismo fichero que lee el
-/// routa-gateway y que actualiza `routa use`). Nada de modelos hardcodeados:
-/// cambiar el modelo con un comando cambia TODO el motor.
+/// Modelo real activo: lo que se envía en `model` en cada llamada.
+/// token-proxy traduce `claude-*` al modelo real (muse-spark-1.2-contributor)
+/// en su propio config, así que el alias visible ES el valor correcto.
 ///
-/// Prioridad: env ALX_MODEL (experimentos puntuales) > config routatic >
-/// alias visible (el gateway lo traduce igualmente).
+/// Prioridad: env ALX_MODEL (experimentos puntuales) > config heredado de
+/// routatic (~/.config/routatic-proxy/config.json, si aún existe) >
+/// alias visible (token-proxy lo traduce igualmente).
 pub fn modelo_real_activo() -> String {
     if let Ok(m) = std::env::var("ALX_MODEL") {
         if !m.trim().is_empty() {
@@ -2040,7 +2051,7 @@ pub fn modelo_real_activo() -> String {
             }
         }
     }
-    "claude-opus-4-6[1m]".to_string()
+    MODELO_VISIBLE_DEFAULT.to_string()
 }
 
 pub fn run_polish(path: &str, rubric_name: &str) -> String {
@@ -2515,7 +2526,7 @@ pub fn render_skills_score(root: &std::path::Path) -> String {
 
 
 
-/// Llamada LLM cruda por la cadena canónica (headroom → gateway → routatic).
+/// Llamada LLM cruda por la cadena canónica (headroom → token-proxy).
 /// Sin sufijos de benchmark ni compresión: prompt entra, texto sale.
 fn llm_raw(prompt: &str, max_tokens: u32, timeout_ms: u64) -> Option<String> {
     let body = serde_json::json!({
@@ -4849,11 +4860,10 @@ pub fn render_doctor() -> String {
 
 /// Servicios systemd user que componen la infraestructura del governor.
 const SYSTEMD_SERVICES: &[(&str, &str)] = &[
-    ("alx-proxy", "proxy único Alexandria (Anthropic+OpenAI, :8797)"),
+    ("alx-proxy", "proxy único Alexandria (Anthropic+OpenAI, :8797, opcional)"),
     ("headroom", "context compression proxy (:8788)"),
-    ("routa-gateway", "mask+entropy gateway (:3460)"),
-    ("routatic", "PROVIDER (:3456)"),
-    ("omniroute", "fallback router (:20128)"),
+    ("token-proxy", "PROVIDER opencode-go (:3456)"),
+    ("omniroute", "fallback router (:20128, opcional)"),
     ("alx-night", "informe nocturno (service + timer)"),
 ];
 
@@ -5431,46 +5441,34 @@ pub fn spawn_agent(name: &str, task: &str) -> String {
 
 /// Informe legible del estado de red.
 pub fn render_network(statuses: &[NetworkStatus]) -> String {
-    let modelo_real = std::fs::read_to_string(format!(
-        "{}/.config/routatic-proxy/config.json",
-        std::env::var("HOME").unwrap_or_default()
-    ))
-    .ok()
-    .and_then(|raw| {
-        serde_json::from_str::<serde_json::Value>(&raw)
-            .ok()
-            .and_then(|v| {
-                v["models"]["default"]["model_id"]
-                    .as_str()
-                    .map(str::to_string)
-            })
-    })
-    .unwrap_or_else(|| "?".to_string());
+    let modelo_real = modelo_real_activo();
     let mut out = String::from(&format!(
         "{}\n{}\n{}\n",
         section("Red real (governor)"),
         meta(&format!(
-            "Cadena: headroom:8788 → routa-gateway:3460 → routatic:3456 (PROVIDER) → {}",
+            "Cadena: headroom:8788 → token-proxy:3456 (PROVIDER, opencode-go) → {}",
             modelo_real
         )),
-        meta("Fallback: omniroute:20128 (solo si routatic cae)")
+        meta("Opcionales: alx-proxy:8797 (no desplegado) · omniroute:20128 (fallback muerto)")
     ));
     for s in statuses {
+        let tag = if s.optional { " (opcional)" } else { "" };
         out.push_str(&format!(
-            "\n{} {} — {} {} ({})",
+            "\n{} {}{} — {} {} ({})",
             ok_mark(s.ready),
             bold(s.name.as_str()),
+            meta(tag),
             s.url,
             if s.ready { success("listo") } else { error("NO responde") },
             meta(&format!("http {}", s.http_code))
         ));
     }
-    let down: Vec<&NetworkStatus> = statuses.iter().filter(|s| !s.ready).collect();
-    if !down.is_empty() {
-        let names = down.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ");
-        out.push_str(&format!("\n\n{}\n", warn(&format!("внимание: не отвечают — {names}"))));
-        out.push_str(&format!("{}\n", hint("подними упавшие: alx services start <имя>")));
-        out.push_str(&hint("диагностика: systemctl --user status <имя>"));
+    let down_core: Vec<&NetworkStatus> =
+        statuses.iter().filter(|s| !s.ready && !s.optional).collect();
+    if !down_core.is_empty() {
+        let names = down_core.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", ");
+        out.push_str(&format!("\n\n{}\n", warn(&format!("внимание: núcleo caído — {names}"))));
+        out.push_str(&format!("{}\n", hint("diagnóstico: systemctl --user status <nombre>")));
     }
     out
 }
@@ -5570,12 +5568,15 @@ mod tests {
     }
 
     #[test]
-    fn check_network_returns_five_endpoints() {
+    fn check_network_returns_four_endpoints() {
         let statuses = check_network();
-        assert_eq!(statuses.len(), 5);
+        assert_eq!(statuses.len(), 4);
         assert!(statuses.iter().any(|s| s.name.contains("alx-proxy")));
-        assert!(statuses.iter().any(|s| s.name.contains("routatic")));
+        assert!(statuses.iter().any(|s| s.name.contains("token-proxy")));
         assert!(statuses.iter().any(|s| s.name.contains("omniroute")));
+        assert!(statuses.iter().any(|s| s.name.contains("headroom")));
+        // El núcleo (token-proxy + headroom) no es opcional; los extras sí.
+        assert!(statuses.iter().filter(|s| !s.optional).count() == 2);
     }
 
     #[test]
@@ -5584,7 +5585,7 @@ mod tests {
         let text = render_network(&statuses);
         assert!(text.contains("PROVIDER"));
         assert!(text.contains("headroom"));
-        assert!(text.contains("routatic"));
+        assert!(text.contains("token-proxy"));
     }
 
     #[test]

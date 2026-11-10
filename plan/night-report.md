@@ -1,4 +1,4 @@
-# Informe nocturno — 2026-08-28 07:45
+# Informe nocturno — 2026-10-29 02:58
 
 ## Informe nocturno
 
@@ -19,46 +19,50 @@ Coste estimado: 0.00 USD
 --- Reporte completo del motor ---
 [1;33m╔═ ALEXANDRIA — Motor de desarrollo IA autónomo ═════════════════╗[0m
 [1;36m│ Motor:[0m 16 crates · 205 tests · `alx` en PATH
-[1;36m│ Red:[0m [31m✗[0m routa-gateway [31m✗[0m headroom [31m✗[0m routatic [31m✗[0m omniroute 
-[1;36m│ Coste:[0m Coste estimado total: $0.005660
-[1;36m│ Doctor:[0m Total items: 28
+[1;36m│ Red:[0m [31m✗[0m token-proxy [31m✗[0m headroom [32m✓[0m alx-proxy [31m✗[0m omniroute 
+[1;36m│ Coste:[0m Coste: n/a
+[1;36m│ Doctor:[0m Total items: 350
 [1;36m│ Telemetría:[0m 49 eventos · night systemd: 02:00
-[1;36m│ Métricas:[0m Total: 11432 líneas
+[1;36m│ Métricas:[0m Total: 16778 líneas
 [1;36m│ Agentes reales:[0m 0 en el ecosistema
-[1;36m│ Comandos ejecutados:[0m 85882
+[1;36m│ Comandos ejecutados:[0m 86677
 [1;36m│ Comandos:[0m status network build run --real night mcp phalanx feature evolve doctor cost agents spawn tui
 [1;33m╚══════════════════════════════════════════════════════════════════╝[0m
 
 
-## Cost report (governor)
-Llamadas reales: 102
-Tokens: 3257 in / 5009 out
-Coste estimado total: $0.005660
+── Cost report (governor) 
+llamadas reales 102
+tokens         3257 in / 5009 out
+coste total    $0.005660
 
 Eventos por día:
-  día 20678: 49 eventos
+  día 20678 49
 
 
 ## Doctor ALEXANDRIA
-Total items: 28
+Total items: 350
 == Informe Doctor del Registry ==
-Total items: 28
+Total items: 350
 
 == Items por kind ==
 Kind       Count
 -----      -----
-Skill      0
-Agent      0
-Plugin     16
+Skill      50
+Agent      265
+Plugin     21
 Hook       10
-McpServer  0
-Harness    2
+McpServer  1
+Harness    3
 
 == Items inválidos ==
 (ninguno)
 
 == Duplicados detectados ==
-(ninguno)
+- alx-night [Plugin] x2 -> crates/alx-night | systemd/user/alx-night.service
+
+## LSP
+Servers disponibles: 1/4
+  ✓ clangd (c/c++) → clangd version 22.1.8
 
 
 ## Agentes ALEXANDRIA
@@ -92,39 +96,41 @@ budget: 15000 tokens
   alx-agents: 667 líneas
   alx-audit: 462 líneas
   alx-bench: 348 líneas
-  alx-cli: 4389 líneas
+  alx-cli: 6266 líneas
   alx-core: 471 líneas
-  alx-critic: 552 líneas
-  alx-evolve: 688 líneas
-  alx-gate: 335 líneas
-  alx-governor: 768 líneas
+  alx-critic: 554 líneas
+  alx-evolve: 697 líneas
+  alx-gate: 928 líneas
+  alx-governor: 772 líneas
   alx-harness: 380 líneas
   alx-hooks: 431 líneas
   alx-lib: 198 líneas
-  alx-mcp: 419 líneas
+  alx-mcp: 508 líneas
   alx-memory: 317 líneas
   alx-night: 239 líneas
+  alx-proxy: 1523 líneas
   alx-task: 431 líneas
-  alx-tui: 337 líneas
-Total: 11432 líneas
+  alx-tui: 1394 líneas
+  alx-ui: 192 líneas
+Total: 16778 líneas
 
 
 --- Resumen semanal ---
 ## Resumen semanal ALEXANDRIA
-## Cost report (governor)
-Llamadas reales: 102
-Tokens: 3257 in / 5009 out
-Coste estimado total: $0.005660
+── Cost report (governor) 
+llamadas reales 102
+tokens         3257 in / 5009 out
+coste total    $0.005660
 
 Eventos por día:
-  día 20678: 49 eventos
+  día 20678 49
 
 ## Harnesses evolutivos
-Vivos: 1 · Retirados: 1
+Vivos: 1 · Retirados: 2
 ## Agentes
 3 especializados (general-purpose, code-reviewer, test-engineer)
 ## Métricas
-Total: 11432 líneas
+Total: 16778 líneas
 
 
 --- Salud de la cadena (routa) ---

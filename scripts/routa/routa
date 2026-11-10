@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""routa — CLI para gobernar la cadena de modelos de ALEXANDRIA.
+"""routa — ⚠️ RETIRADO (2026-09): routatic-proxy y routa-gateway ya no existen.
+Usa `alx network` / `alx status` en su lugar. Se conserva como referencia.
+
+Cadena actual: Claude Code -> headroom :8788 -> token-proxy :3456 -> opencode-go.
 
 La cadena:  Claude Code -> headroom :8788 -> routa-gateway :3460 -> routatic :3456 -> opencode-go
 

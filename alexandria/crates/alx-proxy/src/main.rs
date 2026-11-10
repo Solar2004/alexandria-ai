@@ -1,7 +1,7 @@
 //! Binario `alx-proxy`: EL proxy de Alexandria.
 //!
 //! Config: `$ALX_PROXY_CONFIG` → `~/.config/alexandria/proxy.toml` →
-//! `alexandria/config/proxy.toml` → defaults (routatic local).
+//! `alexandria/config/proxy.toml` → defaults (token-proxy local).
 
 #[tokio::main]
 async fn main() {

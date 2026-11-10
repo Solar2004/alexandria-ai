@@ -45,7 +45,7 @@ impl PhaseId {
     }
 }
 
-/// Tier de modelo. Hoy el provider real es uno (routatic→deepseek-v4-flash);
+/// Tier de modelo. Hoy el provider real es uno (token-proxy→muse-spark);
 /// el tier controla presupuesto, effort y nivel de compresión, no el modelo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ModelTier {

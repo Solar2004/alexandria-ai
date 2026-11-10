@@ -222,8 +222,8 @@ progress.
 ### LLM chain (how the model is reached)
 
 ```
-Claude Code → headroom (:8788, compression) → cc-model-mask (:3460, model routing)
-           → routatic (:3456, provider) → deepseek-v4-flash / any model
+Claude Code → headroom (:8788, compression) → token-proxy (:3456, provider)
+           → opencode-go → muse-spark-1.3-contributor / any model
 ```
 
 ALEXANDRIA is **model-agnostic** — the harness works with any model the chain routes to.

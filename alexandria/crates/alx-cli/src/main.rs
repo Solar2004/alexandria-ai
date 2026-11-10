@@ -61,13 +61,13 @@ enum Command {
     Run {
         /// Título de la tarea demo.
         titulo: String,
-        /// Llama a la cadena real (headroom→mask→routatic) con ledger de coste.
+        /// Llama a la cadena real (headroom→token-proxy) con ledger de coste.
         #[arg(long)]
         real: bool,
     },
     /// Estado actual del sistema (fachada alx-lib).
     Status,
-    /// Comprueba la red real del governor (headroom→mask→routatic, fallback omniroute).
+    /// Comprueba la red real del governor (headroom→token-proxy, fallback omniroute opcional).
     Network,
     /// Dogfood: verifica el build del workspace con un gate real (cargo build).
     Build,
@@ -195,7 +195,7 @@ enum Command {
     Services,
     /// Arranca (enable --now) un servicio systemd user del governor.
     ServicesStart {
-        /// Nombre del servicio (alx-proxy, headroom, routa-gateway, routatic, omniroute, alx-night).
+        /// Nombre del servicio (alx-proxy, headroom, token-proxy, omniroute, alx-night).
         name: String,
     },
     /// Cost-report del governor desde el ledger persistido.

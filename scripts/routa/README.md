@@ -1,17 +1,20 @@
-# routa — gobierno de la cadena de modelos
+# routa — gobierno de la cadena de modelos (⚠️ RETIRADO)
 
-La cadena de ALEXANDRIA (v2, sin muse-stack):
+> **Estado (2026-09): routatic-proxy y routa-gateway ya no existen.** El puerto
+> `:3456` lo ocupa **token-proxy** (opencode-go con rotación de 2 keys), que ya
+> enmascara `claude-*` → `muse-spark-1.2-contributor` en su propio config
+> (`~/.config/token-proxy/config.jsonc`). Este directorio se conserva como
+> referencia histórica; `alx network` ya no sondea `:3460`.
+
+La cadena de ALEXANDRIA (v3 token-proxy):
 
 ```
-Claude Code ──> headroom :8788 ──> routa-gateway :3460 ──> routatic :3456 ──> opencode-go
-Hermes/herramientas OpenAI ─────────────────────────────> routa-gateway :3461 ─┘
+Claude Code ──> headroom :8788 ──> token-proxy :3456 ──> opencode-go (muse-spark)
 ```
 
 | Puerto | Servicio | Para qué |
 |--------|----------|----------|
-| `:3456` | routatic-proxy | Enrutado por escenario hacia opencode-go. **Fuente única del modelo real**: `~/.config/routatic-proxy/config.json` |
-| `:3460` | routa-gateway | Máscara `[1m]` + suelo de `max_tokens` + **gobernador de entropía** + health GET |
-| `:3461` | routa-gateway | Compat OpenAI (`/v1/chat/completions` → `/v1/messages`) |
+| `:3456` | token-proxy | PROVIDER opencode-go (rotación 2 keys). Mapea `claude-*` → modelo real |
 | `:8788` | headroom | Compresión de contexto (opcional pero recomendado) |
 
 ## Qué hace el gateway por ti

@@ -1,5 +1,5 @@
 [Unit]
-Description=Headroom context compression proxy (Claude Code -> routatic-proxy :3456)
+Description=Headroom context compression proxy (Claude Code -> token-proxy :3456)
 After=network.target oc-go-cc.service
 Wants=oc-go-cc.service
 

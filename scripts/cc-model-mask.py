@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""cc-model-mask — traduce el modelo que CC ve (claude-opus-4-6[1m]) al real (deepseek-v4-flash).
+"""cc-model-mask — ⚠️ RETIRADO (2026-09): token-proxy ya mapea claude-* → real.
+Traducía el modelo que CC ve (claude-opus-4-6[1m]) al real (muse-spark-1.2-contributor).
 
 Por qué: Claude Code asume 200k de window para modelos que no conoce. Con el nombre
 'claude-opus-4-6[1m]' usa 1M (no compacta hasta ~920k). Este proxy:

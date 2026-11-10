@@ -119,10 +119,11 @@ impl RouteEngine {
             if p.models.is_empty() {
                 continue;
             }
+            let pool = self.routable_models(p);
             let mi = self.rr_model[i].fetch_add(1, Ordering::Relaxed);
             // primer modelo el rotatorio; el resto en orden (failover intra)
-            for k in 0..p.models.len() {
-                let model = p.models[(mi + k) % p.models.len()].clone();
+            for k in 0..pool.len() {
+                let model = pool[(mi + k) % pool.len()].clone();
                 let breaker_key = format!("{}/{}", p.name, model);
                 if self.breaker_open(&breaker_key) {
                     continue;
@@ -148,12 +149,13 @@ impl RouteEngine {
         if out.len() < MAX_CANDIDATES {
             for &i in &order {
                 let p: &Provider = &self.cfg.providers[i];
-                if p.models.len() < 2 {
+                let pool = self.routable_models(p);
+                if pool.len() < 2 {
                     continue;
                 }
                 let mi = self.rr_model[i].load(Ordering::Relaxed);
-                for k in 1..p.models.len() {
-                    let model = p.models[(mi + k) % p.models.len()].clone();
+                for k in 1..pool.len() {
+                    let model = pool[(mi + k) % pool.len()].clone();
                     let breaker_key = format!("{}/{}", p.name, model);
                     if self.breaker_open(&breaker_key) {
                         continue;
@@ -178,6 +180,20 @@ impl RouteEngine {
             }
         }
         out
+    }
+
+    /// Modelos RUTABLES de un proveedor: la máscara (`visible_model`) es lo que
+    /// ve el CLIENTE, no un modelo real → se excluye del pool de routing. Si el
+    /// proveedor solo declara la máscara, se rutéa con ella tal cual (proxy
+    /// transparente).
+    fn routable_models(&self, p: &Provider) -> Vec<String> {
+        let real: Vec<String> = p
+            .models
+            .iter()
+            .filter(|m| *m != &self.cfg.proxy.visible_model)
+            .cloned()
+            .collect();
+        if real.is_empty() { p.models.clone() } else { real }
     }
 
     fn next_key(&self, i: usize, p: &Provider) -> Option<String> {
@@ -309,5 +325,39 @@ mod tests {
         assert_eq!(RouteEngine::tier_from_header(Some("heavy")), Some(3));
         assert_eq!(RouteEngine::tier_from_header(Some("fast")), Some(1));
         assert_eq!(RouteEngine::tier_from_header(Some("bob")), None);
+    }
+
+    #[test]
+    fn la_mascara_no_se_rutuea() {
+        // visible_model = máscara de defaults; si está en la lista del
+        // proveedor junto a un modelo real, SOLO el real entra al pool.
+        let e = RouteEngine::new(cfg(vec![prov(
+            "token-proxy",
+            "anthropic",
+            0,
+            10,
+            vec![],
+            vec!["claude-opus-4-6[1m]", "muse-real"],
+        )]));
+        for _ in 0..4 {
+            let cands = e.candidates(2);
+            assert_eq!(cands.len(), 1);
+            assert_eq!(cands[0].model, "muse-real");
+        }
+    }
+
+    #[test]
+    fn proveedor_solo_con_mascara_rutuea_transparente() {
+        let e = RouteEngine::new(cfg(vec![prov(
+            "token-proxy",
+            "anthropic",
+            0,
+            10,
+            vec![],
+            vec!["claude-opus-4-6[1m]"],
+        )]));
+        let cands = e.candidates(2);
+        assert_eq!(cands.len(), 1);
+        assert_eq!(cands[0].model, "claude-opus-4-6[1m]");
     }
 }

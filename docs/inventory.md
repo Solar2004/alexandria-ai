@@ -1,6 +1,6 @@
 # 📦 INVENTARIO — AlexanderTheGreat (build completa)
 
-> Estado: 2026-08-12 · Repo: /home/artorias/Projectos/AlexanderTheGreat
+> Estado: 2026-09-06 (migración v3 token-proxy) · Repo: /home/artorias/Projectos/AlexanderTheGreat
 > Cada pieza está verificada por invocación real (no "instalada y a ver").
 
 ---
@@ -8,30 +8,25 @@
 ## 1. Stack de modelos (cadena de ejecución)
 
 ```
-cc / claude → atg → headroom :8788 → routa-gateway :3460 → routatic :3456 → opencode-go → modelo real del config (`routa show`; 1M visible)
+cc / claude → atg → headroom :8788 → token-proxy :3456 → opencode-go → muse-spark-1.3-contributor (alias visible claude-opus-4-6[1m], 1M)
 ```
 
 | Capa | Puerto/Servicio | Función |
 |---|---|---|
 | `atg` (wrapper) | — | auto_init, tema sol/luna, re-brand ☀, env 1M |
 | headroom | :8788 | wrap de sesión (compresión, headroom) |
-| routa-gateway | :3460 (+:3461 OpenAI) | máscara [1m] + suelo max_tokens + probes cortocircuitados + gobernador de entropía + failover de modelos; sustituye a cc-model-mask y cc-openai-bridge |
-| routatic-proxy | :3456 | routing por escenario, fallbacks, rota claves k1/k2, visión mimo-v2.5 |
-| cc-openai-bridge | :3461 | OpenAI/Responses API → Anthropic (para code-graph-rag Cypher gen) |
-| omniroute | :20128 | fallback free tiers (`cc --free`) |
-| opencode.ai | — | proveedor real (modelo deepseek-v4-flash, 1M context) |
+| token-proxy | :3456 | PROVIDER opencode-go: rota keys k1/k2, mapea claude-* → muse-spark, /v1/messages + /v1/chat/completions + /v1/responses |
+| omniroute | :20128 | fallback free tiers (`cc --free`) — hoy caído (opcional) |
+| opencode.ai | — | proveedor real (muse-spark-1.3-contributor) |
 
-⚠️ Reglas: NO tocar `/model` en CC (rompe el disfraz → 200k). Coste mostrado inflado (CC lo calcula como Opus) — real es deepseek.
+⚠️ Reglas: NO tocar `/model` en CC (rompe el disfraz → 200k). Coste mostrado inflado (CC lo calcula como Opus) — real es muse-spark.
 
 ## 2. Servicios systemd (usuario, autostart)
 
 | Servicio | Puerto | Estado |
 |---|---|---|
 | headroom.service | :8788 | enabled |
-| oc-go-cc.service | :3456 | enabled (rota k1/k2) |
-| routa-gateway.service | :3460/:3461 | enabled |
-| cc-openai-bridge.service | :3461 | enabled |
-| omniroute.service | :20128 | enabled |
+| token-proxy.service | :3456 | enabled (rota k1/k2) |
 | cloudcli.service | :3002 | enabled (control remoto, cc.centaury.net) |
 | night-ops.timer | — | enabled (02:00 diario) |
 | night-ops.service | — | oneshot (procesa cola nocturna) |
@@ -99,4 +94,4 @@ Backup último: `backups/atg-20260812-164811.tar.gz` (224 MB)
 
 ## 13. Puertos en uso
 
-8788 headroom · 3460 mask · 3456 routatic · 3461 bridge · 20128 omniroute · 3002 cloudcli · 8791 ocq-web · 7687 Memgraph · 6333 Qdrant · 9178 hindsight · 9119 hermes dashboard · 8787 HermesWebUI (¡NO TOCAR!)
+8788 headroom · 3456 token-proxy · 20128 omniroute (caído) · 3002 cloudcli · 8791 ocq-web · 7687 Memgraph · 6333 Qdrant · 9178 hindsight · 9119 hermes dashboard · 8787 HermesWebUI (¡NO TOCAR!)

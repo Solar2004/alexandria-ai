@@ -19,13 +19,16 @@ queue_timeout_s = 120
 # dumb = true desactiva el clasificador por tarea (todo en orden declarado).
 dumb = false
 
-# ─── Proveedor local (default): la cadena routatic/opencode-go que ya existe ───
+# ─── Proveedor local (default): token-proxy/opencode-go (:3456) ───
 [[providers]]
-name = "routatic"
+name = "token-proxy"
 protocol = "anthropic"          # habla /v1/messages
 base_url = "http://127.0.0.1:3456"
 api_keys = []                   # sin auth en local
-models = ["deepseek-v4-flash", "hy3", "kimi-k2.7-code", "glm-5"]
+# Un solo modelo: la máscara. El modelo REAL lo decide token-proxy en su
+# config (~/.config/token-proxy/config.jsonc → model_mappings), así cambiar
+# de modelo = tocar ese JSON, sin código ni reinicios de más.
+models = ["claude-opus-4-6[1m]"]
 tier = 0                        # barato/siempre disponible
 weight = 10
 

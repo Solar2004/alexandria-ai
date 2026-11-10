@@ -56,19 +56,19 @@ mod tests {
     #[test]
     fn enmascara_primer_chunk_y_despues_no_toca() {
         let c1 = br#"event: message_start
-data: {"type":"message_start","message":{"model":"deepseek-v4-flash"}}
+data: {"type":"message_start","message":{"model":"muse-spark-1.2-contributor"}}
 
 "#;
-        let (out, done) = mask_sse_chunk(c1, "deepseek-v4-flash", "vis[1m]", false);
+        let (out, done) = mask_sse_chunk(c1, "muse-spark-1.2-contributor", "vis[1m]", false);
         assert!(done);
         let s = String::from_utf8_lossy(&out).to_string();
         assert!(s.contains("\"model\":\"vis[1m]\""));
-        assert!(!s.contains("deepseek"));
+        assert!(!s.contains("muse-spark"));
         // segundo chunk: sin modelo → intacto
         let c2 = br#"data: {"type":"content_block_delta","delta":{"text":"hola"}}
 
 "#;
-        let (out2, done2) = mask_sse_chunk(c2, "deepseek-v4-flash", "vis[1m]", done);
+        let (out2, done2) = mask_sse_chunk(c2, "muse-spark-1.2-contributor", "vis[1m]", done);
         assert!(done2);
         assert_eq!(out2.as_ref(), c2);
     }

@@ -1,9 +1,9 @@
 //! Routing por disponibilidad: tier → cadena de proxies (red corregida, plan 09 §1).
 //!
-//! Cadena canónica (v2): `headroom → routa-gateway → routatic`. Fallback
-//! global: omniroute. El gateway (:3460) oculta el modelo real tras un nombre
-//! visible `[1m]`, aplica suelo de max_tokens y gobierna la entropía de la red
-//! (techo de concurrencia + backoff jitterizado + circuit-breaker).
+//! Cadena canónica (v3 token-proxy): `headroom → token-proxy`. Fallback
+//! global: omniroute (opcional, hoy caído). El gateway :3460 (routa-gateway)
+//! está RETIRADO: token-proxy ya enmascara `claude-*` → modelo real
+//! (muse-spark vía opencode-go) en su propio config.
 
 use alx_core::types::ModelTier;
 use serde::{Deserialize, Serialize};
@@ -21,27 +21,32 @@ pub struct Route {
 pub struct Router {
     pub routes: Vec<Route>,
     /// Fallback global: omniroute (gateway multi-proveedor) — solo entra si
-    /// routatic cae. NO es parte de la cadena principal.
+    /// token-proxy cae. NO es parte de la cadena principal.
     pub fallback: String,
 }
 
-pub const ROUTATIC: &str = "http://127.0.0.1:3456";
+/// token-proxy (:3456) — PROVIDER opencode-go. Sustituye a routatic-proxy
+/// (mismo puerto, distinto software). Se conserva el alias ROUTATIC por
+/// compatibilidad con código externo.
+pub const PROVIDER: &str = "http://127.0.0.1:3456";
+/// Alias heredado de PROVIDER (era routatic-proxy). No usar en código nuevo.
+pub const ROUTATIC: &str = PROVIDER;
 pub const HEADROOM: &str = "http://127.0.0.1:8788";
-/// routa-gateway (:3460) — antes `cc-model-mask`; mismo puerto, más funciones.
+/// routa-gateway (:3460) RETIRADO — se conserva la const para no romper
+/// firmas, pero default_routes() ya no lo incluye en ninguna cadena.
 pub const GATEWAY: &str = "http://127.0.0.1:3460";
 pub const OMNIROUTE: &str = "http://127.0.0.1:20128";
 
 impl Router {
-    /// Las 3 rutas del plan:
-    /// - T1: routatic directo (sin compresión)
-    /// - T2: headroom → gateway → routatic
+    /// Las 3 rutas del plan (v3: sin gateway intermedio):
+    /// - T1: token-proxy directo (sin compresión)
+    /// - T2: headroom → token-proxy
     /// - T3: igual que T2
     pub fn default_routes() -> Self {
-        let medium_chain =
-            vec![HEADROOM.to_string(), GATEWAY.to_string(), ROUTATIC.to_string()];
+        let medium_chain = vec![HEADROOM.to_string(), PROVIDER.to_string()];
         Self {
             routes: vec![
-                Route { tier: ModelTier::T1Cheap, chain: vec![ROUTATIC.to_string()] },
+                Route { tier: ModelTier::T1Cheap, chain: vec![PROVIDER.to_string()] },
                 Route { tier: ModelTier::T2Medium, chain: medium_chain.clone() },
                 Route { tier: ModelTier::T3Premium, chain: medium_chain },
             ],
@@ -77,7 +82,6 @@ mod tests {
             t2.chain,
             vec![
                 "http://127.0.0.1:8788".to_string(),
-                "http://127.0.0.1:3460".to_string(),
                 "http://127.0.0.1:3456".to_string(),
             ]
         );

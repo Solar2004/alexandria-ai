@@ -48,6 +48,15 @@ fn tier_u8(t: ModelTier) -> u8 {
     }
 }
 
+/// Timestamp epoch en milisegundos (para el ledger; antes se guardaba ms de
+/// duración, lo que corrompía cualquier serie temporal).
+fn unix_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
 /// Ledger: una línea JSONL por intento. Ruta: `$ALX_PROXY_LEDGER` →
 /// `~/.local/state/alexandria/proxy-ledger.jsonl`. Falla silenciosa: el
 /// ledger nunca rompe un request.
@@ -234,10 +243,10 @@ async fn attempt_upstream(
         match resp {
             Ok(r) if r.status().is_success() => {
                 state.engine.record_success(&cand.provider, &cand.model);
+                let ms = started.elapsed().as_millis() as u64;
                 ledger(json!({
-                    "ts": started.elapsed().as_millis() as u64,
-                    "provider": cand.provider, "model": cand.model,
-                    "tier": tier, "ok": true, "ms": started.elapsed().as_millis() as u64,
+                    "ts": unix_ms(), "provider": cand.provider, "model": cand.model,
+                    "tier": tier, "ok": true, "ms": ms,
                 }));
                 return Ok((r, cand));
             }
@@ -253,7 +262,7 @@ async fn attempt_upstream(
                 state.engine.record_failure(&cand.provider, &cand.model);
                 last_err = format!("{}/{} → HTTP {code}: {snippet}", cand.provider, cand.model);
                 ledger(json!({
-                    "provider": cand.provider, "model": cand.model,
+                    "ts": unix_ms(), "provider": cand.provider, "model": cand.model,
                     "tier": tier, "ok": false, "code": code, "err": snippet,
                 }));
                 if code != 429 && code < 500 {
@@ -265,7 +274,7 @@ async fn attempt_upstream(
             Err(e) => {
                 state.engine.record_failure(&cand.provider, &cand.model);
                 last_err = format!("{}/{} → {e}", cand.provider, cand.model);
-                ledger(json!({"provider": cand.provider, "model": cand.model, "tier": tier, "ok": false, "err": e.to_string()}));
+                ledger(json!({"ts": unix_ms(), "provider": cand.provider, "model": cand.model, "tier": tier, "ok": false, "err": e.to_string()}));
             }
         }
     }

@@ -2,6 +2,47 @@
 
 > Estado verificado (no "debería funcionar"): tests, comandos e integraciones reales.
 
+## v3.1 — muse-spark 1.3 + fuente única de modelo (2026-09-06)
+
+- Modelo real: **muse-spark-1.3-contributor**. FUENTE ÚNICA: el config de
+  token-proxy (`~/.config/token-proxy/config.jsonc` → `model_mappings`,
+  `claude-*` → muse). Cambiar de modelo = tocar ese JSON; ni código ni
+  versiones hardcodeadas en alx-proxy.
+- alx-proxy: la máscara (`visible_model`) ya NO es candidata de routing (iba
+  alternando alias/real por round-robin → ledger “duplicado”). El pool de
+  modelos de un proveedor excluye la máscara; si solo declara la máscara,
+  rut ea transparente. `models` en proxy.toml = solo el alias.
+- Ledger: `ts` ahora es epoch ms real (antes guardaba ms de duración →
+  series temporales corruptas). TUI: `keys:0` se muestra como `local`.
+- alx-proxy desplegado por fin: binario en `~/.local/bin`, unidad
+  `systemd --user alx-proxy` (enabled), config en `~/.config/alexandria/`.
+
+## Migración v3 token-proxy (2026-09-06)
+
+routatic-proxy y routa-gateway (:3460) ya no existen. El :3456 lo ocupa
+**token-proxy** (`token-proxy.service`, opencode-go con rotación de 2 keys),
+que mapea `claude-*` → muse-spark en su propio config (hoy 1.3).
+
+- **Cadena nueva**: `CC → headroom :8788 → token-proxy :3456 → opencode-go`.
+  VERIFICADO: POST /v1/messages con `claude-opus-4-6[1m]` → HTTP 200 (vía
+  :3456 directo y vía :8788).
+- `alx network`: el núcleo (token-proxy + headroom) en verde; alx-proxy:8797
+  (nunca desplegado) y omniroute:20128 (muerto) marcados `(opcional)`, ya no
+  disparan el warning. El `→ ?` desapareció: el modelo se resuelve por
+  ALX_MODEL > config heredado de routatic > alias visible `claude-opus-4-6[1m]`
+  (token-proxy lo traduce).
+- Router (governor): T1 = token-proxy directo, T2/T3 = headroom→token-proxy
+  (gateway :3460 eliminado de las cadenas; const GATEWAY conservada como
+  alias muerto para no romper firmas).
+- `alx-proxy` (proxy.toml + defaults): provider `token-proxy`, modelos
+  `claude-opus-4-6[1m]` + `muse-spark-1.2-contributor` (fuera deepseek/hy3/kimi/glm).
+- Scripts: `ccmodel` y `cgr-mcp-wrapper.sh` ya no cuelgan del config de
+  routatic (fallback al alias visible); `routa`, `routa-gateway.py`,
+  `oc-go-cc-wrapper`, `cc-model-mask.py` marcados RETIRADOS; `atg` habla de
+  token-proxy y ya no reinicia servicios inexistentes; `backup.sh` respalda
+  `.config/token-proxy` y los servicios `headroom` + `token-proxy`.
+- Build release reinstalado en `~/.local/bin/alx`. Tests: workspace en verde.
+
 ## Ciclo 13 — skills que se EJECUTAN + assets regenerados (2026-08-28, sesión 2)
 
 ### Skill-harness: el patrón "skills ejecutadas, no leídas"

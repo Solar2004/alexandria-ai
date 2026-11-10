@@ -1,6 +1,7 @@
 #!/bin/bash
-# oc-go-cc-wrapper — arranca routatic-proxy con la clave ACTIVA de opencode-go.
-#
+# oc-go-cc-wrapper — ⚠️ RETIRADO (2026-09): routatic-proxy ya no existe.
+# El puerto :3456 lo ocupa token-proxy (ver ~/.config/token-proxy/config.jsonc),
+# gestionado fuera de este repo. Este script se conserva como referencia.
 # v2 (routa): la clave ya NO rota en cada restart. Antes el wrapper incrementaba
 # el indice en cada arranque, asi que un simple `systemctl restart` podia caer
 # en una clave sin creditos y tumbar Claude Code con "all models failed" hasta

@@ -1,7 +1,7 @@
 //! Ledger de coste — registro append de tokens/coste por micro-tarea.
 //!
 //! Cuando el pipeline ejecuta una micro-tarea contra la cadena real
-//! (headroom→mask→routatic), cada llamada se registra aquí: tokens de entrada
+//! (headroom→token-proxy), cada llamada se registra aquí: tokens de entrada
 //! y salida, coste estimado y latencia. El ledger alimenta el cost-report del
 //! governor (plan 09 §4).
 
@@ -14,7 +14,7 @@ pub struct LedgerEntry {
     pub task_id: String,
     pub micro_task: String,
     pub tier: ModelTier,
-    /// Cadena de red usada (headroom→mask→routatic, o routatic directo).
+    /// Cadena de red usada (headroom→token-proxy, o token-proxy directo).
     pub chain: String,
     pub input_tokens: u32,
     pub output_tokens: u32,
@@ -100,7 +100,7 @@ mod tests {
             "t-1",
             "micro-1",
             ModelTier::T2Medium,
-            "headroom→mask→routatic",
+            "headroom→token-proxy",
             input,
             output,
             1500,

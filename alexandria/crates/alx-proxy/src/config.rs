@@ -1,7 +1,7 @@
 //! Config del proxy: TOML con proveedores declarativos.
 //!
 //! Orden de resolución: `$ALX_PROXY_CONFIG` → `~/.config/alexandria/proxy.toml`
-//! → `<repo>/alexandria/config/proxy.toml` → defaults (routatic local, sin keys).
+//! → `<repo>/alexandria/config/proxy.toml` → defaults (token-proxy local, sin keys).
 //!
 //! Las api-keys soportan la forma `env:VAR` para no meter secretos en disco.
 
@@ -136,23 +136,21 @@ impl ProxyConfig {
         })
     }
 
-    /// Defaults: routatic/opencode-go local como único proveedor (tier 0).
+    /// Defaults: token-proxy/opencode-go local como único proveedor (tier 0).
     /// Funciona sin ninguna key — la cadena que ya existe sigue sirviendo.
     pub fn defaults() -> Self {
         Self {
             proxy: ProxySettings::default(),
             routing: RoutingSettings::default(),
             providers: vec![Provider {
-                name: "routatic".into(),
+                name: "token-proxy".into(),
                 protocol: "anthropic".into(),
                 base_url: "http://127.0.0.1:3456".into(),
                 api_keys: vec![],
-                models: vec![
-                    "deepseek-v4-flash".into(),
-                    "hy3".into(),
-                    "kimi-k2.7-code".into(),
-                    "glm-5".into(),
-                ],
+                // Un solo modelo: la máscara. token-proxy la traduce al modelo
+                // real de turno (ver ~/.config/token-proxy/config.jsonc), así
+                // cambiar de modelo real NO toca código ni este binario.
+                models: vec![default_visible()],
                 tier: 0,
                 weight: 10,
                 timeout_s: 300,
@@ -199,10 +197,10 @@ tier = 0
     }
 
     #[test]
-    fn defaults_sin_fichero_sirven_routatic() {
+    fn defaults_sin_fichero_sirven_token_proxy() {
         let cfg = ProxyConfig::defaults();
         assert_eq!(cfg.providers.len(), 1);
-        assert_eq!(cfg.providers[0].name, "routatic");
+        assert_eq!(cfg.providers[0].name, "token-proxy");
         assert_eq!(cfg.proxy.port, 8797);
     }
 }

@@ -1,3 +1,5 @@
 #!/bin/sh
-# Lee el modelo activo de routatic en vivo (cambiar con `routa use <modelo>`)
-python3 -c "import json; d=json.load(open('/home/artorias/.config/routatic-proxy/config.json')); print(d['models']['default']['model_id'])" 2>/dev/null || echo deepseek-v4-flash
+# Modelo activo de la cadena (ALX_MODEL > config heredado de routatic > alias
+# visible que token-proxy traduce a muse-spark). routatic ya no existe.
+if [ -n "${ALX_MODEL:-}" ]; then echo "$ALX_MODEL"; exit 0; fi
+python3 -c "import json; d=json.load(open('/home/artorias/.config/routatic-proxy/config.json')); print(d['models']['default']['model_id'])" 2>/dev/null || echo claude-opus-4-6[1m

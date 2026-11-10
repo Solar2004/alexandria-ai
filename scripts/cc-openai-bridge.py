@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""cc-openai-bridge — traduce OpenAI /chat/completions -> Anthropic /v1/messages (routatic :3456).
+"""cc-openai-bridge — traduce OpenAI /chat/completions -> Anthropic /v1/messages (token-proxy :3456).
 Permite que herramientas que solo hablan OpenAI (p.ej. code-graph-rag Cypher gen) usen el stack local.
+NOTA: token-proxy ya acepta /v1/chat/completions nativo; este bridge solo queda para casos legacy.
 """
 import http.server, json, urllib.request, sys
 
-ROUTATIC = "http://127.0.0.1:3456"
+PROVIDER = "http://127.0.0.1:3456"  # token-proxy (antes routatic)
 KEY = "sk-REPLACE_ME_OPENAI"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 3461
 
@@ -27,7 +28,7 @@ class H(http.server.BaseHTTPRequestHandler):
             "max_tokens": body.get("max_tokens", 2048),
             "messages": msgs,
         }
-        req = urllib.request.Request(ROUTATIC + "/v1/messages",
+        req = urllib.request.Request(PROVIDER + "/v1/messages",
                                      data=json.dumps(payload).encode(),
                                      headers={"Content-Type": "application/json",
                                               "x-api-key": KEY,

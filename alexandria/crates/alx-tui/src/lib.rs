@@ -163,8 +163,7 @@ pub struct NetRow {
 fn poll_net() -> Vec<NetRow> {
     let endpoints = [
         ("alx-proxy", "http://127.0.0.1:8797/health"),
-        ("routatic", "http://127.0.0.1:3456/v1/models"),
-        ("gateway", "http://127.0.0.1:3460/health"),
+        ("token-proxy", "http://127.0.0.1:3456/v1/models"),
         ("headroom", "http://127.0.0.1:8788/readyz"),
         ("omniroute", "http://127.0.0.1:20128/"),
     ];
@@ -200,19 +199,9 @@ struct GovernorStats {
 }
 
 fn poll_governor() -> GovernorStats {
-    let Some(b) = http_get_body("http://127.0.0.1:3460/stats", 1200) else {
-        return GovernorStats::default();
-    };
-    let v: serde_json::Value = serde_json::from_str(&b).unwrap_or_default();
-    let g = &v["governor"];
-    GovernorStats {
-        in_flight: g["in_flight"].as_u64().unwrap_or(0) as u32,
-        served: g["served"].as_u64().unwrap_or(0) as u32,
-        retries: g["retries"].as_u64().unwrap_or(0) as u32,
-        failovers: g["failovers"].as_u64().unwrap_or(0) as u32,
-        last_served_model: g["last_served_model"].as_str().unwrap_or("").to_string(),
-        last_error: g["last_error"].as_str().unwrap_or("").chars().take(80).collect(),
-    }
+    // El gateway :3460 (routa-gateway) está retirado; no hay /stats que
+    // sondear. Se conserva la vista (a ceros) para no romper el layout.
+    GovernorStats::default()
 }
 
 // ─────────────────────────────────────────── pollers: proxy
@@ -456,11 +445,27 @@ fn load_iterate() -> (u32, u32) {
 }
 
 fn load_model_real() -> String {
+    // token-proxy no tiene "modelo default" en fichero: traduce claude-* →
+    // muse-spark en su config. Respeta ALX_MODEL y el config heredado de
+    // routatic (compat), si no el alias visible canónico.
+    if let Ok(m) = std::env::var("ALX_MODEL") {
+        if !m.trim().is_empty() {
+            return m;
+        }
+    }
     let home = std::env::var("HOME").unwrap_or_default();
-    let txt = std::fs::read_to_string(format!("{home}/.config/routatic-proxy/config.json"))
-        .unwrap_or_default();
-    let v: serde_json::Value = serde_json::from_str(&txt).unwrap_or_default();
-    v["models"]["default"]["model_id"].as_str().unwrap_or("?").to_string()
+    if let Ok(txt) =
+        std::fs::read_to_string(format!("{home}/.config/routatic-proxy/config.json"))
+    {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&txt) {
+            if let Some(m) = v["models"]["default"]["model_id"].as_str() {
+                if !m.is_empty() {
+                    return m.to_string();
+                }
+            }
+        }
+    }
+    "claude-opus-4-6[1m]".to_string()
 }
 
 fn last_activity() -> String {
@@ -853,7 +858,7 @@ fn draw_panel(f: &mut ratatui::Frame, area: ratatui::layout::Rect, s: PanelSnaps
         ]),
         Line::from(format!(
             "alx-proxy    : {}",
-            if proxy.ok { format!("vivo · máscara {}", proxy.visible_model) } else { "CAÍDO (atg cae a routatic)".to_string() }
+            if proxy.ok { format!("vivo · máscara {}", proxy.visible_model) } else { "CAÍDO (atg usa token-proxy :3456)".to_string() }
         )),
         Line::from(format!("en vuelo/gw  : {}", gov.in_flight)),
         Line::from(format!("último model : {}", gov.last_served_model)),
@@ -1022,8 +1027,10 @@ fn draw_proxy(f: &mut ratatui::Frame, area: ratatui::layout::Rect, p: &ProxyView
         Line::styled("proveedores", Style::default().add_modifier(Modifier::BOLD)),
     ];
     for (n, proto, tier, keys, models) in &p.providers {
+        // 0 keys = proveedor local sin auth (p.ej. token-proxy en 127.0.0.1)
+        let keys_txt = if *keys == 0 { "local".to_string() } else { keys.to_string() };
         lines.push(Line::from(format!(
-            "  {n:<12} {proto:<9} tier{tier} keys:{keys} modelos:{models}"
+            "  {n:<12} {proto:<9} tier{tier} keys:{keys_txt} modelos:{models}"
         )));
     }
     if !p.breakers.is_empty() {

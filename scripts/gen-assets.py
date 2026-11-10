@@ -181,7 +181,7 @@ ARCH = f"""<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="700" vie
   <g>
     {chip(900, 140, 270, "headroom :8788", "compresión de contexto", TEXT, 30)}
     {chip(900, 178, 270, "routa-gateway :3460", "máscara [1m] + gobernador de entropía", TEXT, 30)}
-    {chip(900, 216, 270, "routatic :3456", "PROVIDER · failover automático", TEXT, 30)}
+    {chip(900, 216, 270, "token-proxy :3456", "PROVIDER · rotación 2 keys", TEXT, 30)}
     {chip(900, 254, 270, "omniroute :20128", "fallback multi-proveedor", MUTED, 30)}
   </g>
   <text x="1035" y="322" text-anchor="middle" font-family="{MONO}" font-size="9.5" fill="{ACCENT}">modelo vivo desde config · cero hardcode</text>
